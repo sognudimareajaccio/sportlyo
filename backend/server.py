@@ -1,5 +1,6 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Query, Request, UploadFile, File, Form
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -18,8 +19,11 @@ import base64
 import qrcode
 from io import BytesIO
 import httpx
+import shutil
 
 ROOT_DIR = Path(__file__).parent
+UPLOAD_DIR = ROOT_DIR / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
@@ -1938,6 +1942,68 @@ async def root():
 @api_router.get("/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+# ============== FILE UPLOAD ==============
+
+ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+@api_router.post("/upload/image")
+async def upload_image(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload an image file"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Check file extension
+    ext = Path(file.filename).suffix.lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Type de fichier non autorisé. Utilisez: {', '.join(ALLOWED_EXTENSIONS)}")
+    
+    # Check file size
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="Fichier trop volumineux (max 10MB)")
+    
+    # Generate unique filename
+    unique_filename = f"{uuid.uuid4().hex}{ext}"
+    file_path = UPLOAD_DIR / unique_filename
+    
+    # Save file
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    # Return URL
+    return {
+        "filename": unique_filename,
+        "url": f"/api/uploads/{unique_filename}",
+        "size": len(content)
+    }
+
+@api_router.get("/uploads/{filename}")
+async def get_uploaded_file(filename: str):
+    """Serve uploaded files"""
+    file_path = UPLOAD_DIR / filename
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Determine content type
+    ext = Path(filename).suffix.lower()
+    content_types = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp'
+    }
+    
+    return FileResponse(
+        path=file_path,
+        media_type=content_types.get(ext, 'application/octet-stream')
+    )
 
 # Include router and add middleware
 app.include_router(api_router)

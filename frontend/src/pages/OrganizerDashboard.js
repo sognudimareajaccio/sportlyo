@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   Plus, Calendar, Users, Euro, TrendingUp, Settings,
-  Eye, Edit, Trash2, BarChart3, ChevronRight, Building2, QrCode, Scan
+  Eye, Edit, Trash2, BarChart3, ChevronRight, Building2, QrCode, Scan,
+  Upload, Image, X, Loader2
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
@@ -15,6 +16,7 @@ import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useAuth } from '../context/AuthContext';
 import { eventsApi, authApi } from '../services/api';
+import api from '../services/api';
 import { toast } from 'sonner';
 
 const sportOptions = [
@@ -57,6 +59,10 @@ const OrganizerDashboard = () => {
     description: '',
     iban: ''
   });
+
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
+  const fileInputRef = useRef(null);
 
   const isOrganizer = user?.role === 'organizer' || user?.role === 'admin';
 
@@ -105,11 +111,63 @@ const OrganizerDashboard = () => {
         elevation_gain: '', image_url: '', requires_pps: false,
         requires_medical_cert: false, allows_teams: false, min_age: '', max_age: ''
       });
+      setImagePreview(null);
       fetchEvents();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Erreur lors de la création');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Format non supporté. Utilisez JPG, PNG, GIF ou WebP');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image trop volumineuse (max 10MB)');
+      return;
+    }
+
+    // Preview
+    const reader = new FileReader();
+    reader.onload = (e) => setImagePreview(e.target.result);
+    reader.readAsDataURL(file);
+
+    // Upload
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post('/upload/image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const imageUrl = `${process.env.REACT_APP_BACKEND_URL}${response.data.url}`;
+      setNewEvent(prev => ({ ...prev, image_url: imageUrl }));
+      toast.success('Image uploadée !');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de l\'upload');
+      setImagePreview(null);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const removeImage = () => {
+    setImagePreview(null);
+    setNewEvent(prev => ({ ...prev, image_url: '' }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -321,12 +379,72 @@ const OrganizerDashboard = () => {
                       />
                     </div>
                     <div className="col-span-2">
-                      <Label>URL de l'image</Label>
-                      <Input
-                        placeholder="https://..."
-                        value={newEvent.image_url}
-                        onChange={(e) => setNewEvent(prev => ({ ...prev, image_url: e.target.value }))}
-                      />
+                      <Label>Image de l'événement</Label>
+                      <div className="mt-2">
+                        {/* Image Preview */}
+                        {(imagePreview || newEvent.image_url) && (
+                          <div className="relative mb-3 inline-block">
+                            <img 
+                              src={imagePreview || newEvent.image_url} 
+                              alt="Preview" 
+                              className="h-32 w-auto object-cover rounded border"
+                            />
+                            <button
+                              type="button"
+                              onClick={removeImage}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                        
+                        {/* Upload Button */}
+                        <div className="flex gap-2">
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/gif,image/webp"
+                            onChange={handleImageUpload}
+                            className="hidden"
+                            id="event-image-upload"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploadingImage}
+                            className="flex items-center gap-2"
+                          >
+                            {uploadingImage ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Upload...
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-4 h-4" />
+                                Uploader une image
+                              </>
+                            )}
+                          </Button>
+                          <span className="text-xs text-slate-500 self-center">
+                            ou
+                          </span>
+                          <Input
+                            placeholder="URL de l'image (https://...)"
+                            value={newEvent.image_url}
+                            onChange={(e) => {
+                              setNewEvent(prev => ({ ...prev, image_url: e.target.value }));
+                              setImagePreview(null);
+                            }}
+                            className="flex-1"
+                          />
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">
+                          JPG, PNG, GIF ou WebP. Max 10MB.
+                        </p>
+                      </div>
                     </div>
                     <div className="col-span-2">
                       <Label>Description</Label>
