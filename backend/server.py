@@ -42,8 +42,11 @@ EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 # Stripe API Key
 STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', '')
 
-# Platform Commission Rate
-PLATFORM_COMMISSION = 0.06  # 6%
+# Platform Commission Rate (added on top of base price)
+PLATFORM_COMMISSION = 0.05  # 5% service fee added to participant
+# Stripe/Payment processor fees (deducted from platform commission)
+STRIPE_PERCENT_FEE = 0.014  # 1.4%
+STRIPE_FIXED_FEE = 0.25     # 0.25€
 
 app = FastAPI(title="SportsConnect API")
 api_router = APIRouter(prefix="/api")
@@ -976,9 +979,13 @@ async def create_registration(reg_data: RegistrationCreate, current_user: dict =
     
     total_price = base_price + options_total
     
-    # Calculate fees (6% platform commission)
-    platform_fee = round(total_price * PLATFORM_COMMISSION, 2)
-    organizer_amount = round(total_price - platform_fee, 2)
+    # Calculate fees: 5% service fee ADDED on top
+    service_fee = round(total_price * PLATFORM_COMMISSION, 2)
+    total_to_pay = round(total_price + service_fee, 2)
+    # Stripe fees (1.4% + 0.25€) deducted from platform commission
+    stripe_fee = round(total_to_pay * STRIPE_PERCENT_FEE + STRIPE_FIXED_FEE, 2)
+    platform_net = round(service_fee - stripe_fee, 2)
+    organizer_amount = total_price  # Organizer gets full base price
     
     # Generate QR code for check-in
     qr_data = f"SPORTSCONNECT:{registration_id}:{bib_number}"
@@ -1001,8 +1008,11 @@ async def create_registration(reg_data: RegistrationCreate, current_user: dict =
         "payment_status": "pending",
         "payment_id": None,
         "checkout_session_id": None,
-        "amount_paid": total_price,
-        "platform_fee": platform_fee,
+        "base_price": total_price,
+        "service_fee": service_fee,
+        "amount_paid": total_to_pay,
+        "stripe_fee": stripe_fee,
+        "platform_net": platform_net,
         "organizer_amount": organizer_amount,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "status": "confirmed",
@@ -1045,7 +1055,9 @@ async def create_registration(reg_data: RegistrationCreate, current_user: dict =
     return {
         "registration_id": registration_id,
         "bib_number": bib_number,
-        "amount": total_price,
+        "base_price": total_price,
+        "service_fee": service_fee,
+        "amount": total_to_pay,
         "event_title": event['title'],
         "qr_code": qr_code
     }
@@ -1525,17 +1537,17 @@ async def create_checkout_session(request: Request, current_user: dict = Depends
     if registration['payment_status'] == 'completed':
         raise HTTPException(status_code=400, detail="Already paid")
     
-    # Get amount
-    amount = registration['amount_paid']
+    # Get base price and total from registration
+    base_price = registration.get('base_price', registration['amount_paid'])
     
     # Apply promo code if provided
     if promo_code:
         promo = await db.promo_codes.find_one({"code": promo_code.upper()}, {"_id": 0})
         if promo:
             if promo['discount_type'] == 'percentage':
-                amount = amount * (1 - promo['discount_value'] / 100)
+                base_price = base_price * (1 - promo['discount_value'] / 100)
             else:
-                amount = max(0, amount - promo['discount_value'])
+                base_price = max(0, base_price - promo['discount_value'])
             
             # Increment promo usage
             await db.promo_codes.update_one(
@@ -1543,9 +1555,13 @@ async def create_checkout_session(request: Request, current_user: dict = Depends
                 {"$inc": {"current_uses": 1}}
             )
     
-    # Recalculate fees
-    platform_fee = round(amount * PLATFORM_COMMISSION, 2)
-    organizer_amount = round(amount - platform_fee, 2)
+    # Calculate fees: 5% service fee added on top of base price
+    base_price = round(base_price, 2)
+    service_fee = round(base_price * PLATFORM_COMMISSION, 2)
+    total_to_pay = round(base_price + service_fee, 2)
+    stripe_fee = round(total_to_pay * STRIPE_PERCENT_FEE + STRIPE_FIXED_FEE, 2)
+    platform_net = round(service_fee - stripe_fee, 2)
+    organizer_amount = base_price
     
     # Build URLs
     success_url = f"{origin_url}/payment/success?session_id={{CHECKOUT_SESSION_ID}}"
@@ -1559,9 +1575,9 @@ async def create_checkout_session(request: Request, current_user: dict = Depends
     webhook_url = f"{request.base_url}api/webhook/stripe"
     stripe_checkout = StripeCheckout(api_key=api_key, webhook_url=webhook_url)
     
-    # Create checkout session
+    # Create checkout session - charge total (base + service fee)
     checkout_request = CheckoutSessionRequest(
-        amount=float(amount),
+        amount=float(total_to_pay),
         currency="eur",
         success_url=success_url,
         cancel_url=cancel_url,
@@ -1574,26 +1590,33 @@ async def create_checkout_session(request: Request, current_user: dict = Depends
     
     session = await stripe_checkout.create_checkout_session(checkout_request)
     
-    # Store session info
+    # Store session info with full financial breakdown
     await db.registrations.update_one(
         {"registration_id": registration_id},
         {"$set": {
             "checkout_session_id": session.session_id,
-            "amount_paid": amount,
-            "platform_fee": platform_fee,
+            "base_price": base_price,
+            "service_fee": service_fee,
+            "amount_paid": total_to_pay,
+            "stripe_fee": stripe_fee,
+            "platform_net": platform_net,
             "organizer_amount": organizer_amount
         }}
     )
     
-    # Create payment transaction record
+    # Create payment transaction record with full breakdown
     await db.payment_transactions.insert_one({
         "transaction_id": f"txn_{uuid.uuid4().hex[:12]}",
         "session_id": session.session_id,
         "registration_id": registration_id,
         "user_id": current_user['user_id'],
-        "amount": amount,
+        "event_id": registration['event_id'],
+        "base_price": base_price,
+        "service_fee": service_fee,
+        "amount": total_to_pay,
         "currency": "eur",
-        "platform_fee": platform_fee,
+        "stripe_fee": stripe_fee,
+        "platform_net": platform_net,
         "organizer_amount": organizer_amount,
         "payment_status": "pending",
         "created_at": datetime.now(timezone.utc).isoformat()
@@ -1808,7 +1831,10 @@ async def get_admin_stats(current_user: dict = Depends(get_current_user)):
     
     payments = await db.payment_transactions.find({"payment_status": "completed"}, {"_id": 0}).to_list(10000)
     total_revenue = sum(p.get('amount', 0) for p in payments)
-    platform_fees = sum(p.get('platform_fee', 0) for p in payments)
+    total_service_fees = sum(p.get('service_fee', 0) for p in payments)
+    total_stripe_fees = sum(p.get('stripe_fee', 0) for p in payments)
+    total_platform_net = sum(p.get('platform_net', 0) for p in payments)
+    total_organizer = sum(p.get('organizer_amount', 0) for p in payments)
     
     recent_registrations = await db.registrations.find(
         {},
@@ -1820,7 +1846,10 @@ async def get_admin_stats(current_user: dict = Depends(get_current_user)):
         "total_events": total_events,
         "total_registrations": total_registrations,
         "total_revenue": total_revenue,
-        "platform_fees": platform_fees,
+        "total_service_fees": total_service_fees,
+        "total_stripe_fees": total_stripe_fees,
+        "total_platform_net": total_platform_net,
+        "total_organizer": total_organizer,
         "recent_registrations": recent_registrations
     }
 
@@ -1875,8 +1904,37 @@ async def get_all_payments(
     total = await db.payment_transactions.count_documents({})
     payments = await db.payment_transactions.find({}, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
+    # Enrich with event and user info
+    for p in payments:
+        reg = await db.registrations.find_one(
+            {"registration_id": p.get("registration_id")}, {"_id": 0}
+        )
+        if reg:
+            p["user_name"] = reg.get("user_name", "")
+            p["user_email"] = reg.get("user_email", "")
+            p["selected_race"] = reg.get("selected_race", "")
+        event = await db.events.find_one(
+            {"event_id": p.get("event_id")}, {"_id": 0, "title": 1, "organizer_name": 1}
+        )
+        if event:
+            p["event_title"] = event.get("title", "")
+            p["organizer_name"] = event.get("organizer_name", "")
+    
+    # Calculate totals across ALL completed transactions
+    all_completed = await db.payment_transactions.find({"payment_status": "completed"}, {"_id": 0}).to_list(10000)
+    totals = {
+        "total_base_price": round(sum(t.get('base_price', t.get('organizer_amount', 0)) for t in all_completed), 2),
+        "total_service_fees": round(sum(t.get('service_fee', 0) for t in all_completed), 2),
+        "total_amount": round(sum(t.get('amount', 0) for t in all_completed), 2),
+        "total_stripe_fees": round(sum(t.get('stripe_fee', 0) for t in all_completed), 2),
+        "total_platform_net": round(sum(t.get('platform_net', 0) for t in all_completed), 2),
+        "total_organizer": round(sum(t.get('organizer_amount', t.get('base_price', 0)) for t in all_completed), 2),
+        "total_completed": len(all_completed)
+    }
+    
     return {
         "payments": payments,
+        "totals": totals,
         "total": total,
         "page": page,
         "pages": (total + limit - 1) // limit

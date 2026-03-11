@@ -1,0 +1,80 @@
+{
+  "summary": "Complete testing of new commission model (5% added on top, not deducted). All backend APIs and frontend features working correctly. The commission model change from 6% deducted to 5% added is fully implemented.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "POST /api/registrations - Returns base_price, service_fee (5%), amount (base + fee)",
+    "POST /api/payments/create-checkout - Creates checkout with correct total (base + 5%)",
+    "GET /api/admin/payments - Returns totals with total_base_price, total_service_fees, total_stripe_fees, total_platform_net, total_organizer",
+    "GET /api/admin/stats - Returns total_service_fees, total_stripe_fees, total_platform_net, total_organizer",
+    "Math verification: 35€ base → service_fee=1.75€, total=36.75€, stripe_fee=0.76€, platform_net=0.99€",
+    "Math verification: 20€ base → service_fee=1.00€, total=21.00€, stripe_fee=0.54€, platform_net=0.46€",
+    "Registration dialog shows fee breakdown: Prix inscription + Frais de service (5%) + Total à payer",
+    "Admin Paiements tab shows 'BILAN FINANCIER AUTOMATIQUE' with 5 summary columns",
+    "Admin Paiements tab shows 'TABLEAU DE VENTILATION DES PAIEMENTS' with all required columns",
+    "Admin payments table has TOTAL footer row with aggregated values",
+    "Organizer dashboard shows 100% revenue (470€) - no commission deduction visible"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_commission_model.py",
+    "/app/test_reports/pytest/pytest_commission_results.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [],
+
+  "updated_files": [
+    "/app/backend/tests/test_commission_model.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (7 passed, 1 skipped)",
+    "frontend": "100% (all flows verified)"
+  },
+
+  "test_credentials": {
+    "organizer": "club@paris-sport.fr / club123",
+    "participant": "sophie@test.com / test1234",
+    "admin": "admin@sportsconnect.fr / admin123",
+    "event_with_races": "evt_f79c5cfd5036 (COURSE CORSICA FEVER)"
+  },
+
+  "seed_data_creation": "Test user test_commission_xxx@test.com created for registration tests",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Commission model is 5% ADDED on top (not deducted). Sophie Test completed payment for 20km race (35€ base → 36.75€ total). Admin dashboard at /admin shows full financial breakdown with BILAN FINANCIER AUTOMATIQUE summary and TABLEAU DE VENTILATION DES PAIEMENTS detailed table. Old transactions (before model change) have 0 for service_fee fields which is expected.",
+
+  "financial_model_summary": {
+    "commission_rate": "5% ADDED on top of base price",
+    "stripe_fees": "1.4% + 0.25€ per transaction",
+    "organizer_receives": "100% of base price",
+    "platform_net": "service_fee - stripe_fees",
+    "example_35_base": {
+      "base_price": 35.00,
+      "service_fee": 1.75,
+      "total_paid": 36.75,
+      "stripe_fee": 0.76,
+      "platform_net": 0.99,
+      "organizer": 35.00
+    }
+  },
+
+  "mocked_apis": {
+    "PPS_verification": "Returns simulated success (mocked)",
+    "Stripe": "Uses test API key sk_test_emergent - creates real Stripe test checkout sessions"
+  }
+}

@@ -346,8 +346,7 @@ const OrganizerDashboard = () => {
   // Stats calculation
   const totalParticipants = events.reduce((sum, e) => sum + e.current_participants, 0);
   const totalRevenue = events.reduce((sum, e) => sum + (e.current_participants * e.price), 0);
-  const platformFees = totalRevenue * 0.06;
-  const organizerRevenue = totalRevenue - platformFees;
+  const organizerRevenue = totalRevenue; // L'organisateur reçoit 100% du prix de base
 
   if (loading) {
     return (
@@ -375,7 +374,7 @@ const OrganizerDashboard = () => {
             <li className="flex items-center"><span className="text-brand mr-2">✓</span> Création illimitée d'événements</li>
             <li className="flex items-center"><span className="text-brand mr-2">✓</span> Gestion des inscriptions</li>
             <li className="flex items-center"><span className="text-brand mr-2">✓</span> Statistiques détaillées</li>
-            <li className="flex items-center"><span className="text-brand mr-2">✓</span> Commission de seulement 6%</li>
+            <li className="flex items-center"><span className="text-brand mr-2">✓</span> Frais de 5% ajoutés au participant (vous recevez 100%)</li>
           </ul>
 
           <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
@@ -907,7 +906,7 @@ const OrganizerDashboard = () => {
             { icon: Calendar, label: 'Événements', value: events.length },
             { icon: Users, label: 'Participants', value: totalParticipants },
             { icon: Euro, label: 'Revenus', value: `${organizerRevenue.toFixed(0)}€` },
-            { icon: TrendingUp, label: 'Commission', value: `${platformFees.toFixed(0)}€` }
+            { icon: TrendingUp, label: 'Votre revenu', value: `${organizerRevenue.toFixed(0)}€` }
           ].map((stat, idx) => (
             <motion.div
               key={idx}
@@ -958,7 +957,7 @@ const OrganizerDashboard = () => {
                           </div>
                         </td>
                         <td className="p-4 font-heading font-bold">
-                          {(event.current_participants * event.price * 0.94).toFixed(0)}€
+                          {(event.current_participants * event.price).toFixed(0)}€
                         </td>
                         <td className="p-4">
                           <span className={`badge ${event.status === 'active' ? 'badge-success' : 'badge-warning'}`}>

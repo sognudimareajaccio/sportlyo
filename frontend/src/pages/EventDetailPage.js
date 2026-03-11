@@ -89,34 +89,38 @@ const EventDetailPage = () => {
   };
 
   const calculateTotal = () => {
-    if (!event) return 0;
+    if (!event) return { base: 0, serviceFee: 0, total: 0 };
     
-    let total = event.current_price || event.price;
+    let base = event.current_price || event.price;
     
     // Get race-specific price
     if (formData.selected_race && event.races) {
       const race = event.races.find(r => r.name === formData.selected_race);
-      if (race) total = race.price;
+      if (race) base = race.price;
     }
     
     // Add options
     if (formData.selected_options.length > 0 && event.options) {
       for (const optId of formData.selected_options) {
         const opt = event.options.find(o => o.option_id === optId);
-        if (opt) total += opt.price;
+        if (opt) base += opt.price;
       }
     }
     
     // Apply promo discount
     if (promoDiscount) {
       if (promoDiscount.discount_type === 'percentage') {
-        total = total * (1 - promoDiscount.discount_value / 100);
+        base = base * (1 - promoDiscount.discount_value / 100);
       } else {
-        total = Math.max(0, total - promoDiscount.discount_value);
+        base = Math.max(0, base - promoDiscount.discount_value);
       }
     }
     
-    return Math.round(total * 100) / 100;
+    base = Math.round(base * 100) / 100;
+    const serviceFee = Math.round(base * 0.05 * 100) / 100;
+    const total = Math.round((base + serviceFee) * 100) / 100;
+    
+    return { base, serviceFee, total };
   };
 
   const handleRegister = async () => {
@@ -631,12 +635,27 @@ const EventDetailPage = () => {
                           )}
                         </div>
 
-                        {/* Total */}
+                        {/* Total with fee breakdown */}
                         <div className="bg-slate-50 p-4 rounded-sm">
-                          <div className="flex justify-between items-center">
-                            <span>Total à payer</span>
-                            <span className="font-heading text-2xl font-bold text-brand">{calculateTotal()}€</span>
-                          </div>
+                          {(() => {
+                            const { base, serviceFee, total } = calculateTotal();
+                            return (
+                              <>
+                                <div className="flex justify-between items-center text-sm">
+                                  <span className="text-slate-600">Prix inscription</span>
+                                  <span className="font-medium">{base}€</span>
+                                </div>
+                                <div className="flex justify-between items-center text-sm mt-1">
+                                  <span className="text-slate-600">Frais de service (5%)</span>
+                                  <span className="font-medium">+{serviceFee}€</span>
+                                </div>
+                                <div className="border-t mt-2 pt-2 flex justify-between items-center">
+                                  <span className="font-medium">Total à payer</span>
+                                  <span className="font-heading text-2xl font-bold text-brand">{total}€</span>
+                                </div>
+                              </>
+                            );
+                          })()}
                           <p className="text-xs text-slate-500 mt-2">
                             Paiement sécurisé par Stripe
                           </p>

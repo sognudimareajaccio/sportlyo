@@ -20,6 +20,7 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [paymentTotals, setPaymentTotals] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [userPage, setUserPage] = useState(1);
@@ -40,12 +41,13 @@ const AdminDashboard = () => {
       const [statsRes, usersRes, paymentsRes] = await Promise.all([
         adminApi.getStats(),
         adminApi.getUsers({ page: 1, limit: 20 }),
-        adminApi.getPayments({ page: 1, limit: 20 })
+        adminApi.getPayments({ page: 1, limit: 100 })
       ]);
       setStats(statsRes.data);
       setUsers(usersRes.data.users);
       setTotalUserPages(usersRes.data.pages);
       setPayments(paymentsRes.data.payments);
+      setPaymentTotals(paymentsRes.data.totals);
     } catch (error) {
       console.error('Error fetching admin data:', error);
       toast.error('Erreur lors du chargement des données');
@@ -126,7 +128,7 @@ const AdminDashboard = () => {
                 { icon: Users, label: 'Utilisateurs', value: stats.total_users },
                 { icon: Calendar, label: 'Événements', value: stats.total_events },
                 { icon: TrendingUp, label: 'Inscriptions', value: stats.total_registrations },
-                { icon: Euro, label: 'Commission', value: `${stats.platform_fees?.toFixed(0) || 0}€` }
+                { icon: Euro, label: 'Net Plateforme', value: `${(paymentTotals?.total_platform_net || 0).toFixed(2)}€` }
               ].map((stat, idx) => (
                 <motion.div
                   key={idx}
@@ -142,21 +144,31 @@ const AdminDashboard = () => {
               ))}
             </div>
 
-            {/* Revenue Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="bg-white border border-slate-200 p-6">
-                <h3 className="font-heading text-lg font-bold uppercase mb-4">Revenus Totaux</h3>
-                <div className="text-4xl font-heading font-extrabold text-brand mb-2">
-                  {stats.total_revenue?.toFixed(0) || 0}€
-                </div>
-                <p className="text-sm text-slate-500">Depuis le lancement</p>
+            {/* Revenue Summary - 4 columns */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <div className="bg-white border border-slate-200 p-5">
+                <p className="text-xs font-heading uppercase text-slate-500 mb-1">Total encaissé</p>
+                <p className="text-2xl font-heading font-extrabold text-slate-800">
+                  {(paymentTotals?.total_amount || 0).toFixed(2)}€
+                </p>
               </div>
-              <div className="bg-asphalt text-white border-l-4 border-brand p-6">
-                <h3 className="font-heading text-lg font-bold uppercase mb-4">Commission Plateforme (6%)</h3>
-                <div className="text-4xl font-heading font-extrabold text-brand mb-2">
-                  {stats.platform_fees?.toFixed(0) || 0}€
-                </div>
-                <p className="text-sm text-slate-400">Revenus nets</p>
+              <div className="bg-white border border-slate-200 p-5">
+                <p className="text-xs font-heading uppercase text-slate-500 mb-1">Reversé organisateurs</p>
+                <p className="text-2xl font-heading font-extrabold text-blue-700">
+                  {(paymentTotals?.total_organizer || 0).toFixed(2)}€
+                </p>
+              </div>
+              <div className="bg-white border border-slate-200 p-5">
+                <p className="text-xs font-heading uppercase text-slate-500 mb-1">Frais Stripe</p>
+                <p className="text-2xl font-heading font-extrabold text-red-600">
+                  -{(paymentTotals?.total_stripe_fees || 0).toFixed(2)}€
+                </p>
+              </div>
+              <div className="bg-asphalt text-white p-5 border-l-4 border-brand">
+                <p className="text-xs font-heading uppercase text-slate-400 mb-1">Net plateforme</p>
+                <p className="text-2xl font-heading font-extrabold text-brand">
+                  {(paymentTotals?.total_platform_net || 0).toFixed(2)}€
+                </p>
               </div>
             </div>
 
@@ -286,41 +298,117 @@ const AdminDashboard = () => {
         )}
 
         {activeTab === 'payments' && (
-          <div className="bg-white border border-slate-200">
-            <div className="p-4 border-b">
-              <h3 className="font-heading font-bold uppercase">Historique des paiements</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="text-left p-4 text-sm font-heading font-bold uppercase">ID</th>
-                    <th className="text-left p-4 text-sm font-heading font-bold uppercase">Montant</th>
-                    <th className="text-left p-4 text-sm font-heading font-bold uppercase">Commission</th>
-                    <th className="text-left p-4 text-sm font-heading font-bold uppercase">Organisateur</th>
-                    <th className="text-left p-4 text-sm font-heading font-bold uppercase">Statut</th>
-                    <th className="text-left p-4 text-sm font-heading font-bold uppercase">Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payments.map(p => (
-                    <tr key={p.payment_id} className="border-b hover:bg-slate-50">
-                      <td className="p-4 text-sm font-mono">{p.payment_id?.slice(0, 12)}</td>
-                      <td className="p-4 font-heading font-bold">{p.amount}€</td>
-                      <td className="p-4 text-brand font-medium">{p.platform_fee}€</td>
-                      <td className="p-4">{p.organizer_amount}€</td>
-                      <td className="p-4">
-                        <span className={`badge ${p.payment_status === 'completed' ? 'badge-success' : 'badge-warning'}`}>
-                          {p.payment_status === 'completed' ? 'Complété' : 'En attente'}
-                        </span>
-                      </td>
-                      <td className="p-4 text-sm text-slate-500">
-                        {p.created_at && format(new Date(p.created_at), 'd MMM yyyy HH:mm', { locale: fr })}
-                      </td>
+          <div className="space-y-6">
+            {/* Financial Summary Cards */}
+            {paymentTotals && paymentTotals.total_completed > 0 && (
+              <div className="bg-asphalt text-white p-6 border-l-4 border-brand" data-testid="financial-summary">
+                <h3 className="font-heading text-lg font-bold uppercase mb-4">Bilan financier automatique</h3>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <div>
+                    <p className="text-xs text-slate-400 uppercase">Total encaissé</p>
+                    <p className="text-xl font-heading font-bold">{paymentTotals.total_amount.toFixed(2)}€</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400 uppercase">Organisateurs</p>
+                    <p className="text-xl font-heading font-bold text-blue-400">{paymentTotals.total_organizer.toFixed(2)}€</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400 uppercase">Commission (5%)</p>
+                    <p className="text-xl font-heading font-bold text-green-400">{paymentTotals.total_service_fees.toFixed(2)}€</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400 uppercase">Frais Stripe</p>
+                    <p className="text-xl font-heading font-bold text-red-400">-{paymentTotals.total_stripe_fees.toFixed(2)}€</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400 uppercase">Net plateforme</p>
+                    <p className="text-xl font-heading font-bold text-brand">{paymentTotals.total_platform_net.toFixed(2)}€</p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 mt-3">{paymentTotals.total_completed} paiement(s) complété(s) — Stripe: 1,4% + 0,25€ par transaction</p>
+              </div>
+            )}
+
+            {/* Detailed Transactions Table */}
+            <div className="bg-white border border-slate-200" data-testid="payments-table">
+              <div className="p-4 border-b">
+                <h3 className="font-heading font-bold uppercase">Tableau de ventilation des paiements</h3>
+                <p className="text-xs text-slate-500 mt-1">Mis à jour automatiquement à chaque transaction</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-100">
+                    <tr>
+                      <th className="text-left p-3 font-heading text-xs font-bold uppercase whitespace-nowrap">Participant</th>
+                      <th className="text-left p-3 font-heading text-xs font-bold uppercase whitespace-nowrap">Événement</th>
+                      <th className="text-left p-3 font-heading text-xs font-bold uppercase whitespace-nowrap">Course</th>
+                      <th className="text-right p-3 font-heading text-xs font-bold uppercase whitespace-nowrap">Prix base</th>
+                      <th className="text-right p-3 font-heading text-xs font-bold uppercase whitespace-nowrap">Frais service (5%)</th>
+                      <th className="text-right p-3 font-heading text-xs font-bold uppercase whitespace-nowrap">Total payé</th>
+                      <th className="text-right p-3 font-heading text-xs font-bold uppercase whitespace-nowrap">Frais Stripe</th>
+                      <th className="text-right p-3 font-heading text-xs font-bold uppercase whitespace-nowrap">Organisateur</th>
+                      <th className="text-right p-3 font-heading text-xs font-bold uppercase whitespace-nowrap">Net plateforme</th>
+                      <th className="text-center p-3 font-heading text-xs font-bold uppercase whitespace-nowrap">Statut</th>
+                      <th className="text-left p-3 font-heading text-xs font-bold uppercase whitespace-nowrap">Date</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {payments.map(p => {
+                      const basePrice = p.base_price || p.organizer_amount || p.amount;
+                      const serviceFee = p.service_fee || 0;
+                      const totalPaid = p.amount || 0;
+                      const stripeFee = p.stripe_fee || 0;
+                      const orgAmount = p.organizer_amount || basePrice;
+                      const platformNet = p.platform_net || (serviceFee - stripeFee);
+                      return (
+                        <tr key={p.transaction_id} className="border-b hover:bg-slate-50" data-testid={`payment-row-${p.transaction_id}`}>
+                          <td className="p-3">
+                            <div className="font-medium">{p.user_name || '—'}</div>
+                            <div className="text-xs text-slate-400">{p.user_email || ''}</div>
+                          </td>
+                          <td className="p-3 max-w-[160px] truncate">{p.event_title || p.event_id?.slice(0, 12) || '—'}</td>
+                          <td className="p-3 text-slate-600">{p.selected_race || '—'}</td>
+                          <td className="p-3 text-right font-mono">{basePrice.toFixed(2)}€</td>
+                          <td className="p-3 text-right font-mono text-green-700">+{serviceFee.toFixed(2)}€</td>
+                          <td className="p-3 text-right font-mono font-bold">{totalPaid.toFixed(2)}€</td>
+                          <td className="p-3 text-right font-mono text-red-600">-{stripeFee.toFixed(2)}€</td>
+                          <td className="p-3 text-right font-mono text-blue-700">{orgAmount.toFixed(2)}€</td>
+                          <td className="p-3 text-right font-mono font-bold text-brand">{platformNet.toFixed(2)}€</td>
+                          <td className="p-3 text-center">
+                            <span className={`inline-block px-2 py-1 text-xs font-bold uppercase rounded ${
+                              p.payment_status === 'completed' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {p.payment_status === 'completed' ? 'Payé' : 'En attente'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-xs text-slate-500 whitespace-nowrap">
+                            {p.created_at && format(new Date(p.created_at), 'd MMM yyyy HH:mm', { locale: fr })}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  {/* Totals row */}
+                  {paymentTotals && (
+                    <tfoot className="bg-slate-100 border-t-2 border-slate-300">
+                      <tr>
+                        <td colSpan="3" className="p-3 font-heading font-bold uppercase text-sm">
+                          TOTAL ({paymentTotals.total_completed} payé(s))
+                        </td>
+                        <td className="p-3 text-right font-mono font-bold">{paymentTotals.total_base_price.toFixed(2)}€</td>
+                        <td className="p-3 text-right font-mono font-bold text-green-700">+{paymentTotals.total_service_fees.toFixed(2)}€</td>
+                        <td className="p-3 text-right font-mono font-bold">{paymentTotals.total_amount.toFixed(2)}€</td>
+                        <td className="p-3 text-right font-mono font-bold text-red-600">-{paymentTotals.total_stripe_fees.toFixed(2)}€</td>
+                        <td className="p-3 text-right font-mono font-bold text-blue-700">{paymentTotals.total_organizer.toFixed(2)}€</td>
+                        <td className="p-3 text-right font-mono font-bold text-brand">{paymentTotals.total_platform_net.toFixed(2)}€</td>
+                        <td colSpan="2" className="p-3"></td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
             </div>
           </div>
         )}
