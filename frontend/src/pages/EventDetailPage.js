@@ -446,7 +446,9 @@ const EventDetailPage = () => {
                   <div className="text-center pb-6 border-b">
                     <p className="text-sm text-slate-500 uppercase tracking-wider mb-1">À partir de</p>
                     <p className="font-heading text-5xl font-extrabold text-brand">
-                      {event.current_price || event.price}€
+                      {event.races && event.races.length > 0
+                        ? Math.min(...event.races.map(r => r.price))
+                        : (event.current_price || event.price)}€
                     </p>
                     {event.pricing_tiers && (
                       <p className="text-xs text-slate-500 mt-2">Tarif évolutif</p>
