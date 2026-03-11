@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import { eventsApi, authApi } from '../services/api';
 import api from '../services/api';
 import { toast } from 'sonner';
+import DateTimePicker from '../components/DateTimePicker';
 
 const sportOptions = [
   { value: 'cycling', label: 'Cyclisme' },
@@ -146,6 +147,7 @@ const OrganizerDashboard = () => {
         title: editingEvent.title,
         description: editingEvent.description,
         sport_type: editingEvent.sport_type,
+        date: editingEvent.date,
         location: editingEvent.location,
         max_participants: editingEvent.max_participants,
         price: editingEvent.price,
@@ -474,11 +476,11 @@ const OrganizerDashboard = () => {
                     </div>
                     <div>
                       <Label>Date *</Label>
-                      <Input
-                        type="datetime-local"
+                      <DateTimePicker
                         value={newEvent.date}
-                        onChange={(e) => setNewEvent(prev => ({ ...prev, date: e.target.value }))}
-                        data-testid="event-date-input"
+                        onChange={(val) => setNewEvent(prev => ({ ...prev, date: val }))}
+                        placeholder="Choisir la date de l'événement"
+                        testId="event-date-input"
                       />
                     </div>
                     <div className="col-span-2">
@@ -718,6 +720,15 @@ const OrganizerDashboard = () => {
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+                      <div>
+                        <Label>Date</Label>
+                        <DateTimePicker
+                          value={editingEvent.date ? new Date(editingEvent.date).toISOString().slice(0, 16) : ''}
+                          onChange={(val) => setEditingEvent(prev => ({ ...prev, date: new Date(val).toISOString() }))}
+                          placeholder="Modifier la date"
+                          testId="edit-event-date-input"
+                        />
                       </div>
                       <div>
                         <Label>Participants max</Label>

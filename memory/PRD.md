@@ -180,6 +180,14 @@ ADMIN
 
 ## Changelog
 
+### v2.5 (March 11, 2026)
+- Replaced native datetime-local input with custom French DateTimePicker component
+  - Shadcn Calendar + Popover with French locale (date-fns/locale/fr)
+  - Site brand colors: asphalt header, orange accents, orange today border
+  - Integrated time picker (hours + 15min intervals) with Valider button
+  - Past dates disabled, human-readable format: "mercredi 11 mars 2026 à 14:30"
+  - Available in both create and edit event forms
+
 ### v2.4 (March 11, 2026)
 - Renamed SportsConnect → SportLyo everywhere (navbar, footer, backend, dashboard, exports)
 - Created Coming Soon page (landing publique) blocking access to the real site
