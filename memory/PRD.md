@@ -180,6 +180,18 @@ ADMIN
 
 ## Changelog
 
+### v2.2 (March 11, 2026)
+- Changed commission model: 5% service fee ADDED on top of base price (not deducted)
+  - Participant pays: base_price + 5% service fee
+  - Organizer receives: 100% of base price
+  - Platform net: service_fee - Stripe fees (1.4% + 0.25€)
+- Admin back office: "BILAN FINANCIER AUTOMATIQUE" + "TABLEAU DE VENTILATION DES PAIEMENTS"
+  - Summary: Total encaissé, Organisateurs, Commission 5%, Frais Stripe, Net plateforme
+  - Detail table: Participant, Événement, Course, Prix base, Frais service, Total payé, Frais Stripe, Organisateur, Net plateforme, Statut, Date
+  - Footer with auto-calculated totals
+- Full E2E payment test passed: Sophie Test → 20km/35€ → 36.75€ total → Stripe → Payé ✅
+- Backend and frontend tests: 100% pass rate (iteration 5)
+
 ### v2.1 (March 11, 2026)
 - Finalized event editing with multi-race/distance pricing management
 - Verified and validated Stripe payment flow end-to-end (registration → checkout → Stripe redirect → confirmation)
