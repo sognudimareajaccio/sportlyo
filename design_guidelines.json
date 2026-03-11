@@ -1,0 +1,169 @@
+{
+  "identity": {
+    "name": "SportsConnect",
+    "persona": "The Performance Pro",
+    "vibes": ["Endurance", "Precision", "Community", "Nature"],
+    "voice": "Motivating, clear, professional, direct.",
+    "emoji_style": "Minimalist, flat"
+  },
+  "typography": {
+    "font_family_heading": "Barlow Condensed",
+    "font_family_body": "Manrope",
+    "google_fonts_url": "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;800&family=Manrope:wght@300;400;500;700&display=swap",
+    "scale": {
+      "h1": "text-5xl md:text-7xl font-extrabold tracking-tight uppercase italic",
+      "h2": "text-4xl md:text-5xl font-bold tracking-tight uppercase",
+      "h3": "text-2xl md:text-3xl font-semibold tracking-normal",
+      "body": "text-base md:text-lg leading-relaxed text-slate-600 dark:text-slate-300",
+      "caption": "text-xs font-mono uppercase tracking-widest text-slate-500"
+    }
+  },
+  "colors": {
+    "palette": {
+      "primary": "#FF4500", 
+      "primary_foreground": "#FFFFFF",
+      "secondary": "#0F172A", 
+      "secondary_foreground": "#F8FAFC",
+      "accent": "#FACC15", 
+      "background": "#F8FAFC", 
+      "surface": "#FFFFFF", 
+      "success": "#22C55E",
+      "warning": "#F59E0B",
+      "error": "#EF4444"
+    },
+    "tailwind_config": {
+      "colors": {
+        "brand": {
+          "DEFAULT": "#FF4500",
+          "50": "#FFF7ED",
+          "100": "#FFEDD5",
+          "200": "#FED7AA",
+          "300": "#FDBA74",
+          "400": "#FB923C",
+          "500": "#F97316",
+          "600": "#EA580C",
+          "700": "#C2410C",
+          "800": "#9A3412",
+          "900": "#7C2D12"
+        },
+        "asphalt": {
+          "DEFAULT": "#0F172A",
+          "light": "#1E293B",
+          "dark": "#020617"
+        }
+      }
+    }
+  },
+  "layout_strategy": {
+    "container_padding": "px-6 md:px-12 lg:px-24",
+    "section_spacing": "py-24 md:py-32",
+    "grid_system": "Bento Grid Mode A (Tetris)",
+    "border_radius": "rounded-sm", 
+    "shadows": "shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]", 
+    "glassmorphism": "backdrop-blur-md bg-white/80 border border-white/20"
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-brand text-white font-bold uppercase tracking-wider px-8 py-4 hover:bg-brand-600 transition-all shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none",
+      "secondary": "bg-transparent border-2 border-asphalt text-asphalt font-bold uppercase tracking-wider px-8 py-4 hover:bg-asphalt hover:text-white transition-all",
+      "ghost": "text-asphalt hover:bg-slate-100 font-semibold uppercase tracking-wide px-6 py-3"
+    },
+    "cards": {
+      "event_card": "group relative overflow-hidden bg-white border border-slate-200 hover:border-brand transition-colors duration-300 flex flex-col h-full",
+      "organizer_card": "bg-asphalt text-white p-8 border-l-4 border-brand",
+      "feature_card": "p-8 bg-slate-50 border border-slate-200 hover:shadow-lg transition-all"
+    },
+    "navigation": {
+      "style": "sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60",
+      "link_style": "text-sm font-medium uppercase tracking-widest hover:text-brand transition-colors"
+    },
+    "hero": {
+      "style": "relative h-[80vh] w-full flex items-center justify-center overflow-hidden bg-asphalt",
+      "overlay": "absolute inset-0 bg-gradient-to-t from-asphalt/90 via-asphalt/50 to-transparent z-10"
+    }
+  },
+  "visual_enhancers": {
+    "textures": "Use subtle noise overlays on dark sections to prevent banding.",
+    "gradients": "No full gradients. Use gradients only for text-clip effects or subtle glows behind objects.",
+    "motion": "Use 'framer-motion'. Standard transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] }.",
+    "maps": "Use 'react-leaflet' with custom minimal tiles (e.g., CartoDB Positron) to match the clean aesthetic."
+  },
+  "image_assets": {
+    "hero_backgrounds": [
+      {
+        "url": "https://images.unsplash.com/photo-1766970096430-204f27f6e247?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Marathon runners in motion",
+        "category": "running"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1753516264455-f7678cb97b7a?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Cyclists racing",
+        "category": "cycling"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1747072860311-41889d65570c?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Scenic trail run",
+        "category": "trail"
+      }
+    ],
+    "category_thumbnails": [
+      {
+        "url": "https://images.unsplash.com/photo-1753800487227-ea7582de9a9d?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Running category",
+        "category": "running"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1758300620054-f42cf6e5458f?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Cycling category",
+        "category": "cycling"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1633114069176-8632494e6f4f?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Triathlon start",
+        "category": "triathlon"
+      }
+    ]
+  },
+  "universal_guidelines": {
+    "do_not_use": [
+      "Standard Bootstrap Grids",
+      "Generic 'Inter' font for headings",
+      "Pure black (#000000)",
+      "Rounded-full buttons (unless icon only)",
+      "Placeholder text 'Lorem Ipsum' (Use real sports copy)"
+    ],
+    "must_do": [
+      "Use 'Barlow Condensed' for all numeric data (prices, distances, dates).",
+      "Ensure all maps have a 'View Route' full-screen option.",
+      "Show elevation gain prominently for trail/cycling events.",
+      "Use 'data-testid' on all interactive elements."
+    ]
+  },
+  "ai_features": {
+    "chatbot": {
+      "name": "Coach AI",
+      "style": "Floating Action Button (bottom-right), expands to a glassmorphism panel.",
+      "avatar": "Minimalist geometric icon or branded mascot."
+    },
+    "recommendations": {
+      "style": "Carousel of 'Top Picks for You' based on user history."
+    }
+  },
+  "libraries": {
+    "maps": "react-leaflet",
+    "charts": "recharts",
+    "motion": "framer-motion",
+    "icons": "lucide-react",
+    "date": "date-fns",
+    "ui": "shadcn/ui"
+  },
+  "instructions_to_main_agent": [
+    "Install 'Barlow Condensed' via Google Fonts in index.css.",
+    "Set up Tailwind colors with the 'brand' and 'asphalt' palette defined above.",
+    "Create a 'Layout' component that handles the Navbar and Footer globally.",
+    "Implement the 'EventCard' component using the 'Bento' grid logic.",
+    "Ensure the 'Organizer Dashboard' uses a sidebar layout with a darker theme option.",
+    "For the 'Checkout' flow, use a multi-step form wizard (Step 1: Details, Step 2: Options, Step 3: Payment).",
+    "Use 'recharts' for the Elevation Profile component on Event Details pages."
+  ]
+}
