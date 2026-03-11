@@ -79,7 +79,7 @@ ADMIN
 
 ---
 
-## What's Been Implemented (March 2026)
+## What's Been Implemented
 
 ### Phase 1 - MVP ✅
 - [x] Landing page avec hero dynamique, catégories, événements
@@ -121,6 +121,15 @@ ADMIN
   - Billet digital avec QR code
   - Check-in par scan
 
+### Phase 2.1 - Modification d'événements ✅ (March 11, 2026)
+- [x] **Modification d'événements par l'organisateur:**
+  - Modale d'édition complète avec tous les champs
+  - Gestion multi-épreuves/distances avec tarifs différenciés
+  - Ajout/modification/suppression d'épreuves
+  - Upload/modification d'image dans l'éditeur
+  - Tests backend 16/16 passés (pytest)
+  - Tests frontend 100% passés
+
 ---
 
 ## Test Credentials
@@ -129,6 +138,7 @@ ADMIN
 |------|-------|----------|
 | Admin | admin@sportsconnect.fr | admin123 |
 | Organizer | club@paris-sport.fr | club123 |
+| Participant | pierre@test.com | test1234 |
 
 ---
 
@@ -169,6 +179,12 @@ ADMIN
 ---
 
 ## Changelog
+
+### v2.1 (March 11, 2026)
+- Finalized event editing with multi-race/distance pricing management
+- Added data-testid attributes for edit buttons
+- Added DialogDescription for accessibility compliance
+- Backend and frontend tests: 100% pass rate
 
 ### v2.0 (March 2026)
 - Added advanced registration system

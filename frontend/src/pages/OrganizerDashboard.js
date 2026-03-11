@@ -9,7 +9,7 @@ import {
   Upload, Image, X, Loader2
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
@@ -444,6 +444,7 @@ const OrganizerDashboard = () => {
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="font-heading text-xl uppercase">Créer un événement</DialogTitle>
+                  <DialogDescription className="sr-only">Formulaire de création d'événement</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 pt-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -691,6 +692,7 @@ const OrganizerDashboard = () => {
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="font-heading text-xl uppercase">Modifier l'événement</DialogTitle>
+                  <DialogDescription className="sr-only">Formulaire de modification d'événement</DialogDescription>
                 </DialogHeader>
                 {editingEvent && (
                   <div className="space-y-4 pt-4">
@@ -975,6 +977,7 @@ const OrganizerDashboard = () => {
                               size="sm"
                               onClick={() => openEditDialog(event)}
                               title="Modifier"
+                              data-testid={`edit-event-${event.event_id}`}
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
