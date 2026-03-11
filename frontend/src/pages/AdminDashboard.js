@@ -310,8 +310,8 @@ const AdminDashboard = () => {
                       <td className="p-4 text-brand font-medium">{p.platform_fee}€</td>
                       <td className="p-4">{p.organizer_amount}€</td>
                       <td className="p-4">
-                        <span className={`badge ${p.status === 'completed' ? 'badge-success' : 'badge-warning'}`}>
-                          {p.status === 'completed' ? 'Complété' : 'En attente'}
+                        <span className={`badge ${p.payment_status === 'completed' ? 'badge-success' : 'badge-warning'}`}>
+                          {p.payment_status === 'completed' ? 'Complété' : 'En attente'}
                         </span>
                       </td>
                       <td className="p-4 text-sm text-slate-500">
