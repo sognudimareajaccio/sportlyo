@@ -124,12 +124,26 @@ const Footer = () => {
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-slate-800">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <p className="text-slate-500 text-sm">
-              © 2026 SportsConnect. Tous droits réservés.
-            </p>
+            <div className="flex items-center space-x-4">
+              <p className="text-slate-500 text-sm">
+                © 2026 SportsConnect. Tous droits réservés.
+              </p>
+              {/* Discreet admin access - small gear icon */}
+              <Link 
+                to="/admin" 
+                className="text-slate-600 hover:text-brand transition-colors opacity-40 hover:opacity-100"
+                title="Administration"
+                data-testid="admin-link"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </Link>
+            </div>
             <div className="flex items-center space-x-6 text-sm">
               <span className="text-slate-500">Paiement sécurisé par</span>
-              <span className="font-heading font-bold text-brand">SQUARE</span>
+              <span className="font-heading font-bold text-brand">STRIPE</span>
             </div>
           </div>
         </div>
