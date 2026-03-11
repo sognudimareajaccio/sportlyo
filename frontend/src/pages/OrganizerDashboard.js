@@ -99,10 +99,19 @@ const OrganizerDashboard = () => {
 
     setCreating(true);
     try {
+      let eventDate;
+      try {
+        eventDate = new Date(newEvent.date).toISOString();
+      } catch {
+        toast.error('Date invalide, veuillez la resélectionner');
+        setCreating(false);
+        return;
+      }
+
       const eventData = {
         ...newEvent,
-        date: new Date(newEvent.date).toISOString(),
-        distances: newEvent.distances.split(',').map(d => d.trim()).filter(Boolean),
+        date: eventDate,
+        distances: (newEvent.distances || '').split(',').map(d => d.trim()).filter(Boolean),
         elevation_gain: newEvent.elevation_gain ? parseInt(newEvent.elevation_gain) : null,
         min_age: newEvent.min_age ? parseInt(newEvent.min_age) : null,
         max_age: newEvent.max_age ? parseInt(newEvent.max_age) : null
@@ -121,6 +130,7 @@ const OrganizerDashboard = () => {
       setImagePreview(null);
       fetchEvents();
     } catch (error) {
+      console.error('Create event error:', error);
       toast.error(error.response?.data?.detail || 'Erreur lors de la création');
     } finally {
       setCreating(false);

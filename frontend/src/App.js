@@ -23,6 +23,7 @@ import PaymentCancelPage from "./pages/PaymentCancelPage";
 import TimerPage from "./pages/TimerPage";
 import ResultsPage from "./pages/ResultsPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -144,22 +145,24 @@ function App() {
 
   if (!hasAccess) {
     return (
-      <>
+      <ErrorBoundary>
         <ComingSoonPage onAccessGranted={() => setHasAccess(true)} />
         <Toaster position="top-right" richColors />
-      </>
+      </ErrorBoundary>
     );
   }
 
   return (
-    <AuthProvider>
-      <div className="App">
-        <BrowserRouter>
-          <AppRouter />
-        </BrowserRouter>
-        <Toaster position="top-right" richColors />
-      </div>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <div className="App">
+          <BrowserRouter>
+            <AppRouter />
+          </BrowserRouter>
+          <Toaster position="top-right" richColors />
+        </div>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
