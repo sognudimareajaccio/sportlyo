@@ -4,13 +4,14 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   Users, Calendar, Euro, TrendingUp, BarChart3,
-  Settings, Search, ChevronLeft, ChevronRight
+  Settings, Search, ChevronLeft, ChevronRight, Download, FileText
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useAuth } from '../context/AuthContext';
 import { adminApi } from '../services/api';
+import api from '../services/api';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -26,6 +27,8 @@ const AdminDashboard = () => {
   const [userPage, setUserPage] = useState(1);
   const [totalUserPages, setTotalUserPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [exportStartDate, setExportStartDate] = useState('');
+  const [exportEndDate, setExportEndDate] = useState('');
 
   useEffect(() => {
     if (user?.role !== 'admin') {
@@ -74,6 +77,33 @@ const AdminDashboard = () => {
       fetchUsers(userPage);
     } catch (error) {
       toast.error('Erreur lors de la mise à jour');
+    }
+  };
+
+  const handleExport = async (format) => {
+    try {
+      const params = new URLSearchParams({ format });
+      if (exportStartDate) params.append('start_date', exportStartDate);
+      if (exportEndDate) params.append('end_date', exportEndDate);
+      
+      const res = await api.get(`/admin/payments/export?${params.toString()}`, {
+        responseType: 'blob'
+      });
+      
+      const ext = format === 'pdf' ? 'pdf' : 'csv';
+      const mimeType = format === 'pdf' ? 'application/pdf' : 'text/csv';
+      const blob = new Blob([res.data], { type: mimeType });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bilan_financier_${new Date().toISOString().slice(0,10)}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(`Export ${format.toUpperCase()} téléchargé`);
+    } catch (error) {
+      toast.error('Erreur lors de l\'export');
     }
   };
 
@@ -299,6 +329,46 @@ const AdminDashboard = () => {
 
         {activeTab === 'payments' && (
           <div className="space-y-6">
+            {/* Export Controls */}
+            <div className="bg-white border border-slate-200 p-4" data-testid="export-controls">
+              <div className="flex flex-wrap items-end gap-4">
+                <div>
+                  <label className="block text-xs font-heading uppercase text-slate-500 mb-1">Date début</label>
+                  <Input
+                    type="date"
+                    value={exportStartDate}
+                    onChange={(e) => setExportStartDate(e.target.value)}
+                    className="w-44"
+                    data-testid="export-start-date"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-heading uppercase text-slate-500 mb-1">Date fin</label>
+                  <Input
+                    type="date"
+                    value={exportEndDate}
+                    onChange={(e) => setExportEndDate(e.target.value)}
+                    className="w-44"
+                    data-testid="export-end-date"
+                  />
+                </div>
+                <Button
+                  onClick={() => handleExport('csv')}
+                  variant="outline"
+                  className="gap-2"
+                  data-testid="export-csv-btn"
+                >
+                  <Download className="w-4 h-4" /> Export CSV
+                </Button>
+                <Button
+                  onClick={() => handleExport('pdf')}
+                  className="gap-2 bg-brand hover:bg-brand/90 text-white"
+                  data-testid="export-pdf-btn"
+                >
+                  <FileText className="w-4 h-4" /> Export PDF
+                </Button>
+              </div>
+            </div>
             {/* Financial Summary Cards */}
             {paymentTotals && paymentTotals.total_completed > 0 && (
               <div className="bg-asphalt text-white p-6 border-l-4 border-brand" data-testid="financial-summary">

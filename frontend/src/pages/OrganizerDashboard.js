@@ -6,7 +6,7 @@ import { fr } from 'date-fns/locale';
 import {
   Plus, Calendar, Users, Euro, TrendingUp, Settings,
   Eye, Edit, Trash2, BarChart3, ChevronRight, Building2, QrCode, Scan,
-  Upload, Image, X, Loader2
+  Upload, Image, X, Loader2, Download, FileText
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '../components/ui/dialog';
@@ -920,6 +920,70 @@ const OrganizerDashboard = () => {
               <p className="text-sm text-slate-500">{stat.label}</p>
             </motion.div>
           ))}
+        </div>
+
+        {/* Export Section */}
+        <div className="bg-white border border-slate-200 p-4 mb-6" data-testid="organizer-export">
+          <div className="flex flex-wrap items-end gap-4">
+            <div>
+              <label className="block text-xs font-heading uppercase text-slate-500 mb-1">Relevé de paiements</label>
+              <p className="text-sm text-slate-600">Téléchargez votre relevé financier</p>
+            </div>
+            <div className="flex-1" />
+            <div>
+              <label className="block text-xs font-heading uppercase text-slate-500 mb-1">Du</label>
+              <Input type="date" id="org-start-date" className="w-40" data-testid="org-export-start" />
+            </div>
+            <div>
+              <label className="block text-xs font-heading uppercase text-slate-500 mb-1">Au</label>
+              <Input type="date" id="org-end-date" className="w-40" data-testid="org-export-end" />
+            </div>
+            <Button
+              variant="outline"
+              className="gap-2"
+              data-testid="org-export-csv-btn"
+              onClick={async () => {
+                try {
+                  const start = document.getElementById('org-start-date').value;
+                  const end = document.getElementById('org-end-date').value;
+                  const params = new URLSearchParams({ format: 'csv' });
+                  if (start) params.append('start_date', start);
+                  if (end) params.append('end_date', end);
+                  const res = await api.get(`/organizer/payments/export?${params}`, { responseType: 'blob' });
+                  const blob = new Blob([res.data], { type: 'text/csv' });
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a'); a.href = url;
+                  a.download = `releve_${new Date().toISOString().slice(0,10)}.csv`;
+                  document.body.appendChild(a); a.click(); a.remove();
+                  toast.success('CSV téléchargé');
+                } catch { toast.error('Aucun paiement à exporter'); }
+              }}
+            >
+              <Download className="w-4 h-4" /> CSV
+            </Button>
+            <Button
+              className="gap-2 bg-brand hover:bg-brand/90 text-white"
+              data-testid="org-export-pdf-btn"
+              onClick={async () => {
+                try {
+                  const start = document.getElementById('org-start-date').value;
+                  const end = document.getElementById('org-end-date').value;
+                  const params = new URLSearchParams({ format: 'pdf' });
+                  if (start) params.append('start_date', start);
+                  if (end) params.append('end_date', end);
+                  const res = await api.get(`/organizer/payments/export?${params}`, { responseType: 'blob' });
+                  const blob = new Blob([res.data], { type: 'application/pdf' });
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a'); a.href = url;
+                  a.download = `releve_${new Date().toISOString().slice(0,10)}.pdf`;
+                  document.body.appendChild(a); a.click(); a.remove();
+                  toast.success('PDF téléchargé');
+                } catch { toast.error('Aucun paiement à exporter'); }
+              }}
+            >
+              <FileText className="w-4 h-4" /> PDF
+            </Button>
+          </div>
         </div>
 
         {/* Events List */}

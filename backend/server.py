@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Query, Request, UploadFile, File, Form
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -20,6 +20,7 @@ import qrcode
 from io import BytesIO
 import httpx
 import shutil
+import csv
 
 ROOT_DIR = Path(__file__).parent
 UPLOAD_DIR = ROOT_DIR / "uploads"
@@ -1939,6 +1940,284 @@ async def get_all_payments(
         "page": page,
         "pages": (total + limit - 1) // limit
     }
+
+# ============== EXPORT ENDPOINTS ==============
+
+async def _get_completed_payments(start_date: str = None, end_date: str = None, event_ids: list = None):
+    """Fetch completed payments with optional filters, enriched with user/event data."""
+    query = {"payment_status": "completed"}
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+    if end_date:
+        query.setdefault("created_at", {})["$lte"] = end_date + "T23:59:59"
+    if event_ids:
+        query["event_id"] = {"$in": event_ids}
+    
+    payments = await db.payment_transactions.find(query, {"_id": 0}).sort("created_at", -1).to_list(10000)
+    
+    for p in payments:
+        reg = await db.registrations.find_one({"registration_id": p.get("registration_id")}, {"_id": 0})
+        if reg:
+            p["user_name"] = reg.get("user_name", "")
+            p["user_email"] = reg.get("user_email", "")
+            p["selected_race"] = reg.get("selected_race", "")
+        event = await db.events.find_one({"event_id": p.get("event_id")}, {"_id": 0, "title": 1, "organizer_name": 1, "organizer_id": 1})
+        if event:
+            p["event_title"] = event.get("title", "")
+            p["organizer_name"] = event.get("organizer_name", "")
+            p["organizer_id"] = event.get("organizer_id", "")
+    
+    return payments
+
+def _generate_csv(payments, title):
+    """Generate CSV content from payments data."""
+    output = BytesIO()
+    import io
+    text_output = io.StringIO()
+    writer = csv.writer(text_output, delimiter=';')
+    
+    writer.writerow([title])
+    writer.writerow([f"Généré le {datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M')} UTC"])
+    writer.writerow([])
+    writer.writerow([
+        "Participant", "Email", "Événement", "Course",
+        "Prix base (€)", "Frais service 5% (€)", "Total payé (€)",
+        "Frais Stripe (€)", "Organisateur (€)", "Net plateforme (€)",
+        "Statut", "Date"
+    ])
+    
+    total_base = total_fee = total_paid = total_stripe = total_org = total_net = 0
+    
+    for p in payments:
+        base = p.get('base_price', p.get('organizer_amount', 0))
+        fee = p.get('service_fee', 0)
+        paid = p.get('amount', 0)
+        stripe = p.get('stripe_fee', 0)
+        org = p.get('organizer_amount', base)
+        net = p.get('platform_net', 0)
+        
+        total_base += base
+        total_fee += fee
+        total_paid += paid
+        total_stripe += stripe
+        total_org += org
+        total_net += net
+        
+        date_str = ""
+        if p.get("created_at"):
+            try:
+                dt = datetime.fromisoformat(p["created_at"].replace("Z", "+00:00"))
+                date_str = dt.strftime("%d/%m/%Y %H:%M")
+            except:
+                date_str = p["created_at"][:16]
+        
+        writer.writerow([
+            p.get("user_name", ""), p.get("user_email", ""),
+            p.get("event_title", ""), p.get("selected_race", "—"),
+            f"{base:.2f}", f"{fee:.2f}", f"{paid:.2f}",
+            f"{stripe:.2f}", f"{org:.2f}", f"{net:.2f}",
+            "Payé", date_str
+        ])
+    
+    writer.writerow([])
+    writer.writerow([
+        "TOTAL", "", "", "",
+        f"{total_base:.2f}", f"{total_fee:.2f}", f"{total_paid:.2f}",
+        f"{total_stripe:.2f}", f"{total_org:.2f}", f"{total_net:.2f}",
+        f"{len(payments)} paiement(s)", ""
+    ])
+    
+    output.write(text_output.getvalue().encode('utf-8-sig'))
+    output.seek(0)
+    return output
+
+def _generate_pdf(payments, title, subtitle=""):
+    """Generate PDF content from payments data."""
+    from fpdf import FPDF
+    
+    class PDF(FPDF):
+        def header(self):
+            self.set_font('Helvetica', 'B', 14)
+            self.cell(0, 8, title, new_x="LMARGIN", new_y="NEXT", align='C')
+            if subtitle:
+                self.set_font('Helvetica', '', 9)
+                self.cell(0, 5, subtitle, new_x="LMARGIN", new_y="NEXT", align='C')
+            self.set_font('Helvetica', '', 8)
+            self.cell(0, 5, f"Genere le {datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M')} UTC", new_x="LMARGIN", new_y="NEXT", align='C')
+            self.ln(4)
+        
+        def footer(self):
+            self.set_y(-15)
+            self.set_font('Helvetica', 'I', 8)
+            self.cell(0, 10, f'Page {self.page_no()}/{{nb}}', align='C')
+    
+    pdf = PDF(orientation='L', format='A4')
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.alias_nb_pages()
+    pdf.add_page()
+    
+    # Column widths for landscape A4
+    cols = [35, 45, 20, 22, 22, 22, 22, 22, 22, 18, 27]
+    headers = ["Participant", "Evenement", "Course", "Prix base", "Frais 5%", "Total paye", "Frais Stripe", "Organisateur", "Net platef.", "Statut", "Date"]
+    
+    # Header row
+    pdf.set_font('Helvetica', 'B', 7)
+    pdf.set_fill_color(44, 52, 64)
+    pdf.set_text_color(255, 255, 255)
+    for i, h in enumerate(headers):
+        pdf.cell(cols[i], 7, h, border=1, fill=True, align='C')
+    pdf.ln()
+    
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('Helvetica', '', 7)
+    
+    total_base = total_fee = total_paid = total_stripe = total_org = total_net = 0
+    
+    for idx, p in enumerate(payments):
+        base = p.get('base_price', p.get('organizer_amount', 0))
+        fee = p.get('service_fee', 0)
+        paid = p.get('amount', 0)
+        stripe = p.get('stripe_fee', 0)
+        org = p.get('organizer_amount', base)
+        net = p.get('platform_net', 0)
+        
+        total_base += base
+        total_fee += fee
+        total_paid += paid
+        total_stripe += stripe
+        total_org += org
+        total_net += net
+        
+        date_str = ""
+        if p.get("created_at"):
+            try:
+                dt = datetime.fromisoformat(p["created_at"].replace("Z", "+00:00"))
+                date_str = dt.strftime("%d/%m/%Y")
+            except:
+                date_str = ""
+        
+        bg = idx % 2 == 0
+        if bg:
+            pdf.set_fill_color(245, 245, 245)
+        
+        name = (p.get("user_name", "") or "")[:18]
+        event_title = (p.get("event_title", "") or "")[:22]
+        race = (p.get("selected_race", "") or "-")[:12]
+        
+        pdf.cell(cols[0], 6, name, border=1, fill=bg)
+        pdf.cell(cols[1], 6, event_title, border=1, fill=bg)
+        pdf.cell(cols[2], 6, race, border=1, fill=bg, align='C')
+        pdf.cell(cols[3], 6, f"{base:.2f}", border=1, fill=bg, align='R')
+        pdf.cell(cols[4], 6, f"+{fee:.2f}", border=1, fill=bg, align='R')
+        pdf.cell(cols[5], 6, f"{paid:.2f}", border=1, fill=bg, align='R')
+        pdf.cell(cols[6], 6, f"-{stripe:.2f}", border=1, fill=bg, align='R')
+        pdf.cell(cols[7], 6, f"{org:.2f}", border=1, fill=bg, align='R')
+        pdf.cell(cols[8], 6, f"{net:.2f}", border=1, fill=bg, align='R')
+        pdf.cell(cols[9], 6, "Paye", border=1, fill=bg, align='C')
+        pdf.cell(cols[10], 6, date_str, border=1, fill=bg, align='C')
+        pdf.ln()
+    
+    # Total row
+    pdf.set_font('Helvetica', 'B', 7)
+    pdf.set_fill_color(44, 52, 64)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(cols[0] + cols[1] + cols[2], 7, f"TOTAL ({len(payments)} paiements)", border=1, fill=True)
+    pdf.cell(cols[3], 7, f"{total_base:.2f}", border=1, fill=True, align='R')
+    pdf.cell(cols[4], 7, f"+{total_fee:.2f}", border=1, fill=True, align='R')
+    pdf.cell(cols[5], 7, f"{total_paid:.2f}", border=1, fill=True, align='R')
+    pdf.cell(cols[6], 7, f"-{total_stripe:.2f}", border=1, fill=True, align='R')
+    pdf.cell(cols[7], 7, f"{total_org:.2f}", border=1, fill=True, align='R')
+    pdf.cell(cols[8], 7, f"{total_net:.2f}", border=1, fill=True, align='R')
+    pdf.cell(cols[9] + cols[10], 7, "", border=1, fill=True)
+    pdf.ln()
+    
+    output = BytesIO()
+    output.write(pdf.output())
+    output.seek(0)
+    return output
+
+@api_router.get("/admin/payments/export")
+async def export_admin_payments(
+    format: str = Query("csv", regex="^(csv|pdf)$"),
+    start_date: str = Query(None),
+    end_date: str = Query(None),
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    payments = await _get_completed_payments(start_date, end_date)
+    
+    period = ""
+    if start_date and end_date:
+        period = f" du {start_date} au {end_date}"
+    elif start_date:
+        period = f" depuis {start_date}"
+    elif end_date:
+        period = f" jusqu'au {end_date}"
+    
+    title = f"SportsConnect - Bilan financier{period}"
+    filename = f"bilan_financier_{datetime.now().strftime('%Y%m%d')}"
+    
+    if format == "csv":
+        output = _generate_csv(payments, title)
+        return StreamingResponse(
+            output,
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}.csv"'}
+        )
+    else:
+        output = _generate_pdf(payments, title)
+        return StreamingResponse(
+            output,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}.pdf"'}
+        )
+
+@api_router.get("/organizer/payments/export")
+async def export_organizer_payments(
+    format: str = Query("csv", regex="^(csv|pdf)$"),
+    start_date: str = Query(None),
+    end_date: str = Query(None),
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organizer only")
+    
+    # Get organizer's events
+    org_events = await db.events.find(
+        {"organizer_id": current_user['user_id']}, {"_id": 0, "event_id": 1}
+    ).to_list(1000)
+    event_ids = [e['event_id'] for e in org_events]
+    
+    if not event_ids:
+        raise HTTPException(status_code=404, detail="Aucun événement trouvé")
+    
+    payments = await _get_completed_payments(start_date, end_date, event_ids)
+    
+    period = ""
+    if start_date and end_date:
+        period = f" du {start_date} au {end_date}"
+    
+    title = f"Releve de paiements - {current_user.get('name', 'Organisateur')}{period}"
+    filename = f"releve_organisateur_{datetime.now().strftime('%Y%m%d')}"
+    
+    if format == "csv":
+        output = _generate_csv(payments, title)
+        return StreamingResponse(
+            output,
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}.csv"'}
+        )
+    else:
+        output = _generate_pdf(payments, title, subtitle=f"Organisateur: {current_user.get('name', '')}")
+        return StreamingResponse(
+            output,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}.pdf"'}
+        )
+
+
 
 @api_router.get("/admin/refunds")
 async def get_refund_requests(current_user: dict = Depends(get_current_user)):
