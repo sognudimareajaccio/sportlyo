@@ -11,9 +11,9 @@ const Footer = () => {
           <div>
             <div className="flex items-center space-x-2 mb-6">
               <div className="w-10 h-10 bg-brand flex items-center justify-center">
-                <span className="text-white font-heading font-bold text-xl">SC</span>
+                <span className="text-white font-heading font-bold text-xl">SL</span>
               </div>
-              <span className="font-heading font-bold text-xl">SPORTSCONNECT</span>
+              <span className="font-heading font-bold text-xl">SPORTLYO</span>
             </div>
             <p className="text-slate-400 text-sm leading-relaxed mb-6">
               La plateforme de référence pour réserver vos événements sportifs. 
@@ -115,7 +115,7 @@ const Footer = () => {
               </li>
               <li className="flex items-center space-x-3">
                 <Mail className="w-5 h-5 text-brand flex-shrink-0" />
-                <span className="text-slate-400 text-sm">contact@sportsconnect.fr</span>
+                <span className="text-slate-400 text-sm">contact@sportlyo.com</span>
               </li>
             </ul>
           </div>
@@ -126,7 +126,7 @@ const Footer = () => {
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="flex items-center space-x-4">
               <p className="text-slate-500 text-sm">
-                © 2026 SportsConnect. Tous droits réservés.
+                © 2026 SportLyo. Tous droits réservés.
               </p>
               {/* Discreet admin access - small gear icon */}
               <Link 

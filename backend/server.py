@@ -49,7 +49,7 @@ PLATFORM_COMMISSION = 0.05  # 5% service fee added to participant
 STRIPE_PERCENT_FEE = 0.014  # 1.4%
 STRIPE_FIXED_FEE = 0.25     # 0.25€
 
-app = FastAPI(title="SportsConnect API")
+app = FastAPI(title="SportLyo API")
 api_router = APIRouter(prefix="/api")
 
 # Configure logging
@@ -1744,7 +1744,7 @@ async def chat_with_ai(chat_request: ChatRequest, current_user: dict = Depends(g
         events = await db.events.find({"status": "active"}, {"_id": 0}).limit(10).to_list(10)
         events_context = "\n".join([f"- {e['title']} ({e['sport_type']}) - {e['location']} - {e['date'][:10]} - {e.get('price', 0)}€" for e in events])
         
-        system_message = f"""Tu es Coach AI, l'assistant virtuel de SportsConnect, une plateforme de réservation d'événements sportifs.
+        system_message = f"""Tu es Coach AI, l'assistant virtuel de SportLyo, une plateforme de réservation d'événements sportifs.
 
 Tu aides les participants à:
 - Trouver des événements adaptés à leur niveau et préférences
@@ -2156,7 +2156,7 @@ async def export_admin_payments(
     elif end_date:
         period = f" jusqu'au {end_date}"
     
-    title = f"SportsConnect - Bilan financier{period}"
+    title = f"SportLyo - Bilan financier{period}"
     filename = f"bilan_financier_{datetime.now().strftime('%Y%m%d')}"
     
     if format == "csv":
@@ -2274,11 +2274,28 @@ async def get_categories():
 
 @api_router.get("/")
 async def root():
-    return {"message": "SportsConnect API", "status": "running", "version": "2.0"}
+    return {"message": "SportLyo API", "status": "running", "version": "2.0"}
 
 @api_router.get("/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+
+# ============== WAITLIST ==============
+
+@api_router.post("/waitlist-email")
+async def add_waitlist_email(data: dict):
+    email = data.get('email', '').strip()
+    if not email:
+        raise HTTPException(status_code=400, detail="Email requis")
+    existing = await db.waitlist.find_one({"email": email})
+    if not existing:
+        await db.waitlist.insert_one({
+            "email": email,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+    return {"message": "ok"}
+
 
 # ============== FILE UPLOAD ==============
 

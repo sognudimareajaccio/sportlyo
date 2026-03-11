@@ -130,7 +130,7 @@ const AdminDashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="font-heading text-2xl font-bold">Administration</h1>
-              <p className="text-slate-400">Gérez la plateforme SportsConnect</p>
+              <p className="text-slate-400">Gérez la plateforme SportLyo</p>
             </div>
             <div className="flex gap-2">
               {['overview', 'users', 'payments'].map(tab => (

@@ -54,10 +54,10 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2" data-testid="logo-link">
             <div className="w-10 h-10 bg-brand flex items-center justify-center">
-              <span className="text-white font-heading font-bold text-xl">SC</span>
+              <span className="text-white font-heading font-bold text-xl">SL</span>
             </div>
             <span className="font-heading font-bold text-xl text-asphalt hidden sm:block">
-              SPORTSCONNECT
+              SPORTLYO
             </span>
           </Link>
 

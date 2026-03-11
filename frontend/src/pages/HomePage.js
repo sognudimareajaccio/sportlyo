@@ -257,7 +257,7 @@ const HomePage = () => {
               Créez votre événement
             </h2>
             <p className="text-slate-400 text-lg mb-8 max-w-2xl mx-auto">
-              Rejoignez SportsConnect et gérez vos inscriptions en toute simplicité. 
+              Rejoignez SportLyo et gérez vos inscriptions en toute simplicité. 
               Paiement sécurisé, numéros de dossard automatiques et statistiques en temps réel.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

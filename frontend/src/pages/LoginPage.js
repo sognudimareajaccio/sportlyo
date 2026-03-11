@@ -181,7 +181,7 @@ const LoginPage = () => {
               Rejoignez la communauté
             </h2>
             <p className="text-slate-300 text-lg max-w-md">
-              Des milliers d'athlètes utilisent SportsConnect pour trouver leur prochain défi.
+              Des milliers d'athlètes utilisent SportLyo pour trouver leur prochain défi.
             </p>
           </div>
         </div>

@@ -94,7 +94,7 @@ const RegisterPage = () => {
               </div>
             </Link>
             <h1 className="font-heading text-3xl font-bold uppercase">Créer un compte</h1>
-            <p className="text-slate-500 mt-2">Rejoignez la communauté SportsConnect</p>
+            <p className="text-slate-500 mt-2">Rejoignez la communauté SportLyo</p>
           </div>
 
           {/* Google Login */}

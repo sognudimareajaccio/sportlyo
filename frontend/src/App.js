@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -22,6 +22,7 @@ import PaymentSuccessPage from "./pages/PaymentSuccessPage";
 import PaymentCancelPage from "./pages/PaymentCancelPage";
 import TimerPage from "./pages/TimerPage";
 import ResultsPage from "./pages/ResultsPage";
+import ComingSoonPage from "./pages/ComingSoonPage";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -130,6 +131,26 @@ const AppRouter = () => {
 };
 
 function App() {
+  const [hasAccess, setHasAccess] = useState(() => {
+    // Check localStorage or URL param
+    if (localStorage.getItem('sportlyo_preview') === 'true') return true;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('preview') === 'SPORTLYO2026') {
+      localStorage.setItem('sportlyo_preview', 'true');
+      return true;
+    }
+    return false;
+  });
+
+  if (!hasAccess) {
+    return (
+      <>
+        <ComingSoonPage onAccessGranted={() => setHasAccess(true)} />
+        <Toaster position="top-right" richColors />
+      </>
+    );
+  }
+
   return (
     <AuthProvider>
       <div className="App">
