@@ -180,6 +180,19 @@ ADMIN
 
 ## Changelog
 
+### v2.4 (March 11, 2026)
+- Renamed SportsConnect → SportLyo everywhere (navbar, footer, backend, dashboard, exports)
+- Created Coming Soon page (landing publique) blocking access to the real site
+  - Beautiful dark design with SportLyo branding, email signup, sport icons
+  - "Accès équipe" secret link with key form
+- Private access system: 3 methods
+  - URL parameter: ?preview=SPORTLYO2026
+  - Access key: SPORTLYO2026 via "Accès équipe" link
+  - Remembered in localStorage (persistent)
+- Waitlist email collection (POST /api/waitlist-email)
+- Updated HTML title to "SportLyo | Inscriptions sportives"
+- 100% test pass rate (iteration 7, 8/8 backend + 11/11 frontend)
+
 ### v2.3 (March 11, 2026)
 - Added CSV and PDF export for financial reports
   - Admin: "Export CSV" + "Export PDF" buttons with date range filter
