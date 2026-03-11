@@ -33,8 +33,11 @@ const OrganizerDashboard = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
 
   const [newEvent, setNewEvent] = useState({
     title: '',
@@ -51,7 +54,8 @@ const OrganizerDashboard = () => {
     requires_medical_cert: false,
     allows_teams: false,
     min_age: '',
-    max_age: ''
+    max_age: '',
+    races: []
   });
 
   const [upgradeData, setUpgradeData] = useState({
@@ -63,6 +67,7 @@ const OrganizerDashboard = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
+  const editFileInputRef = useRef(null);
 
   const isOrganizer = user?.role === 'organizer' || user?.role === 'admin';
 
@@ -109,7 +114,8 @@ const OrganizerDashboard = () => {
         title: '', description: '', sport_type: 'running', location: '',
         date: '', max_participants: 100, price: 25, distances: '',
         elevation_gain: '', image_url: '', requires_pps: false,
-        requires_medical_cert: false, allows_teams: false, min_age: '', max_age: ''
+        requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '',
+        races: []
       });
       setImagePreview(null);
       fetchEvents();
@@ -117,6 +123,146 @@ const OrganizerDashboard = () => {
       toast.error(error.response?.data?.detail || 'Erreur lors de la création');
     } finally {
       setCreating(false);
+    }
+  };
+
+  // Open edit dialog with event data
+  const openEditDialog = (event) => {
+    setEditingEvent(event);
+    setImagePreview(event.image_url || null);
+    setShowEditDialog(true);
+  };
+
+  // Handle edit event
+  const handleEditEvent = async () => {
+    if (!editingEvent.title || !editingEvent.location) {
+      toast.error('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    setEditing(true);
+    try {
+      const updateData = {
+        title: editingEvent.title,
+        description: editingEvent.description,
+        sport_type: editingEvent.sport_type,
+        location: editingEvent.location,
+        max_participants: editingEvent.max_participants,
+        price: editingEvent.price,
+        distances: editingEvent.distances,
+        elevation_gain: editingEvent.elevation_gain,
+        image_url: editingEvent.image_url,
+        requires_pps: editingEvent.requires_pps,
+        races: editingEvent.races || []
+      };
+
+      await eventsApi.update(editingEvent.event_id, updateData);
+      toast.success('Événement mis à jour !');
+      setShowEditDialog(false);
+      setEditingEvent(null);
+      setImagePreview(null);
+      fetchEvents();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de la mise à jour');
+    } finally {
+      setEditing(false);
+    }
+  };
+
+  // Add race to event
+  const addRace = (isEdit = false) => {
+    const newRace = {
+      name: '',
+      price: 25,
+      max_participants: 100,
+      distance_km: '',
+      elevation_gain: ''
+    };
+    
+    if (isEdit && editingEvent) {
+      setEditingEvent(prev => ({
+        ...prev,
+        races: [...(prev.races || []), newRace]
+      }));
+    } else {
+      setNewEvent(prev => ({
+        ...prev,
+        races: [...(prev.races || []), newRace]
+      }));
+    }
+  };
+
+  // Update race
+  const updateRace = (index, field, value, isEdit = false) => {
+    if (isEdit && editingEvent) {
+      setEditingEvent(prev => ({
+        ...prev,
+        races: prev.races.map((race, i) => 
+          i === index ? { ...race, [field]: value } : race
+        )
+      }));
+    } else {
+      setNewEvent(prev => ({
+        ...prev,
+        races: prev.races.map((race, i) => 
+          i === index ? { ...race, [field]: value } : race
+        )
+      }));
+    }
+  };
+
+  // Remove race
+  const removeRace = (index, isEdit = false) => {
+    if (isEdit && editingEvent) {
+      setEditingEvent(prev => ({
+        ...prev,
+        races: prev.races.filter((_, i) => i !== index)
+      }));
+    } else {
+      setNewEvent(prev => ({
+        ...prev,
+        races: prev.races.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
+  // Handle edit image upload
+  const handleEditImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Format non supporté');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image trop volumineuse (max 10MB)');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => setImagePreview(e.target.result);
+    reader.readAsDataURL(file);
+
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post('/upload/image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const imageUrl = `${process.env.REACT_APP_BACKEND_URL}${response.data.url}`;
+      setEditingEvent(prev => ({ ...prev, image_url: imageUrl }));
+      toast.success('Image uploadée !');
+    } catch (error) {
+      toast.error('Erreur lors de l\'upload');
+      setImagePreview(editingEvent?.image_url || null);
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -456,6 +602,77 @@ const OrganizerDashboard = () => {
                         data-testid="event-description-input"
                       />
                     </div>
+
+                    {/* Races / Distances with prices */}
+                    <div className="col-span-2 border-t pt-4 mt-2">
+                      <div className="flex items-center justify-between mb-3">
+                        <Label className="text-base font-bold">Épreuves / Distances avec tarifs</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addRace(false)}
+                        >
+                          <Plus className="w-4 h-4 mr-1" /> Ajouter épreuve
+                        </Button>
+                      </div>
+                      
+                      {newEvent.races && newEvent.races.length > 0 ? (
+                        <div className="space-y-3">
+                          {newEvent.races.map((race, index) => (
+                            <div key={index} className="flex gap-2 items-start p-3 bg-slate-50 rounded">
+                              <div className="flex-1">
+                                <Input
+                                  placeholder="Nom (ex: 10km, Marathon)"
+                                  value={race.name}
+                                  onChange={(e) => updateRace(index, 'name', e.target.value, false)}
+                                  className="mb-2"
+                                />
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div>
+                                    <Label className="text-xs">Prix (€)</Label>
+                                    <Input
+                                      type="number"
+                                      value={race.price}
+                                      onChange={(e) => updateRace(index, 'price', parseFloat(e.target.value), false)}
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label className="text-xs">Places max</Label>
+                                    <Input
+                                      type="number"
+                                      value={race.max_participants}
+                                      onChange={(e) => updateRace(index, 'max_participants', parseInt(e.target.value), false)}
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label className="text-xs">Distance (km)</Label>
+                                    <Input
+                                      type="number"
+                                      value={race.distance_km}
+                                      onChange={(e) => updateRace(index, 'distance_km', e.target.value, false)}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeRace(index, false)}
+                                className="text-red-500"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-slate-500 text-center py-4 bg-slate-50 rounded">
+                          Aucune épreuve ajoutée. Cliquez sur "Ajouter épreuve" pour définir des tarifs par distance.
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <Button
                     onClick={handleCreateEvent}
@@ -466,6 +683,215 @@ const OrganizerDashboard = () => {
                     {creating ? 'Création...' : 'Créer l\'événement'}
                   </Button>
                 </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* EDIT EVENT DIALOG */}
+            <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="font-heading text-xl uppercase">Modifier l'événement</DialogTitle>
+                </DialogHeader>
+                {editingEvent && (
+                  <div className="space-y-4 pt-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="col-span-2">
+                        <Label>Titre *</Label>
+                        <Input
+                          value={editingEvent.title}
+                          onChange={(e) => setEditingEvent(prev => ({ ...prev, title: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Type de sport</Label>
+                        <Select
+                          value={editingEvent.sport_type}
+                          onValueChange={(value) => setEditingEvent(prev => ({ ...prev, sport_type: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {sportOptions.map(opt => (
+                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Participants max</Label>
+                        <Input
+                          type="number"
+                          value={editingEvent.max_participants}
+                          onChange={(e) => setEditingEvent(prev => ({ ...prev, max_participants: parseInt(e.target.value) }))}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Label>Lieu</Label>
+                        <Input
+                          value={editingEvent.location}
+                          onChange={(e) => setEditingEvent(prev => ({ ...prev, location: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Prix de base (€)</Label>
+                        <Input
+                          type="number"
+                          value={editingEvent.price}
+                          onChange={(e) => setEditingEvent(prev => ({ ...prev, price: parseFloat(e.target.value) }))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Dénivelé (m)</Label>
+                        <Input
+                          type="number"
+                          value={editingEvent.elevation_gain || ''}
+                          onChange={(e) => setEditingEvent(prev => ({ ...prev, elevation_gain: e.target.value ? parseInt(e.target.value) : null }))}
+                        />
+                      </div>
+                      
+                      {/* Image Upload for Edit */}
+                      <div className="col-span-2">
+                        <Label>Image</Label>
+                        <div className="mt-2">
+                          {(imagePreview || editingEvent.image_url) && (
+                            <div className="relative mb-3 inline-block">
+                              <img 
+                                src={imagePreview || editingEvent.image_url} 
+                                alt="Preview" 
+                                className="h-32 w-auto object-cover rounded border"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setImagePreview(null);
+                                  setEditingEvent(prev => ({ ...prev, image_url: '' }));
+                                }}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            <input
+                              ref={editFileInputRef}
+                              type="file"
+                              accept="image/jpeg,image/png,image/gif,image/webp"
+                              onChange={handleEditImageUpload}
+                              className="hidden"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => editFileInputRef.current?.click()}
+                              disabled={uploadingImage}
+                            >
+                              {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}
+                              Upload
+                            </Button>
+                            <Input
+                              placeholder="URL de l'image"
+                              value={editingEvent.image_url || ''}
+                              onChange={(e) => {
+                                setEditingEvent(prev => ({ ...prev, image_url: e.target.value }));
+                                setImagePreview(null);
+                              }}
+                              className="flex-1"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="col-span-2">
+                        <Label>Description</Label>
+                        <Textarea
+                          rows={3}
+                          value={editingEvent.description}
+                          onChange={(e) => setEditingEvent(prev => ({ ...prev, description: e.target.value }))}
+                        />
+                      </div>
+
+                      {/* Races / Distances with prices for Edit */}
+                      <div className="col-span-2 border-t pt-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <Label className="text-base font-bold">Épreuves / Distances avec tarifs</Label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => addRace(true)}
+                          >
+                            <Plus className="w-4 h-4 mr-1" /> Ajouter
+                          </Button>
+                        </div>
+                        
+                        {editingEvent.races && editingEvent.races.length > 0 ? (
+                          <div className="space-y-3">
+                            {editingEvent.races.map((race, index) => (
+                              <div key={index} className="flex gap-2 items-start p-3 bg-slate-50 rounded">
+                                <div className="flex-1">
+                                  <Input
+                                    placeholder="Nom (ex: 10km)"
+                                    value={race.name}
+                                    onChange={(e) => updateRace(index, 'name', e.target.value, true)}
+                                    className="mb-2"
+                                  />
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                      <Label className="text-xs">Prix (€)</Label>
+                                      <Input
+                                        type="number"
+                                        value={race.price}
+                                        onChange={(e) => updateRace(index, 'price', parseFloat(e.target.value), true)}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs">Places</Label>
+                                      <Input
+                                        type="number"
+                                        value={race.max_participants}
+                                        onChange={(e) => updateRace(index, 'max_participants', parseInt(e.target.value), true)}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs">Km</Label>
+                                      <Input
+                                        type="number"
+                                        value={race.distance_km || ''}
+                                        onChange={(e) => updateRace(index, 'distance_km', e.target.value, true)}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeRace(index, true)}
+                                  className="text-red-500"
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-500 text-center py-4 bg-slate-50 rounded">
+                            Aucune épreuve. Ajoutez des épreuves pour définir des tarifs différents par distance.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      onClick={handleEditEvent}
+                      disabled={editing}
+                      className="w-full btn-primary"
+                    >
+                      {editing ? 'Mise à jour...' : 'Enregistrer les modifications'}
+                    </Button>
+                  </div>
+                )}
               </DialogContent>
             </Dialog>
           </div>
@@ -544,6 +970,14 @@ const OrganizerDashboard = () => {
                                 <Eye className="w-4 h-4" />
                               </Button>
                             </Link>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => openEditDialog(event)}
+                              title="Modifier"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
                             <Link to={`/organizer/events/${event.event_id}/registrations`}>
                               <Button variant="ghost" size="sm">
                                 <BarChart3 className="w-4 h-4" />

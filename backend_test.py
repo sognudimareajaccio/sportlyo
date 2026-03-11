@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timedelta
 
 class SportsConnectAPITester:
-    def __init__(self, base_url="https://activity-booking-2.preview.emergentagent.com"):
+    def __init__(self, base_url="https://sport-ticketing.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
         self.session = requests.Session()
