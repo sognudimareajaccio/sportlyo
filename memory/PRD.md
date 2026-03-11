@@ -182,9 +182,12 @@ ADMIN
 
 ### v2.1 (March 11, 2026)
 - Finalized event editing with multi-race/distance pricing management
+- Verified and validated Stripe payment flow end-to-end (registration → checkout → Stripe redirect → confirmation)
+- Fixed commission rate display: 5% → 6% consistently across admin/organizer dashboards
+- Fixed "À partir de" price to show minimum race price when races exist
 - Added data-testid attributes for edit buttons
 - Added DialogDescription for accessibility compliance
-- Backend and frontend tests: 100% pass rate
+- Backend and frontend tests: 100% pass rate (iterations 3 and 4)
 
 ### v2.0 (March 2026)
 - Added advanced registration system

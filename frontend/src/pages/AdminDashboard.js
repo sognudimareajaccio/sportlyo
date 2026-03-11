@@ -152,7 +152,7 @@ const AdminDashboard = () => {
                 <p className="text-sm text-slate-500">Depuis le lancement</p>
               </div>
               <div className="bg-asphalt text-white border-l-4 border-brand p-6">
-                <h3 className="font-heading text-lg font-bold uppercase mb-4">Commission Plateforme (5%)</h3>
+                <h3 className="font-heading text-lg font-bold uppercase mb-4">Commission Plateforme (6%)</h3>
                 <div className="text-4xl font-heading font-extrabold text-brand mb-2">
                   {stats.platform_fees?.toFixed(0) || 0}€
                 </div>

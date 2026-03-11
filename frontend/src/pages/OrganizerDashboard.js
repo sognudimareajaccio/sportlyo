@@ -346,7 +346,7 @@ const OrganizerDashboard = () => {
   // Stats calculation
   const totalParticipants = events.reduce((sum, e) => sum + e.current_participants, 0);
   const totalRevenue = events.reduce((sum, e) => sum + (e.current_participants * e.price), 0);
-  const platformFees = totalRevenue * 0.05;
+  const platformFees = totalRevenue * 0.06;
   const organizerRevenue = totalRevenue - platformFees;
 
   if (loading) {
@@ -375,7 +375,7 @@ const OrganizerDashboard = () => {
             <li className="flex items-center"><span className="text-brand mr-2">✓</span> Création illimitée d'événements</li>
             <li className="flex items-center"><span className="text-brand mr-2">✓</span> Gestion des inscriptions</li>
             <li className="flex items-center"><span className="text-brand mr-2">✓</span> Statistiques détaillées</li>
-            <li className="flex items-center"><span className="text-brand mr-2">✓</span> Commission de seulement 5%</li>
+            <li className="flex items-center"><span className="text-brand mr-2">✓</span> Commission de seulement 6%</li>
           </ul>
 
           <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
@@ -958,7 +958,7 @@ const OrganizerDashboard = () => {
                           </div>
                         </td>
                         <td className="p-4 font-heading font-bold">
-                          {(event.current_participants * event.price * 0.95).toFixed(0)}€
+                          {(event.current_participants * event.price * 0.94).toFixed(0)}€
                         </td>
                         <td className="p-4">
                           <span className={`badge ${event.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
