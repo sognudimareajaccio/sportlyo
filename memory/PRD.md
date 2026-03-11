@@ -180,6 +180,16 @@ ADMIN
 
 ## Changelog
 
+### v2.3 (March 11, 2026)
+- Added CSV and PDF export for financial reports
+  - Admin: "Export CSV" + "Export PDF" buttons with date range filter
+  - Organizer: "Relevé de paiements" section with CSV/PDF export
+  - CSV: semicolon delimiter, UTF-8-BOM encoding (Excel-compatible), TOTAL footer row
+  - PDF: landscape A4, fpdf2, header/footer with page numbers
+  - Only completed (PAYÉ) payments exported
+  - Authorization enforced: admin-only for admin exports, organizer-only for organizer exports
+- 100% test pass rate (iteration 6, 16/16 backend tests)
+
 ### v2.2 (March 11, 2026)
 - Changed commission model: 5% service fee ADDED on top of base price (not deducted)
   - Participant pays: base_price + 5% service fee
