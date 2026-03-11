@@ -30,9 +30,17 @@ const LoginPage = () => {
 
     setLoading(true);
     try {
-      await login(formData.email, formData.password);
+      const userData = await login(formData.email, formData.password);
       toast.success('Connexion réussie !');
-      navigate(from);
+      
+      // Redirect based on role
+      if (userData.role === 'admin') {
+        navigate('/admin');
+      } else if (userData.role === 'organizer') {
+        navigate('/organizer');
+      } else {
+        navigate(from);
+      }
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Identifiants incorrects');
     } finally {
