@@ -18,13 +18,16 @@ import ParticipantDashboard from "./pages/ParticipantDashboard";
 import OrganizerDashboard from "./pages/OrganizerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import MyRegistrationsPage from "./pages/MyRegistrationsPage";
+import PaymentSuccessPage from "./pages/PaymentSuccessPage";
+import PaymentCancelPage from "./pages/PaymentCancelPage";
+import TimerPage from "./pages/TimerPage";
+import ResultsPage from "./pages/ResultsPage";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, requiredRole }) => {
   const { user, isAuthenticated, loading } = useAuth();
   const location = useLocation();
 
-  // If user data passed from AuthCallback, skip loading
   if (location.state?.user) {
     return children;
   }
@@ -52,7 +55,6 @@ const ProtectedRoute = ({ children, requiredRole }) => {
 const AppRouter = () => {
   const location = useLocation();
 
-  // Check URL fragment (not query params) for session_id - detect OAuth callback
   if (location.hash?.includes('session_id=')) {
     return <AuthCallback />;
   }
@@ -64,11 +66,26 @@ const AppRouter = () => {
         <Route path="/" element={<HomePage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/events/:eventId" element={<EventDetailPage />} />
+        <Route path="/results/:eventId" element={<ResultsPage />} />
       </Route>
 
       {/* Auth routes without Layout */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+
+      {/* Payment routes without Layout */}
+      <Route path="/payment/success" element={<PaymentSuccessPage />} />
+      <Route path="/payment/cancel" element={<PaymentCancelPage />} />
+
+      {/* Timer route without Layout (fullscreen) */}
+      <Route
+        path="/timer/:registrationId"
+        element={
+          <ProtectedRoute>
+            <TimerPage />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Protected routes with Layout */}
       <Route element={<Layout />}>

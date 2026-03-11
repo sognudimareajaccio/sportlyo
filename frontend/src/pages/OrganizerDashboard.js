@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   Plus, Calendar, Users, Euro, TrendingUp, Settings,
-  Eye, Edit, Trash2, BarChart3, ChevronRight, Building2
+  Eye, Edit, Trash2, BarChart3, ChevronRight, Building2, QrCode, Scan
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
@@ -44,7 +44,12 @@ const OrganizerDashboard = () => {
     price: 25,
     distances: '',
     elevation_gain: '',
-    image_url: ''
+    image_url: '',
+    requires_pps: false,
+    requires_medical_cert: false,
+    allows_teams: false,
+    min_age: '',
+    max_age: ''
   });
 
   const [upgradeData, setUpgradeData] = useState({
@@ -86,7 +91,9 @@ const OrganizerDashboard = () => {
         ...newEvent,
         date: new Date(newEvent.date).toISOString(),
         distances: newEvent.distances.split(',').map(d => d.trim()).filter(Boolean),
-        elevation_gain: newEvent.elevation_gain ? parseInt(newEvent.elevation_gain) : null
+        elevation_gain: newEvent.elevation_gain ? parseInt(newEvent.elevation_gain) : null,
+        min_age: newEvent.min_age ? parseInt(newEvent.min_age) : null,
+        max_age: newEvent.max_age ? parseInt(newEvent.max_age) : null
       };
 
       await eventsApi.create(eventData);
@@ -95,7 +102,8 @@ const OrganizerDashboard = () => {
       setNewEvent({
         title: '', description: '', sport_type: 'running', location: '',
         date: '', max_participants: 100, price: 25, distances: '',
-        elevation_gain: '', image_url: ''
+        elevation_gain: '', image_url: '', requires_pps: false,
+        requires_medical_cert: false, allows_teams: false, min_age: '', max_age: ''
       });
       fetchEvents();
     } catch (error) {

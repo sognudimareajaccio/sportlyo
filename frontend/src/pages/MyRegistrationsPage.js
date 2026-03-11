@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar, MapPin, Download, ChevronLeft, Search, Filter } from 'lucide-react';
+import { Calendar, MapPin, Download, ChevronLeft, Search, Filter, Timer, QrCode, Trophy } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -152,10 +152,26 @@ const MyRegistrationsPage = () => {
                         </Button>
                       </Link>
                       {!isPast && (
-                        <Button variant="outline" className="w-full">
-                          <Download className="w-4 h-4 mr-2" />
-                          Télécharger
-                        </Button>
+                        <>
+                          <Link to={`/timer/${reg.registration_id}`}>
+                            <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
+                              <Timer className="w-4 h-4 mr-2" />
+                              Chrono
+                            </Button>
+                          </Link>
+                          <Button variant="outline" className="w-full">
+                            <QrCode className="w-4 h-4 mr-2" />
+                            Billet
+                          </Button>
+                        </>
+                      )}
+                      {isPast && reg.race_finished && (
+                        <Link to={`/results/${reg.event_id}`}>
+                          <Button variant="outline" className="w-full">
+                            <Trophy className="w-4 h-4 mr-2" />
+                            Résultats
+                          </Button>
+                        </Link>
                       )}
                     </div>
                   </div>
