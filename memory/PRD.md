@@ -1,55 +1,40 @@
 # SportLyo - PRD (Product Requirements Document)
 
 ## Problème Original
-Plateforme de vente de tickets en ligne pour des événements sportifs (marathon, trail, vélo, etc.), nommée SportLyo.
-
-## Rôles Utilisateurs
-- **Organisateurs** : Créent et gèrent des événements, les participants, les promotions, et suivent les performances.
-- **Participants** : S'inscrivent aux courses, gèrent leurs documents (PPS), et accèdent à leurs billets.
-- **Admin** : Supervise la plateforme, les utilisateurs et les finances.
+Plateforme de vente de tickets en ligne pour des événements sportifs, nommée SportLyo.
 
 ## Architecture Technique
-- **Frontend** : React, TailwindCSS, Shadcn UI, framer-motion, qrcode.react, react-share
-- **Backend** : FastAPI (Python) - server.py monolithe
+- **Frontend** : React, TailwindCSS, Shadcn UI, framer-motion, react-square-web-payments-sdk
+- **Backend** : FastAPI (Python), email_service.py (Resend)
 - **Database** : MongoDB
-- **Auth** : JWT + Google OAuth (Emergent)
-- **Paiements** : Stripe (commission 5% participant)
-- **Accès** : Coming Soon par défaut, `?preview=SPORTLYO2026` pour accès complet
+- **Auth** : JWT (Google OAuth retiré)
+- **Paiements** : Square (production)
+- **Emails** : Resend (en mode test, domaine sportlyo.com à vérifier)
 
 ## Fonctionnalités Implémentées
 
-### Phase 1 - Core (DONE)
-- Authentification JWT + Google OAuth
-- Création/gestion d'événements (CRUD)
-- Inscription aux événements avec données personnelles
-- Système de paiement Stripe avec commission 5%
-- Attribution automatique de dossards
-- Page publique "Coming Soon"
+### Core (DONE)
+- Auth JWT, CRUD événements, inscription multi-étapes wizard
+- Paiement Square intégré (tokenisation carte côté frontend, traitement backend)
+- Attribution automatique dossards, codes promo
+- Chronométrage RFID, résultats temps réel, check-in QR code
 
-### Phase 2 - Chronométrage & Gestion (DONE)
-- API RFID pour chronométrage (`/api/rfid-read`)
-- Page de résultats avec classements temps réel par catégorie
-- Interface de check-in par QR code
-- Dashboard de gestion par événement
-- Gestion des inscrits (ajout manuel, export CSV)
-- Codes promo, partage réseaux sociaux
-- Upload/validation de documents PPS
-- Billet digital avec QR code
-- Dashboard admin avec jauges de remplissage
+### Emails Automatiques (DONE)
+- Email de bienvenue à l'inscription
+- Email de confirmation d'inscription avec détails (dossard, épreuve, montant, QR code)
+- Email de notification à l'organisateur (nouvelle inscription + taux remplissage)
+- Templates HTML chartés : #0f172a (bleu marine) + #ff4500 (orange) + logo SportLyo
 
 ### UI/UX (DONE)
-- Dashboard organisateur avec cartes animées framer-motion
-- Formulaire de création modernisé : Wizard multi-étapes (4 steps)
-- Formulaire d'inscription modernisé : Wizard 3 étapes
-- Page événement enrichie : OpenRunner, Google Maps, compteur temps réel
-- Page de destination organisateurs (`/organizers`)
-- **Section "Trouvez votre défi"** : 44 défis sportifs organisés en 7 groupes colorés (Running, Autres défis course, Multisport & Fun, Hivernaux & Extrêmes, Obstacles & Fitness, Défis Vélo, Endurance Outdoor)
-- **Module de recherche EventsPage refondu** : Hero search glass-morphism, pilules de catégories avec icônes, filtres actifs en badges, vue grille/liste
-
-### Contenu (DONE)
-- 18 catégories de sport disponibles
-- 12 événements réalistes avec images Unsplash pertinentes
-- 44 défis sportifs cliquables avec redirection vers /events?search=
+- 44 défis sportifs en 7 groupes + CTA "Devenez Organisateur"
+- Module recherche EventsPage refondu (glass-morphism, pilules catégories)
+- Menu connecté modernisé (profil contextuel, animations framer-motion)
+- Page Login/Register sans Google Auth
+- Navbar simplifiée (Événements + Organisateurs)
+- Scroll-to-top automatique
+- Footer : "Conception Plateforme WEBISULA" + "Paiement sécurisé par SQUARE"
+- Prix dynamique sidebar selon épreuve sélectionnée
+- Plus aucun jaune (accent color → gris neutre)
 
 ## Comptes Test
 | Rôle | Email | Mot de passe |
@@ -57,38 +42,28 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 | Admin | admin@sportsconnect.fr | admin123 |
 | Organisateur | club@paris-sport.fr | club123 |
 | Participant | pierre@test.com | test1234 |
-| Participant | sophie@test.com | test1234 |
-
-## Sports Disponibles
-Cyclisme, Course à pied, Triathlon, Marche, Sports Mécaniques, Rallye Voitures, VTT, BMX, Cyclo-cross, Sports de raquette, Tir à l'arc, Kitesurf, Golf, Pétanque, Billard, Bowling, CrossFit, Sports de combat
+| Test | contact.sognudimare@gmail.com | test1234 |
+| Test | webisula@gmail.com | test1234 |
 
 ## Tâches Restantes
 
+### P0 - Email Domain
+- Vérifier domaine sportlyo.com sur Resend pour envoyer depuis noreply@sportlyo.com
+
 ### P1 - Communication
-- Intégration Resend pour emails automatiques (confirmation inscription avec QR code)
-- Gestion communautaire (interaction organisateur/participants)
+- Gestion communautaire organisateur/participants
 - Facturation automatique
 
 ### P2 - Avancé
-- Contact organisateur/admin pour remboursements
-- Location de matériel RFID
-- Fermeture automatique des inscriptions
-- App mobile check-in
-- Import CSV de temps depuis logiciels chronométrage
-- Statistiques avancées organisateurs
-- Intégration Twilio SMS
+- Contact organisateur/admin remboursements
+- Location matériel RFID, fermeture auto inscriptions
+- App mobile check-in, import CSV temps
+- Stats avancées organisateurs, Twilio SMS
 
-### Refactorisation Recommandée
-- Découpage de `backend/server.py` en modules (routes, services, modèles)
+### Refactorisation
+- Découpage backend/server.py en modules
 
-## Intégrations Actives
-- Stripe (paiements)
-- Google OAuth (Emergent)
-- fpdf2 (génération PDF)
-- qrcode.react (QR codes billets)
-- framer-motion (animations)
-- react-share (partage social)
-
-## Intégrations Planifiées
-- Resend (emails)
-- Twilio (SMS)
+## Intégrations
+- Square (paiements production)
+- Resend (emails transactionnels)
+- fpdf2 (PDF), qrcode.react (QR), framer-motion, react-share

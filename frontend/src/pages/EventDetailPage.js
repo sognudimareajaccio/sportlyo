@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
@@ -7,7 +7,8 @@ import {
   MapPin, Calendar, Users, Mountain, ArrowLeft, Share2, 
   Heart, CheckCircle, AlertCircle, Loader2, QrCode, Clock, Timer,
   Route, FileText, Navigation, ExternalLink, ChevronDown, ChevronUp,
-  ArrowRight, Check, Phone, Mail, User, Globe, Shirt, Facebook, Instagram, Youtube, Twitter
+  ArrowRight, Check, Phone, Mail, User, Globe, Shirt, Facebook, Instagram, Youtube, Twitter,
+  CreditCard, Lock
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -19,6 +20,7 @@ import { useAuth } from '../context/AuthContext';
 import { eventsApi, registrationsApi } from '../services/api';
 import { toast } from 'sonner';
 import api from '../services/api';
+import { PaymentForm, CreditCard as SquareCreditCard } from 'react-square-web-payments-sdk';
 
 const sportLabels = {
   cycling: 'Cyclisme',
@@ -70,6 +72,11 @@ const EventDetailPage = () => {
   const [promoDiscount, setPromoDiscount] = useState(null);
   const [checkingPromo, setCheckingPromo] = useState(false);
   const [showRegulations, setShowRegulations] = useState(false);
+
+  // Square payment state
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [pendingRegistration, setPendingRegistration] = useState(null);
+  const [processingPayment, setProcessingPayment] = useState(false);
 
   const getOpenRunnerEmbedUrl = (url) => {
     if (!url) return null;
@@ -218,19 +225,46 @@ const EventDetailPage = () => {
         pps_number: formData.pps_number || user?.pps_number
       });
 
-      const checkoutRes = await api.post('/payments/create-checkout', {
+      // Show Square payment dialog
+      setPendingRegistration({
         registration_id: regRes.data.registration_id,
-        origin_url: window.location.origin,
-        promo_code: promoDiscount ? formData.promo_code : null
+        bib_number: regRes.data.bib_number,
+        amount: regRes.data.amount
       });
-
-      window.location.href = checkoutRes.data.checkout_url;
+      setShowRegisterDialog(false);
+      setShowPaymentDialog(true);
+      setRegistering(false);
       
     } catch (error) {
       console.error('Registration error:', error);
-      toast.error(error.response?.data?.detail || 'Erreur lors de l\'inscription');
+      toast.error(error.response?.data?.detail || "Erreur lors de l'inscription");
       setRegistering(false);
     }
+  };
+
+  const handleSquarePayment = async (token) => {
+    setProcessingPayment(true);
+    try {
+      const res = await api.post('/payments/process-square', {
+        source_id: token.token,
+        registration_id: pendingRegistration.registration_id,
+        idempotency_key: `pay_${pendingRegistration.registration_id}_${Date.now()}`,
+        promo_code: promoDiscount ? formData.promo_code : null
+      });
+
+      if (res.data.success) {
+        setShowPaymentDialog(false);
+        setRegistrationSuccess({
+          ...pendingRegistration,
+          amount: res.data.amount
+        });
+        toast.success('Paiement réussi ! Inscription confirmée.');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast.error(error.response?.data?.detail || 'Erreur lors du paiement');
+    }
+    setProcessingPayment(false);
   };
 
   const toggleOption = (optionId) => {
@@ -257,6 +291,7 @@ const EventDetailPage = () => {
   const isFull = spotsLeft <= 0;
 
   return (
+    <>
     <div className="min-h-screen bg-slate-50" data-testid="event-detail-page">
       {/* Hero Image */}
       <div className="relative h-[40vh] md:h-[50vh]">
@@ -1184,7 +1219,7 @@ const EventDetailPage = () => {
                                       <span className="font-heading font-bold">Total à payer</span>
                                       <span className="font-heading text-2xl font-bold text-brand">{total.toFixed(2)}€</span>
                                     </div>
-                                    <p className="text-[10px] text-slate-500 mt-2">Paiement sécurisé par Stripe</p>
+                                    <p className="text-[10px] text-slate-500 mt-2">Paiement sécurisé par Square</p>
                                   </>
                                 );
                               })()}
@@ -1224,6 +1259,75 @@ const EventDetailPage = () => {
         </div>
       </div>
     </div>
+
+    {/* Square Payment Dialog */}
+    <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-heading text-xl font-bold uppercase flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-brand" />
+            Paiement sécurisé
+          </DialogTitle>
+        </DialogHeader>
+        
+        {pendingRegistration && (
+          <div className="space-y-4">
+            <div className="bg-slate-50 p-4 border border-slate-200">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-slate-500">Inscription</span>
+                <span className="font-heading font-bold text-sm">Dossard N° {pendingRegistration.bib_number}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-500">Total à payer</span>
+                <span className="font-heading text-2xl font-extrabold text-brand">
+                  {pendingRegistration.amount}€
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-2">Commission de service 5% incluse</p>
+            </div>
+
+            <div className="square-payment-form" data-testid="square-payment-form">
+              <PaymentForm
+                applicationId={process.env.REACT_APP_SQUARE_APP_ID}
+                locationId={process.env.REACT_APP_SQUARE_LOCATION_ID}
+                cardTokenizeResponseReceived={handleSquarePayment}
+                createPaymentRequest={() => ({
+                  countryCode: "FR",
+                  currencyCode: "EUR",
+                  total: {
+                    amount: String(pendingRegistration.amount),
+                    label: "SportLyo - Inscription",
+                  },
+                })}
+              >
+                <SquareCreditCard
+                  buttonProps={{
+                    css: {
+                      backgroundColor: "#ff4500",
+                      color: "#fff",
+                      fontSize: "14px",
+                      fontWeight: "700",
+                      letterSpacing: "1px",
+                      textTransform: "uppercase",
+                      padding: "0 16px",
+                      "&:hover": { backgroundColor: "#e03e00" }
+                    }
+                  }}
+                >
+                  {processingPayment ? 'Traitement...' : `Payer ${pendingRegistration.amount}€`}
+                </SquareCreditCard>
+              </PaymentForm>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
+              <Lock className="w-3 h-3" />
+              Paiement sécurisé par Square
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
 

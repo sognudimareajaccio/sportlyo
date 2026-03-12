@@ -127,7 +127,7 @@ const Footer = () => {
             </p>
             <div className="flex items-center space-x-6 text-sm">
               <span className="text-slate-500">Paiement sécurisé par</span>
-              <span className="font-heading font-bold text-brand">STRIPE</span>
+              <span className="font-heading font-bold text-brand">SQUARE</span>
             </div>
           </div>
         </div>

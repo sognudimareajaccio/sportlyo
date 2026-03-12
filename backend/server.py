@@ -2013,33 +2013,37 @@ async def export_timing_csv(event_id: str, current_user: dict = Depends(get_curr
         headers={"Content-Disposition": f'attachment; filename="timing_export_{event_id}.csv"'}
     )
 
-# ============== PAYMENT ROUTES (STRIPE) ==============
+# ============== PAYMENT ROUTES (SQUARE) ==============
 
-@api_router.post("/payments/create-checkout")
-async def create_checkout_session(request: Request, current_user: dict = Depends(get_current_user)):
-    """Create Stripe checkout session"""
-    from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionRequest
-    
+SQUARE_ACCESS_TOKEN = os.environ.get('SQUARE_ACCESS_TOKEN', '')
+SQUARE_LOCATION_ID = os.environ.get('SQUARE_LOCATION_ID', '')
+SQUARE_ENVIRONMENT = os.environ.get('SQUARE_ENVIRONMENT', 'sandbox')
+
+@api_router.post("/payments/process-square")
+async def process_square_payment(request: Request, current_user: dict = Depends(get_current_user)):
+    """Process payment via Square"""
+    from square import Square as SquareClient
+
     data = await request.json()
+    source_id = data.get('source_id')
     registration_id = data.get('registration_id')
-    origin_url = data.get('origin_url')
+    idempotency_key = data.get('idempotency_key', str(uuid.uuid4()))
     promo_code = data.get('promo_code')
-    
+
+    if not source_id:
+        raise HTTPException(status_code=400, detail="Token de paiement manquant")
+
     registration = await db.registrations.find_one(
         {"registration_id": registration_id, "user_id": current_user['user_id']},
         {"_id": 0}
     )
-    
     if not registration:
-        raise HTTPException(status_code=404, detail="Registration not found")
-    
-    if registration['payment_status'] == 'completed':
-        raise HTTPException(status_code=400, detail="Already paid")
-    
-    # Get base price and total from registration
-    base_price = registration.get('base_price', registration['amount_paid'])
-    
-    # Apply promo code if provided
+        raise HTTPException(status_code=404, detail="Inscription introuvable")
+    if registration.get('payment_status') == 'completed':
+        raise HTTPException(status_code=400, detail="Déjà payé")
+
+    base_price = registration.get('base_price', registration.get('amount_paid', 0))
+
     if promo_code:
         promo = await db.promo_codes.find_one({"code": promo_code.upper()}, {"_id": 0})
         if promo:
@@ -2047,81 +2051,84 @@ async def create_checkout_session(request: Request, current_user: dict = Depends
                 base_price = base_price * (1 - promo['discount_value'] / 100)
             else:
                 base_price = max(0, base_price - promo['discount_value'])
-            
-            # Increment promo usage
-            await db.promo_codes.update_one(
-                {"code": promo_code.upper()},
-                {"$inc": {"current_uses": 1}}
-            )
-    
-    # Calculate fees: 5% service fee added on top of base price
+            await db.promo_codes.update_one({"code": promo_code.upper()}, {"$inc": {"current_uses": 1}})
+
     base_price = round(base_price, 2)
     service_fee = round(base_price * PLATFORM_COMMISSION, 2)
     total_to_pay = round(base_price + service_fee, 2)
-    stripe_fee = round(total_to_pay * STRIPE_PERCENT_FEE + STRIPE_FIXED_FEE, 2)
-    platform_net = round(service_fee - stripe_fee, 2)
-    organizer_amount = base_price
-    
-    # Build URLs
-    success_url = f"{origin_url}/payment/success?session_id={{CHECKOUT_SESSION_ID}}"
-    cancel_url = f"{origin_url}/payment/cancel"
-    
-    # Initialize Stripe
-    api_key = STRIPE_API_KEY or os.environ.get('STRIPE_API_KEY')
-    if not api_key:
-        raise HTTPException(status_code=500, detail="Payment not configured")
-    
-    webhook_url = f"{request.base_url}api/webhook/stripe"
-    stripe_checkout = StripeCheckout(api_key=api_key, webhook_url=webhook_url)
-    
-    # Create checkout session - charge total (base + service fee)
-    checkout_request = CheckoutSessionRequest(
-        amount=float(total_to_pay),
-        currency="eur",
-        success_url=success_url,
-        cancel_url=cancel_url,
-        metadata={
-            "registration_id": registration_id,
-            "user_id": current_user['user_id'],
-            "event_id": registration['event_id']
+    amount_cents = int(total_to_pay * 100)
+
+    if not SQUARE_ACCESS_TOKEN:
+        raise HTTPException(status_code=500, detail="Paiement non configuré")
+
+    try:
+        from square.environment import SquareEnvironment
+        env = SquareEnvironment.PRODUCTION if SQUARE_ENVIRONMENT == 'production' else SquareEnvironment.SANDBOX
+        client = SquareClient(token=SQUARE_ACCESS_TOKEN, environment=env)
+
+        payment_body = {
+            "source_id": source_id,
+            "idempotency_key": idempotency_key,
+            "amount_money": {
+                "amount": amount_cents,
+                "currency": "EUR"
+            },
+            "location_id": SQUARE_LOCATION_ID,
+            "autocomplete": True,
+            "note": f"SportLyo - {registration.get('event_id', '')} - Dossard {registration.get('bib_number', '')}",
         }
-    )
-    
-    session = await stripe_checkout.create_checkout_session(checkout_request)
-    
-    # Store session info with full financial breakdown
-    await db.registrations.update_one(
-        {"registration_id": registration_id},
-        {"$set": {
-            "checkout_session_id": session.session_id,
-            "base_price": base_price,
-            "service_fee": service_fee,
-            "amount_paid": total_to_pay,
-            "stripe_fee": stripe_fee,
-            "platform_net": platform_net,
-            "organizer_amount": organizer_amount
-        }}
-    )
-    
-    # Create payment transaction record with full breakdown
-    await db.payment_transactions.insert_one({
-        "transaction_id": f"txn_{uuid.uuid4().hex[:12]}",
-        "session_id": session.session_id,
-        "registration_id": registration_id,
-        "user_id": current_user['user_id'],
-        "event_id": registration['event_id'],
-        "base_price": base_price,
-        "service_fee": service_fee,
-        "amount": total_to_pay,
-        "currency": "eur",
-        "stripe_fee": stripe_fee,
-        "platform_net": platform_net,
-        "organizer_amount": organizer_amount,
-        "payment_status": "pending",
-        "created_at": datetime.now(timezone.utc).isoformat()
-    })
-    
-    return {"checkout_url": session.url, "session_id": session.session_id}
+
+        result = client.payments.create(body=payment_body)
+
+        if hasattr(result, 'payment') and result.payment:
+            sq_payment = result.payment
+            sq_id = sq_payment.id if hasattr(sq_payment, 'id') else str(sq_payment)
+
+            await db.registrations.update_one(
+                {"registration_id": registration_id},
+                {"$set": {
+                    "payment_status": "completed",
+                    "payment_id": sq_id,
+                    "base_price": base_price,
+                    "service_fee": service_fee,
+                    "amount_paid": total_to_pay,
+                    "platform_net": service_fee,
+                    "organizer_amount": base_price,
+                    "payment_provider": "square"
+                }}
+            )
+
+            await db.payment_transactions.insert_one({
+                "transaction_id": f"txn_{uuid.uuid4().hex[:12]}",
+                "square_payment_id": sq_id,
+                "registration_id": registration_id,
+                "user_id": current_user['user_id'],
+                "event_id": registration.get('event_id'),
+                "base_price": base_price,
+                "service_fee": service_fee,
+                "amount": total_to_pay,
+                "currency": "eur",
+                "platform_net": service_fee,
+                "organizer_amount": base_price,
+                "payment_status": "completed",
+                "payment_provider": "square",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+
+            return {"success": True, "payment_id": sq_id, "amount": total_to_pay}
+
+        elif hasattr(result, 'errors') and result.errors:
+            err = result.errors[0]
+            detail = err.detail if hasattr(err, 'detail') else str(err)
+            raise HTTPException(status_code=400, detail=f"Paiement refusé: {detail}")
+        else:
+            raise HTTPException(status_code=400, detail="Paiement échoué")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Square payment error: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur paiement: {str(e)}")
 
 @api_router.get("/payments/status/{session_id}")
 async def get_payment_status(session_id: str, current_user: dict = Depends(get_current_user)):
