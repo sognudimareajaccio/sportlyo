@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar, MapPin, Download, ChevronLeft, Search, Filter, Timer, QrCode, Trophy } from 'lucide-react';
+import { Calendar, MapPin, Download, ChevronLeft, Search, Filter, Timer, QrCode, Trophy, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { useAuth } from '../context/AuthContext';
 import { registrationsApi } from '../services/api';
 
@@ -14,7 +15,8 @@ const MyRegistrationsPage = () => {
   const { user } = useAuth();
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // all, upcoming, past
+  const [filter, setFilter] = useState('all');
+  const [ticketReg, setTicketReg] = useState(null);
 
   useEffect(() => {
     const fetchRegistrations = async () => {
@@ -159,7 +161,7 @@ const MyRegistrationsPage = () => {
                               Chrono
                             </Button>
                           </Link>
-                          <Button variant="outline" className="w-full">
+                          <Button variant="outline" className="w-full" onClick={() => setTicketReg(reg)} data-testid={`ticket-btn-${reg.registration_id}`}>
                             <QrCode className="w-4 h-4 mr-2" />
                             Billet
                           </Button>
@@ -196,6 +198,77 @@ const MyRegistrationsPage = () => {
           </div>
         )}
       </div>
+
+      {/* Ticket Dialog */}
+      <Dialog open={!!ticketReg} onOpenChange={() => setTicketReg(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl uppercase text-center">Billet Digital</DialogTitle>
+          </DialogHeader>
+          {ticketReg && (
+            <div className="text-center space-y-4" data-testid="ticket-modal">
+              {/* Event name */}
+              <div className="bg-asphalt text-white p-4">
+                <h3 className="font-heading font-bold text-lg uppercase">{ticketReg.event?.title}</h3>
+                <p className="text-slate-300 text-sm">
+                  {ticketReg.event?.date && format(new Date(ticketReg.event.date), 'd MMMM yyyy', { locale: fr })}
+                  {ticketReg.event?.location && ` — ${ticketReg.event.location}`}
+                </p>
+              </div>
+
+              {/* QR Code */}
+              {ticketReg.qr_code ? (
+                <div className="flex justify-center py-4">
+                  <img
+                    src={`data:image/png;base64,${ticketReg.qr_code}`}
+                    alt="QR Code"
+                    className="w-48 h-48"
+                    data-testid="ticket-qr-code"
+                  />
+                </div>
+              ) : (
+                <div className="flex justify-center py-4">
+                  <div className="w-48 h-48 bg-slate-100 flex items-center justify-center border">
+                    <QrCode className="w-16 h-16 text-slate-300" />
+                  </div>
+                </div>
+              )}
+
+              {/* Participant info */}
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-slate-500">Participant</span>
+                  <span className="font-medium">{ticketReg.first_name || ticketReg.user_name?.split(' ')[0]} {ticketReg.last_name || ticketReg.user_name?.split(' ').slice(1).join(' ')}</span>
+                </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-slate-500">Dossard</span>
+                  <span className="font-heading font-bold">{ticketReg.bib_number}</span>
+                </div>
+                {ticketReg.selected_race && (
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-slate-500">Épreuve</span>
+                    <span className="font-medium">{ticketReg.selected_race}</span>
+                  </div>
+                )}
+                {ticketReg.category && (
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-slate-500">Catégorie</span>
+                    <span className="font-medium">{ticketReg.category}</span>
+                  </div>
+                )}
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-slate-500">Statut</span>
+                  <span className={`font-medium ${ticketReg.payment_status === 'completed' ? 'text-green-600' : 'text-orange-500'}`}>
+                    {ticketReg.payment_status === 'completed' ? 'Confirmé' : 'En attente de paiement'}
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-400">Présentez ce QR code le jour de l'événement pour le check-in.</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
