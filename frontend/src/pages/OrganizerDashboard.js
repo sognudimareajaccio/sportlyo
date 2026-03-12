@@ -449,7 +449,20 @@ const OrganizerDashboard = () => {
               <h1 className="font-heading text-2xl font-bold">Espace Organisateur</h1>
               <p className="text-slate-400">Gérez vos événements et suivez vos performances</p>
             </div>
-            <Dialog open={showCreateDialog} onOpenChange={(open) => { setShowCreateDialog(open); if (!open) setCreateStep(1); }}>
+            <Dialog open={showCreateDialog} onOpenChange={(open) => {
+              setShowCreateDialog(open);
+              if (!open) {
+                setCreateStep(1);
+                setNewEvent({
+                  title: '', description: '', sport_type: 'running', location: '',
+                  date: '', max_participants: 100, price: 25, distances: '',
+                  elevation_gain: '', image_url: '', requires_pps: false,
+                  requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '',
+                  races: []
+                });
+                setImagePreview(null);
+              }
+            }}>
               <DialogTrigger asChild>
                 <Button className="btn-primary" data-testid="create-event-btn">
                   <Plus className="w-4 h-4 mr-2" />

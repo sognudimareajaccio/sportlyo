@@ -47,6 +47,7 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 - Dashboard organisateur avec cartes animées framer-motion (grille 3 colonnes)
 - Chaque carte : image, badge statut, date, lieu, jauge remplissage, revenus, boutons action
 - **Mini-menu de navigation rapide** : composant `OrganizerNav` avec cartes carrées (icônes orange, texte uppercase) intégré sur toutes les pages organisateur (/organizer, /organizer/event/{id}, /organizer/checkin/{id}). Adaptatif : 3 items sur le dashboard, 5 items sur les pages événement.
+- **Formulaire de création modernisé** : Wizard multi-étapes (4 steps) avec barre de progression, sélection de sport par cartes visuelles, zone d'upload image drag & drop, animations framer-motion entre les étapes.
 
 ## Comptes Test
 | Rôle | Email | Mot de passe |
