@@ -54,6 +54,11 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
   - Règlement de la course (section dépliable)
   - Nom de l'organisateur affiché clairement
   - Compteur temps réel par épreuve/course avec barres de progression animées
+- **Formulaire d'inscription modernisé** : Wizard 3 étapes (Informations personnelles, Course & Options, Licence & Paiement) avec :
+  - Date de naissance Jour/Mois/Année séparés, pays, ville, code postal, email, téléphone, nationalité
+  - Sélection d'épreuve par cartes, taille T-shirt (XS-2XL), contact urgence, nom de club
+  - PPS avec vérification + lien athle.fr, licence FFA avec remise 3€, code promo
+  - Email/téléphone pré-remplis depuis le compte, récapitulatif prix avec remises
 
 ## Comptes Test
 | Rôle | Email | Mot de passe |
