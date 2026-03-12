@@ -144,6 +144,11 @@ const AppRouter = () => {
         />
       </Route>
 
+      {/* Organizer Landing Page (public) */}
+      <Route element={<Layout />}>
+        <Route path="/organizers" element={<OrgaLandingPage />} />
+      </Route>
+
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

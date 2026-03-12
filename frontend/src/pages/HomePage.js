@@ -325,7 +325,7 @@ const HomePage = () => {
                   Devenir organisateur
                 </Button>
               </Link>
-              <Link to="/events">
+              <Link to="/organizers">
                 <Button variant="outline" className="border-white text-white hover:bg-white hover:text-asphalt">
                   En savoir plus
                 </Button>
