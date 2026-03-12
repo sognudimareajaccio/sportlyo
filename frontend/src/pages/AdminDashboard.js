@@ -29,6 +29,7 @@ const AdminDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [exportStartDate, setExportStartDate] = useState('');
   const [exportEndDate, setExportEndDate] = useState('');
+  const [events, setEvents] = useState([]);
 
   useEffect(() => {
     if (user?.role !== 'admin') {
@@ -41,16 +42,18 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [statsRes, usersRes, paymentsRes] = await Promise.all([
+      const [statsRes, usersRes, paymentsRes, eventsRes] = await Promise.all([
         adminApi.getStats(),
         adminApi.getUsers({ page: 1, limit: 20 }),
-        adminApi.getPayments({ page: 1, limit: 100 })
+        adminApi.getPayments({ page: 1, limit: 100 }),
+        api.get('/events')
       ]);
       setStats(statsRes.data);
       setUsers(usersRes.data.users);
       setTotalUserPages(usersRes.data.pages);
       setPayments(paymentsRes.data.payments);
       setPaymentTotals(paymentsRes.data.totals);
+      setEvents(eventsRes.data.events || eventsRes.data || []);
     } catch (error) {
       console.error('Error fetching admin data:', error);
       toast.error('Erreur lors du chargement des données');
@@ -58,6 +61,17 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   };
+
+  // Auto-refresh events every 15s for real-time fill rates
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.get('/events');
+        setEvents(res.data.events || res.data || []);
+      } catch {}
+    }, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchUsers = async (page) => {
     try {
@@ -199,6 +213,75 @@ const AdminDashboard = () => {
                 <p className="text-2xl font-heading font-extrabold text-brand">
                   {(paymentTotals?.total_platform_net || 0).toFixed(2)}€
                 </p>
+              </div>
+            </div>
+
+            {/* Events Fill Rate */}
+            <div className="bg-white border border-slate-200 mb-8" data-testid="events-fill-rate">
+              <div className="p-4 border-b flex items-center justify-between">
+                <h3 className="font-heading font-bold uppercase">Jauges de remplissage — Temps réel</h3>
+                <span className="text-xs text-slate-400">{events.length} événement(s)</span>
+              </div>
+              <div className="divide-y">
+                {events.map(evt => {
+                  const used = evt.current_participants || 0;
+                  const total = evt.max_participants || 1;
+                  const fill = Math.round((used / total) * 100);
+                  const remaining = total - used;
+                  return (
+                    <div key={evt.event_id} className="p-4 hover:bg-slate-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-heading font-bold text-sm uppercase truncate">{evt.title}</h4>
+                          <p className="text-xs text-slate-500">{evt.location} — {evt.date && format(new Date(evt.date), 'd MMM yyyy', { locale: fr })}</p>
+                        </div>
+                        <div className="flex items-center gap-6 ml-4 flex-shrink-0">
+                          <div className="text-right">
+                            <span className="font-heading text-lg font-bold">{used}</span>
+                            <span className="text-slate-400 text-sm"> / {total}</span>
+                          </div>
+                          <div className="text-right w-16">
+                            <span className={`font-heading text-lg font-bold ${fill >= 90 ? 'text-red-600' : fill >= 70 ? 'text-orange-500' : 'text-green-600'}`}>
+                              {fill}%
+                            </span>
+                          </div>
+                          <div className={`text-right w-24 text-sm font-medium ${remaining <= 5 ? 'text-red-600' : 'text-slate-600'}`}>
+                            {remaining} place{remaining > 1 ? 's' : ''} restante{remaining > 1 ? 's' : ''}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="w-full bg-slate-100 h-3 rounded-sm overflow-hidden">
+                        <div
+                          className={`h-3 transition-all duration-700 ${fill >= 90 ? 'bg-red-500' : fill >= 70 ? 'bg-orange-500' : 'bg-brand'}`}
+                          style={{ width: `${fill}%` }}
+                        />
+                      </div>
+                      {evt.races && evt.races.length > 1 && (
+                        <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+                          {evt.races.map(race => {
+                            const rUsed = race.current_participants || 0;
+                            const rTotal = race.max_participants || 1;
+                            const rFill = Math.round((rUsed / rTotal) * 100);
+                            return (
+                              <div key={race.name} className="text-xs">
+                                <div className="flex justify-between mb-0.5">
+                                  <span className="truncate font-medium">{race.name}</span>
+                                  <span className="text-slate-400 ml-1">{rUsed}/{rTotal}</span>
+                                </div>
+                                <div className="w-full bg-slate-100 h-1.5 rounded-sm overflow-hidden">
+                                  <div className={`h-1.5 ${rFill >= 90 ? 'bg-red-400' : 'bg-brand/70'}`} style={{ width: `${rFill}%` }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {events.length === 0 && (
+                  <div className="p-8 text-center text-slate-400">Aucun événement</div>
+                )}
               </div>
             </div>
 
