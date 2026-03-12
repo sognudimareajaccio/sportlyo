@@ -129,6 +129,17 @@ const ComingSoonPage = ({ onAccessGranted }) => {
             </div>
           </motion.div>
 
+
+          <motion.p
+            className="mt-6 text-lg md:text-xl text-slate-400 max-w-lg mx-auto leading-relaxed"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.7 }}
+          >
+            La plateforme qui révolutionne l'inscription aux événements sportifs.
+            <span className="text-white font-medium"> Simple. Rapide. Puissante.</span>
+          </motion.p>
+
           {/* Email CTA */}
           <motion.div
             className="mt-10 w-full max-w-md"
