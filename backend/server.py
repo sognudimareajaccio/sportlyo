@@ -200,11 +200,20 @@ class RegistrationCreate(BaseModel):
     last_name: Optional[str] = None
     gender: Optional[str] = None  # M, F
     birth_date: Optional[str] = None  # YYYY-MM-DD
+    country: Optional[str] = None
+    city: Optional[str] = None
+    postal_code: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    nationality: Optional[str] = None
     selected_race: Optional[str] = None
     selected_wave: Optional[str] = None
     selected_options: Optional[List[str]] = None
     emergency_contact: Optional[str] = None
     emergency_phone: Optional[str] = None
+    club_name: Optional[str] = None
+    tshirt_size: Optional[str] = None
+    ffa_license: Optional[str] = None
     custom_fields_data: Optional[Dict[str, Any]] = None
     team_id: Optional[str] = None
     pps_number: Optional[str] = None
@@ -1043,6 +1052,12 @@ async def create_registration(reg_data: RegistrationCreate, current_user: dict =
     
     total_price = base_price + options_total
     
+    # FFA license discount: -3€ if valid license provided
+    ffa_discount = 0
+    if reg_data.ffa_license and len(reg_data.ffa_license) >= 6:
+        ffa_discount = 3.0
+        total_price = max(0, total_price - ffa_discount)
+    
     # Calculate fees: 5% service fee ADDED on top
     service_fee = round(total_price * PLATFORM_COMMISSION, 2)
     total_to_pay = round(total_price + service_fee, 2)
@@ -1073,6 +1088,16 @@ async def create_registration(reg_data: RegistrationCreate, current_user: dict =
         "selected_options": reg_data.selected_options,
         "emergency_contact": reg_data.emergency_contact,
         "emergency_phone": reg_data.emergency_phone,
+        "country": reg_data.country,
+        "city": reg_data.city,
+        "postal_code": reg_data.postal_code,
+        "email": reg_data.email or current_user['email'],
+        "phone": reg_data.phone,
+        "nationality": reg_data.nationality,
+        "club_name": reg_data.club_name,
+        "tshirt_size": reg_data.tshirt_size,
+        "ffa_license": reg_data.ffa_license,
+        "ffa_discount": ffa_discount,
         "custom_fields_data": reg_data.custom_fields_data,
         "team_id": reg_data.team_id,
         "payment_status": "pending",

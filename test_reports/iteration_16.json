@@ -1,0 +1,112 @@
+{
+  "summary": "Iteration 16: Comprehensive testing of the new multi-step registration wizard (3 steps). All 18 features verified successfully. Frontend wizard has correct data-testids, backend accepts all new fields (country, city, postal_code, email, phone, nationality, tshirt_size, club_name, ffa_license) and FFA 3€ discount logic works correctly.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Registration Dialog", "issues": ["Missing aria-describedby for DialogContent (accessibility warning in console)"]}
+    ]
+  },
+
+  "passed_tests": [
+    "STEP 1 - Nom (last_name) field exists with data-testid=reg-last-name",
+    "STEP 1 - Prénom (first_name) field exists with data-testid=reg-first-name",
+    "STEP 1 - Sexe dropdown exists with data-testid=reg-gender",
+    "STEP 1 - Date de naissance: Jour dropdown with data-testid=reg-birth-day",
+    "STEP 1 - Date de naissance: Mois dropdown with data-testid=reg-birth-month",
+    "STEP 1 - Date de naissance: Année dropdown with data-testid=reg-birth-year",
+    "STEP 1 - Age display shows correctly when date filled (reg-age-display)",
+    "STEP 1 - Pays dropdown exists with data-testid=reg-country",
+    "STEP 1 - Ville field exists with data-testid=reg-city",
+    "STEP 1 - Code postal field exists with data-testid=reg-postal",
+    "STEP 1 - Email field exists with data-testid=reg-email",
+    "STEP 1 - Téléphone field exists with data-testid=reg-phone",
+    "STEP 1 - Nationalité dropdown exists with data-testid=reg-nationality",
+    "STEP 1 - Validation prevents proceeding without required fields",
+    "STEP 2 - 3 race cards displayed: Trail 42km (95€), Ultra 80km (145€), UTMB 170km (250€)",
+    "STEP 2 - T-shirt sizes: XS, S, M, L, XL, 2XL buttons all present",
+    "STEP 2 - Emergency contact name field (reg-emergency-name)",
+    "STEP 2 - Emergency contact phone field (reg-emergency-phone)",
+    "STEP 2 - Club name optional field (reg-club)",
+    "STEP 2 - Validation prevents proceeding without T-shirt selection",
+    "STEP 3 - PPS input field (reg-pps-input)",
+    "STEP 3 - PPS verify button (reg-pps-verify)",
+    "STEP 3 - PPS link to athle.fr (reg-pps-link)",
+    "STEP 3 - FFA license input field (reg-ffa-input)",
+    "STEP 3 - FFA verify button (reg-ffa-verify)",
+    "STEP 3 - FFA license validation: >=6 chars triggers 3€ discount",
+    "STEP 3 - FFA discount appears in price summary: -3.00€",
+    "STEP 3 - Promo code input field (reg-promo-input)",
+    "STEP 3 - Promo code apply button (reg-promo-apply)",
+    "STEP 3 - Price summary with breakdown (reg-price-summary)",
+    "STEP 3 - Confirm and pay button (confirm-register-btn)",
+    "NAVIGATION - 3-step progress bar updates correctly",
+    "NAVIGATION - Back button works from Step 2 to Step 1",
+    "NAVIGATION - Back button works from Step 3 to Step 2",
+    "BACKEND - Login successful: pierre@test.com / test1234",
+    "BACKEND - Event GET returns races with counters",
+    "BACKEND - Registration endpoint accepts all new fields",
+    "BACKEND - FFA license >= 6 chars triggers 3€ discount server-side"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_registration_wizard.py",
+    "/app/test_reports/pytest/pytest_registration_wizard.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "Minor: DialogContent missing aria-describedby attribute (accessibility warning)"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_registration_wizard.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (16/16 pytest tests passed)",
+    "frontend": "100% (all wizard steps and fields verified)"
+  },
+
+  "test_credentials": {
+    "participant": "pierre@test.com / test1234",
+    "access_key": "SPORTLYO2026",
+    "url_param": "?preview=SPORTLYO2026",
+    "test_event": "evt_db0c7b851cb9"
+  },
+
+  "seed_data_creation": "User pierre@test.com may already be registered to evt_db0c7b851cb9 - 'Already registered' is expected behavior",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 16: Verified multi-step registration wizard. Test event: evt_db0c7b851cb9 (Trail du Mont Blanc 2026) with 3 races. Key data-testids: STEP1: reg-step-indicator, reg-last-name, reg-first-name, reg-gender, reg-birth-day/month/year, reg-age-display, reg-country, reg-city, reg-postal, reg-email, reg-phone, reg-nationality, reg-step-next-1. STEP2: reg-race-{name}, reg-tshirt-grid, reg-tshirt-{size}, reg-emergency-name, reg-emergency-phone, reg-club, reg-step-prev-2, reg-step-next-2. STEP3: reg-pps-input, reg-pps-verify, reg-pps-link, reg-ffa-input, reg-ffa-verify, reg-promo-input, reg-promo-apply, reg-price-summary, reg-step-prev-3, confirm-register-btn. Backend RegistrationCreate accepts: country, city, postal_code, email, phone, nationality, tshirt_size, club_name, ffa_license. FFA discount: -3€ if ffa_license.length >= 6.",
+
+  "features_verified": [
+    "Step 1 - Personal information form with all required fields",
+    "Step 1 - Auto age calculation when birth date is filled",
+    "Step 1 - Email/phone can be pre-filled from user account",
+    "Step 1 - Validation prevents proceeding with empty required fields",
+    "Step 2 - Race selection via clickable cards",
+    "Step 2 - T-shirt size selection buttons (XS-2XL)",
+    "Step 2 - Emergency contact fields",
+    "Step 2 - Optional club name field",
+    "Step 2 - Validation requires T-shirt selection",
+    "Step 3 - PPS section with verify button and athle.fr link",
+    "Step 3 - FFA license section with 3€ discount logic",
+    "Step 3 - Promo code section",
+    "Step 3 - Price summary with FFA discount displayed",
+    "Step 3 - Confirm and pay button",
+    "3-step progress bar",
+    "Back navigation between steps",
+    "Backend accepts all new registration fields",
+    "Backend applies FFA 3€ discount correctly"
+  ]
+}
