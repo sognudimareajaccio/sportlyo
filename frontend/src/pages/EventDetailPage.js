@@ -363,17 +363,30 @@ const EventDetailPage = () => {
                 data-testid="races-section"
               >
                 <h2 className="font-heading text-xl font-bold uppercase mb-4">Épreuves disponibles</h2>
+                <p className="text-sm text-slate-500 mb-4">Sélectionnez une épreuve pour voir le tarif</p>
                 <div className="space-y-3">
                   {event.races.map((race) => {
                     const current = race.current_participants || 0;
                     const max = race.max_participants || 0;
                     const fillPct = max > 0 ? Math.round((current / max) * 100) : 0;
                     const isFull = current >= max;
+                    const isSelected = formData.selected_race === race.name;
                     return (
                       <div 
                         key={race.name}
-                        className={`p-4 border ${isFull ? 'border-red-200 bg-red-50' : 'border-slate-200 hover:border-brand'} transition-colors`}
+                        className={`p-4 border-2 cursor-pointer transition-all ${
+                          isFull 
+                            ? 'border-red-200 bg-red-50 cursor-not-allowed' 
+                            : isSelected 
+                              ? 'border-brand bg-orange-50 ring-1 ring-brand/20' 
+                              : 'border-slate-200 hover:border-brand/50'
+                        }`}
                         data-testid={`race-card-${race.name}`}
+                        onClick={() => {
+                          if (!isFull) {
+                            setFormData(prev => ({ ...prev, selected_race: race.name }));
+                          }
+                        }}
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div>
@@ -762,12 +775,25 @@ const EventDetailPage = () => {
                 <>
                   {/* Price */}
                   <div className="text-center pb-6 border-b">
-                    <p className="text-sm text-slate-500 uppercase tracking-wider mb-1">À partir de</p>
-                    <p className="font-heading text-5xl font-extrabold text-brand">
-                      {event.races && event.races.length > 0
-                        ? Math.min(...event.races.map(r => r.price))
-                        : (event.current_price || event.price)}€
-                    </p>
+                    {formData.selected_race && event.races ? (
+                      <>
+                        <p className="text-sm text-slate-500 uppercase tracking-wider mb-1">
+                          {event.races.find(r => r.name === formData.selected_race)?.name}
+                        </p>
+                        <p className="font-heading text-5xl font-extrabold text-brand">
+                          {event.races.find(r => r.name === formData.selected_race)?.price}€
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm text-slate-500 uppercase tracking-wider mb-1">À partir de</p>
+                        <p className="font-heading text-5xl font-extrabold text-brand">
+                          {event.races && event.races.length > 0
+                            ? Math.min(...event.races.map(r => r.price))
+                            : (event.current_price || event.price)}€
+                        </p>
+                      </>
+                    )}
                     {event.pricing_tiers && (
                       <p className="text-xs text-slate-500 mt-2">Tarif évolutif</p>
                     )}
