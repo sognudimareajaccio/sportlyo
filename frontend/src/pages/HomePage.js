@@ -408,6 +408,65 @@ const HomePage = () => {
                 ))}
               </div>
             </motion.div>
+
+            {/* CTA Organisateur */}
+            <motion.div
+              className="relative overflow-hidden bg-brand flex flex-col items-center justify-center text-center p-8"
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.35, type: 'spring', stiffness: 120 }}
+              viewport={{ once: true }}
+              whileHover={{ scale: 1.02 }}
+            >
+              <div className="absolute inset-0 opacity-20">
+                <motion.div
+                  className="absolute -top-10 -right-10 w-40 h-40 border-[3px] border-white rounded-full"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                />
+                <motion.div
+                  className="absolute -bottom-8 -left-8 w-32 h-32 border-[3px] border-white rounded-full"
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
+                />
+                <motion.div
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 border border-white/30 rounded-full"
+                  animate={{ scale: [1, 1.15, 1] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                />
+              </div>
+              <div className="relative z-10">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.5 }}
+                  viewport={{ once: true }}
+                >
+                  <Zap className="w-10 h-10 text-white mx-auto mb-4" />
+                  <h3 className="font-heading text-xl md:text-2xl font-bold uppercase text-white leading-tight mb-2">
+                    Votre défi n'est pas dans la liste ?
+                  </h3>
+                  <p className="text-white/80 text-sm mb-6 max-w-xs mx-auto">
+                    Il est peut-être temps de le créer.
+                  </p>
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.65 }}
+                  viewport={{ once: true }}
+                >
+                  <Link to="/organizers">
+                    <Button
+                      className="bg-white text-brand hover:bg-slate-100 font-heading font-bold uppercase tracking-wider px-6 h-12 text-sm gap-2 transition-all hover:shadow-lg hover:shadow-white/20"
+                      data-testid="cta-devenez-organisateur"
+                    >
+                      Devenez organisateur <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </Link>
+                </motion.div>
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>
