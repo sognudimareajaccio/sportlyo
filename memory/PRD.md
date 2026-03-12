@@ -1,86 +1,87 @@
-# SportLyo - Product Requirements Document
+# SportLyo - PRD (Product Requirements Document)
 
-## Original Problem Statement
-Plateforme de vente de tickets en ligne pour réserver des événements sportifs (marathons, trails, courses cyclistes, etc.). Nommée **SportLyo**.
+## Problème Original
+Plateforme de vente de tickets en ligne pour des événements sportifs (marathon, trail, vélo, etc.), nommée SportLyo.
 
----
+## Rôles Utilisateurs
+- **Organisateurs** : Créent et gèrent des événements, les participants, les promotions, et suivent les performances.
+- **Participants** : S'inscrivent aux courses, gèrent leurs documents (PPS), et accèdent à leurs billets.
+- **Admin** : Supervise la plateforme, les utilisateurs et les finances.
 
-## Architecture
-- **Backend:** FastAPI (Python) | **Frontend:** React 19 + Tailwind + Shadcn/UI | **DB:** MongoDB
-- **Auth:** JWT + Google OAuth | **Payments:** Stripe (5% commission) | **PDF:** fpdf2
+## Architecture Technique
+- **Frontend** : React, TailwindCSS, Shadcn UI, framer-motion, qrcode.react, react-share
+- **Backend** : FastAPI (Python) - server.py monolithe
+- **Database** : MongoDB
+- **Auth** : JWT + Google OAuth (Emergent)
+- **Paiements** : Stripe (commission 5% participant)
+- **Accès** : Coming Soon par défaut, `?preview=SPORTLYO2026` pour accès complet
 
----
+## Fonctionnalités Implémentées
 
-## What's Been Implemented
+### Phase 1 - Core (DONE)
+- Authentification JWT + Google OAuth
+- Création/gestion d'événements (CRUD)
+- Inscription aux événements avec données personnelles (nom, prénom, date de naissance, sexe, calcul âge)
+- Système de paiement Stripe avec commission 5%
+- Attribution automatique de dossards
+- Page publique "Coming Soon"
 
-### Core
-- [x] Landing page, catalogue événements, page détail, auth, dashboards (participant/organisateur/admin)
+### Phase 2 - Chronométrage & Gestion (DONE)
+- API RFID pour chronométrage (`/api/rfid-read`)
+- Page de résultats avec classements temps réel par catégorie
+- Interface de check-in par QR code
+- Dashboard de gestion par événement (`/organizer/event/{id}`)
+- Gestion des inscrits (ajout manuel, export CSV)
+- Codes promo
+- Partage réseaux sociaux
+- Guide d'intégration chronométrage (snippets cURL/Python)
+- Export chronométrage CSV
+- Upload/validation de documents PPS
+- Billet digital avec QR code
+- Dashboard admin avec jauges de remplissage
+- Filtres par événement sur exports financiers
+- Simulation chronométrage (test_rfid_simulation.py)
 
-### Inscriptions & Paiements
-- [x] Inscriptions avancées (quotas, tarifs, vagues, options, restrictions d'âge, équipes)
-- [x] Formulaire inscription avec prénom, nom, sexe, date de naissance, **affichage âge calculé**
-- [x] Paiements Stripe (5% commission ajoutée, codes promo)
-- [x] Dossards, RFID simulé, QR Code, check-in
+### UI/UX (DONE)
+- Logos SportLyo sur toutes les pages (navbar, login, register)
+- Dashboard organisateur avec cartes animées framer-motion (grille 3 colonnes)
+- Chaque carte : image, badge statut, date, lieu, jauge remplissage, revenus, boutons action
 
-### PPS (Pass Prévention Santé) — March 12, 2026
-- [x] Lien vers https://pps.athle.fr/?locale=fr dans la page événement et le formulaire
-- [x] Upload PPS (PDF/image) par le participant dans son espace
-- [x] Réception et vérification/rejet PPS par l'organisateur (boutons approuver/rejeter)
-- [x] Statut PPS visible : en attente / vérifié / rejeté
-- [x] Âge stocké dans l'inscription et affiché dans le tableau organisateur
-
-### Dashboard Organisateur
-- [x] Page gestion événement (/organizer/event/:eventId) — stats, jauge, inscrits en temps réel
-- [x] Ajout manuel de participants, gestion codes promo (CRUD)
-- [x] Partage réseaux sociaux (Facebook, Twitter/X, WhatsApp, LinkedIn, copie lien)
-- [x] Contact admin (demande remboursement/question technique)
-- [x] Colonnes Âge et PPS dans la table des inscrits
-
-### Chronométrage
-- [x] API RFID (/api/rfid-read), résultats live, classements par catégorie
-- [x] Page Check-in, export CSV chronométrage
-- [x] Documentation intégration (RaceResult, Chronotrack, MyLaps, Webscorer)
-
-### Exports & Communication
-- [x] CSV/PDF financiers (admin + organisateur), CSV chronométrage
-- [x] Page Coming Soon avec accès privé (SPORTLYO2026)
-- [x] Logos SportLyo officiels
-
----
-
-## Test Credentials
-| Role | Email | Password |
-|------|-------|----------|
+## Comptes Test
+| Rôle | Email | Mot de passe |
+|---|---|---|
 | Admin | admin@sportsconnect.fr | admin123 |
-| Organizer | club@paris-sport.fr | club123 |
+| Organisateur | club@paris-sport.fr | club123 |
 | Participant | pierre@test.com | test1234 |
 | Participant | sophie@test.com | test1234 |
 
----
+## Tâches Restantes
 
-## Prioritized Backlog
+### P1 - Communication
+- Intégration Resend pour emails automatiques (confirmation inscription avec QR code)
+- Gestion communautaire (interaction organisateur/participants)
+- Facturation automatique
 
-### P1 - Communication & Facturation
-- [ ] Emails automatiques Resend (confirmation inscription + QR code)
-- [ ] Factures automatiques PDF pour participants/groupes
-- [ ] Notifications SMS Twilio
+### P2 - Avancé
+- Contact organisateur/admin pour remboursements
+- Location de matériel RFID
+- Fermeture automatique des inscriptions
+- App mobile check-in
+- Import CSV de temps depuis logiciels chronométrage
+- Statistiques avancées organisateurs
+- Intégration Twilio SMS
 
-### P1.5 - Chronométrage avancé
-- [ ] Configuration UI webhook pour logiciels chrono
-- [ ] Import CSV de temps, location RFID
+### Refactorisation Recommandée
+- Découpage de `backend/server.py` en modules (routes, services, modèles)
 
-### P2 - Communauté & Avancé
-- [ ] Communauté par organisation, validation arrivées live
-- [ ] Gestion catégories personnalisables, vérification PPS réelle API FFA
-- [ ] Refactoring backend (server.py → modules)
+## Intégrations Actives
+- Stripe (paiements)
+- Google OAuth (Emergent)
+- fpdf2 (génération PDF)
+- qrcode.react (QR codes billets)
+- framer-motion (animations)
+- react-share (partage social)
 
-### P3 - Nice to Have
-- [ ] Carte parcours, app mobile check-in, multi-langue, stats avancées
-
----
-
-## Notes Techniques
-- **PPS:** Upload réel (PDF/image), vérification manuelle par organisateur. Numéro PPS auto-validé (MOCKED)
-- **RFID:** Endpoint simulé (MOCKED)
-- **Accès:** ?preview=SPORTLYO2026
-- **Logos:** logo-dark.png (fond clair), logo-light.png (fond sombre)
+## Intégrations Planifiées
+- Resend (emails)
+- Twilio (SMS)
