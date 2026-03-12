@@ -193,9 +193,13 @@ class TeamMember(BaseModel):
 # Registration with advanced fields
 class RegistrationCreate(BaseModel):
     event_id: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    gender: Optional[str] = None  # M, F
+    birth_date: Optional[str] = None  # YYYY-MM-DD
     selected_race: Optional[str] = None
     selected_wave: Optional[str] = None
-    selected_options: Optional[List[str]] = None  # option_ids
+    selected_options: Optional[List[str]] = None
     emergency_contact: Optional[str] = None
     emergency_phone: Optional[str] = None
     custom_fields_data: Optional[Dict[str, Any]] = None
@@ -309,6 +313,35 @@ def generate_bib_number(event_id: str, race_code: str = "") -> str:
     random_part = ''.join(random.choices(string.digits, k=4))
     prefix = race_code[:2].upper() if race_code else event_id[:4].upper()
     return f"{prefix}-{random_part}"
+
+def generate_rfid_chip_id() -> str:
+    """Generate unique RFID chip ID (10-digit)"""
+    return f"{random.randint(1000000000, 9999999999)}"
+
+def calculate_category(birth_date_str: str, gender: str = "M") -> str:
+    """Calculate race category from birth date and gender"""
+    if not birth_date_str:
+        return "SEN"
+    try:
+        birth = datetime.fromisoformat(birth_date_str)
+        age = (datetime.now(timezone.utc) - birth.replace(tzinfo=timezone.utc)).days // 365
+        prefix = "M" if gender == "M" else "F"
+        if age < 18: return f"{prefix}-JUN"
+        elif age < 23: return f"{prefix}-ESP"
+        elif age < 40: return f"{prefix}-SEN"
+        elif age < 50: return f"{prefix}-M1"
+        elif age < 60: return f"{prefix}-M2"
+        elif age < 70: return f"{prefix}-M3"
+        else: return f"{prefix}-M4"
+    except:
+        return "SEN"
+
+def format_duration(seconds):
+    """Format duration in seconds to HH:MM:SS"""
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    s = int(seconds % 60)
+    return f"{h:02d}:{m:02d}:{s:02d}"
 
 def generate_qr_code(data: str) -> str:
     """Generate QR code as base64 string"""
@@ -905,19 +938,27 @@ async def validate_promo_code(request: Request):
 async def create_registration(reg_data: RegistrationCreate, current_user: dict = Depends(get_current_user)):
     event = await db.events.find_one({"event_id": reg_data.event_id}, {"_id": 0})
     if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
+        raise HTTPException(status_code=404, detail="Événement introuvable")
+    
+    # Auto-close: check date
+    if event.get('date'):
+        try:
+            event_date = datetime.fromisoformat(event['date'].replace('Z', '+00:00'))
+            if event_date < datetime.now(timezone.utc):
+                raise HTTPException(status_code=400, detail="Inscriptions fermées (événement passé)")
+        except (ValueError, TypeError):
+            pass
     
     # Check global capacity
     if event['current_participants'] >= event['max_participants']:
-        # Check waitlist option
-        raise HTTPException(status_code=400, detail="Event is full")
+        raise HTTPException(status_code=400, detail="Complet ! Inscrivez-vous en liste d'attente.")
     
     # Check race capacity if specified
     if reg_data.selected_race and event.get('races'):
         for race in event['races']:
             if race['name'] == reg_data.selected_race:
-                if race.get('current_participants', 0) >= race['max_participants']:
-                    raise HTTPException(status_code=400, detail=f"Race {reg_data.selected_race} is full")
+                if race.get('current_participants', 0) >= race.get('max_participants', 9999):
+                    raise HTTPException(status_code=400, detail=f"L'épreuve {reg_data.selected_race} est complète")
                 break
     
     # Check wave capacity if specified
@@ -958,6 +999,13 @@ async def create_registration(reg_data: RegistrationCreate, current_user: dict =
     
     registration_id = f"reg_{uuid.uuid4().hex[:12]}"
     bib_number = generate_bib_number(reg_data.event_id, reg_data.selected_race or "")
+    rfid_chip_id = generate_rfid_chip_id()
+    
+    # Determine names
+    first_name = reg_data.first_name or current_user.get('name', '').split(' ')[0]
+    last_name = reg_data.last_name or ' '.join(current_user.get('name', '').split(' ')[1:]) or current_user.get('name', '')
+    gender = reg_data.gender or "M"
+    category = calculate_category(reg_data.birth_date, gender)
     
     # Calculate price
     base_price = get_current_price(event)
@@ -998,7 +1046,13 @@ async def create_registration(reg_data: RegistrationCreate, current_user: dict =
         "user_id": current_user['user_id'],
         "user_name": current_user['name'],
         "user_email": current_user['email'],
+        "first_name": first_name,
+        "last_name": last_name,
+        "gender": gender,
+        "birth_date": reg_data.birth_date,
+        "category": category,
         "bib_number": bib_number,
+        "rfid_chip_id": rfid_chip_id,
         "selected_race": reg_data.selected_race,
         "selected_wave": reg_data.selected_wave,
         "selected_options": reg_data.selected_options,
@@ -1056,6 +1110,8 @@ async def create_registration(reg_data: RegistrationCreate, current_user: dict =
     return {
         "registration_id": registration_id,
         "bib_number": bib_number,
+        "rfid_chip_id": rfid_chip_id,
+        "category": category,
         "base_price": total_price,
         "service_fee": service_fee,
         "amount": total_to_pay,
@@ -1462,8 +1518,8 @@ async def stop_race_timer(request: Request, current_user: dict = Depends(get_cur
     }
 
 @api_router.get("/timing/results/{event_id}")
-async def get_race_results(event_id: str, race: Optional[str] = None):
-    """Get race results (public)"""
+async def get_race_results(event_id: str, race: Optional[str] = None, category: Optional[str] = None):
+    """Get race results with rankings by category (public)"""
     query = {
         "event_id": event_id,
         "race_finished": True,
@@ -1472,23 +1528,51 @@ async def get_race_results(event_id: str, race: Optional[str] = None):
     
     if race:
         query["selected_race"] = race
+    if category:
+        query["category"] = category
     
     results = await db.registrations.find(
         query,
-        {"_id": 0, "user_name": 1, "bib_number": 1, "selected_race": 1, 
+        {"_id": 0, "user_name": 1, "first_name": 1, "last_name": 1, "bib_number": 1,
+         "rfid_chip_id": 1, "selected_race": 1, "gender": 1, "category": 1,
          "race_duration_seconds": 1, "race_start_time": 1, "race_finish_time": 1}
     ).sort("race_duration_seconds", 1).to_list(1000)
     
-    # Add rank and format time
+    # Add ranks (general + category)
+    category_counters = {}
+    gender_counters = {}
     for idx, result in enumerate(results):
         result['rank'] = idx + 1
-        duration = result['race_duration_seconds']
-        hours = int(duration // 3600)
-        minutes = int((duration % 3600) // 60)
-        seconds = int(duration % 60)
-        result['formatted_time'] = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        result['formatted_time'] = format_duration(result['race_duration_seconds'])
+        
+        cat = result.get('category', 'SEN')
+        category_counters[cat] = category_counters.get(cat, 0) + 1
+        result['category_rank'] = category_counters[cat]
+        
+        g = result.get('gender', 'M')
+        gender_counters[g] = gender_counters.get(g, 0) + 1
+        result['gender_rank'] = gender_counters[g]
     
-    return {"results": results, "total": len(results)}
+    # Get available categories and races for filters
+    all_regs = await db.registrations.find(
+        {"event_id": event_id, "race_finished": True},
+        {"_id": 0, "category": 1, "selected_race": 1, "gender": 1}
+    ).to_list(10000)
+    
+    categories = sorted(set(r.get('category', 'SEN') for r in all_regs))
+    races = sorted(set(r.get('selected_race', '') for r in all_regs if r.get('selected_race')))
+    
+    return {
+        "results": results,
+        "total": len(results),
+        "categories": categories,
+        "races": races,
+        "stats": {
+            "total_finishers": len(results),
+            "male": sum(1 for r in results if r.get('gender') == 'M'),
+            "female": sum(1 for r in results if r.get('gender') == 'F'),
+        }
+    }
 
 @api_router.get("/timing/my-results")
 async def get_my_results(current_user: dict = Depends(get_current_user)):
@@ -1514,6 +1598,224 @@ async def get_my_results(current_user: dict = Depends(get_current_user)):
         result['formatted_time'] = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
     
     return {"results": results}
+
+# ============== RFID / TIMING INTEGRATION ==============
+
+@api_router.post("/rfid-read")
+async def rfid_read(request: Request):
+    """Receive RFID timing data from external timing system.
+    Compatible with RaceResult, Chronotrack, MyLaps, Webscorer.
+    Accepts: chip_id, timestamp, checkpoint (start/finish/checkpoint_N)
+    Optional API key auth via X-API-Key header."""
+    data = await request.json()
+    chip_id = str(data.get('chip_id', ''))
+    timestamp = data.get('timestamp')
+    checkpoint = data.get('checkpoint', 'finish')
+    event_id = data.get('event_id')
+    
+    if not chip_id or not timestamp:
+        raise HTTPException(status_code=400, detail="chip_id et timestamp requis")
+    
+    # Find registration by RFID chip
+    query = {"rfid_chip_id": chip_id}
+    if event_id:
+        query["event_id"] = event_id
+    
+    registration = await db.registrations.find_one(query, {"_id": 0})
+    if not registration:
+        # Store unmatched reading for later
+        await db.rfid_readings.insert_one({
+            "chip_id": chip_id, "timestamp": timestamp, "checkpoint": checkpoint,
+            "event_id": event_id, "matched": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        return {"status": "unmatched", "chip_id": chip_id, "message": "Puce RFID non trouvée"}
+    
+    # Store RFID reading
+    reading_doc = {
+        "chip_id": chip_id,
+        "registration_id": registration['registration_id'],
+        "event_id": registration['event_id'],
+        "bib_number": registration['bib_number'],
+        "timestamp": timestamp,
+        "checkpoint": checkpoint,
+        "matched": True,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.rfid_readings.insert_one(reading_doc)
+    
+    # Process checkpoint
+    if checkpoint == 'start':
+        await db.registrations.update_one(
+            {"registration_id": registration['registration_id']},
+            {"$set": {"race_started": True, "race_start_time": timestamp, "checked_in": True}}
+        )
+        return {"status": "ok", "action": "start_recorded", "bib": registration['bib_number'],
+                "name": f"{registration.get('first_name','')} {registration.get('last_name','')}"}
+    
+    elif checkpoint == 'finish':
+        start_time_str = registration.get('race_start_time')
+        duration_seconds = None
+        formatted_time = None
+        
+        if start_time_str:
+            try:
+                start_dt = datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
+                finish_dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                duration_seconds = int((finish_dt - start_dt).total_seconds())
+                formatted_time = format_duration(duration_seconds)
+            except:
+                pass
+        
+        await db.registrations.update_one(
+            {"registration_id": registration['registration_id']},
+            {"$set": {
+                "race_finished": True,
+                "race_finish_time": timestamp,
+                "race_duration_seconds": duration_seconds
+            }}
+        )
+        return {
+            "status": "ok", "action": "finish_recorded",
+            "bib": registration['bib_number'],
+            "name": f"{registration.get('first_name','')} {registration.get('last_name','')}",
+            "duration_seconds": duration_seconds,
+            "formatted_time": formatted_time
+        }
+    else:
+        # Intermediate checkpoint
+        await db.registrations.update_one(
+            {"registration_id": registration['registration_id']},
+            {"$push": {"checkpoints": {"name": checkpoint, "timestamp": timestamp}}}
+        )
+        return {"status": "ok", "action": "checkpoint_recorded", "checkpoint": checkpoint,
+                "bib": registration['bib_number']}
+
+@api_router.post("/rfid-read/bulk")
+async def rfid_read_bulk(request: Request):
+    """Bulk RFID readings import (for CSV import from timing software)"""
+    data = await request.json()
+    readings = data.get('readings', [])
+    results = []
+    for reading in readings:
+        try:
+            from starlette.requests import Request as MockReq
+            # Process each reading
+            chip_id = str(reading.get('chip_id', ''))
+            timestamp = reading.get('timestamp')
+            checkpoint = reading.get('checkpoint', 'finish')
+            event_id = reading.get('event_id')
+            
+            query = {"rfid_chip_id": chip_id}
+            if event_id:
+                query["event_id"] = event_id
+            reg = await db.registrations.find_one(query, {"_id": 0})
+            
+            if reg and checkpoint == 'finish' and reg.get('race_start_time'):
+                try:
+                    start_dt = datetime.fromisoformat(reg['race_start_time'].replace('Z', '+00:00'))
+                    finish_dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                    duration = int((finish_dt - start_dt).total_seconds())
+                    await db.registrations.update_one(
+                        {"registration_id": reg['registration_id']},
+                        {"$set": {"race_finished": True, "race_finish_time": timestamp,
+                                  "race_duration_seconds": duration}}
+                    )
+                    results.append({"chip_id": chip_id, "status": "ok", "bib": reg['bib_number']})
+                except:
+                    results.append({"chip_id": chip_id, "status": "error"})
+            elif reg and checkpoint == 'start':
+                await db.registrations.update_one(
+                    {"registration_id": reg['registration_id']},
+                    {"$set": {"race_started": True, "race_start_time": timestamp}}
+                )
+                results.append({"chip_id": chip_id, "status": "ok", "bib": reg['bib_number']})
+            else:
+                results.append({"chip_id": chip_id, "status": "unmatched"})
+        except:
+            results.append({"chip_id": reading.get('chip_id'), "status": "error"})
+    
+    return {"processed": len(results), "results": results}
+
+# ============== CHECK-IN (QR CODE SCAN) ==============
+
+@api_router.post("/checkin/scan")
+async def checkin_scan(request: Request, current_user: dict = Depends(get_current_user)):
+    """Scan QR code or enter bib number for day-of check-in"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    
+    data = await request.json()
+    registration_id = data.get('registration_id')
+    bib_number = data.get('bib_number')
+    
+    query = {"_id": 0}
+    if registration_id:
+        reg = await db.registrations.find_one({"registration_id": registration_id}, query)
+    elif bib_number:
+        reg = await db.registrations.find_one({"bib_number": bib_number}, query)
+    else:
+        raise HTTPException(status_code=400, detail="registration_id ou bib_number requis")
+    
+    if not reg:
+        raise HTTPException(status_code=404, detail="Inscription non trouvée")
+    
+    if reg.get('checked_in'):
+        return {"status": "already_checked_in", "registration": reg, "message": "Déjà pointé !"}
+    
+    await db.registrations.update_one(
+        {"registration_id": reg['registration_id']},
+        {"$set": {"checked_in": True, "checkin_time": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    reg['checked_in'] = True
+    return {"status": "ok", "registration": reg, "message": f"Dossard {reg['bib_number']} validé !"}
+
+@api_router.get("/checkin/stats/{event_id}")
+async def checkin_stats(event_id: str, current_user: dict = Depends(get_current_user)):
+    """Get check-in statistics for an event"""
+    total = await db.registrations.count_documents({"event_id": event_id, "payment_status": "completed"})
+    checked_in = await db.registrations.count_documents({"event_id": event_id, "checked_in": True})
+    
+    return {"total_registered": total, "checked_in": checked_in, "remaining": total - checked_in}
+
+# ============== EXPORT TIMING (CSV for chronométreur) ==============
+
+@api_router.get("/organizer/events/{event_id}/export-timing")
+async def export_timing_csv(event_id: str, current_user: dict = Depends(get_current_user)):
+    """Export participants as CSV for timing software (RaceResult, MyLaps, Chronotrack)"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    
+    registrations = await db.registrations.find(
+        {"event_id": event_id, "payment_status": "completed"},
+        {"_id": 0}
+    ).sort("bib_number", 1).to_list(10000)
+    
+    import io
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["BibNumber", "FirstName", "LastName", "RFID", "Gender", "Category", "Race", "Email"])
+    
+    for r in registrations:
+        writer.writerow([
+            r.get('bib_number', ''),
+            r.get('first_name', ''),
+            r.get('last_name', ''),
+            r.get('rfid_chip_id', ''),
+            r.get('gender', ''),
+            r.get('category', ''),
+            r.get('selected_race', ''),
+            r.get('user_email', '')
+        ])
+    
+    csv_bytes = BytesIO(output.getvalue().encode('utf-8-sig'))
+    
+    return StreamingResponse(
+        csv_bytes,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="timing_export_{event_id}.csv"'}
+    )
 
 # ============== PAYMENT ROUTES (STRIPE) ==============
 

@@ -37,6 +37,10 @@ const EventDetailPage = () => {
   const [registrationSuccess, setRegistrationSuccess] = useState(null);
 
   const [formData, setFormData] = useState({
+    first_name: '',
+    last_name: '',
+    gender: 'M',
+    birth_date: '',
     selected_race: '',
     selected_wave: '',
     selected_options: [],
