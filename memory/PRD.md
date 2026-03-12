@@ -3,15 +3,6 @@
 ## Original Problem Statement
 Plateforme de vente de tickets en ligne pour réserver des événements sportifs (marathons, trails, courses cyclistes, etc.) avec les thématiques: Cyclisme, Triathlon, Course à pied, Marche, Sports Mécaniques. Nommée **SportLyo**.
 
-**Fonctionnalités clés demandées:**
-- Inscriptions avancées (quotas, tarifs évolutifs, équipes/relais, vagues)
-- Gestion participants (validation documents, PPS, dossards, RFID)
-- Paiements sécurisés (Stripe, 5% commission ajoutée, codes promo, remboursements)
-- Communication (emails, billets digitaux, QR code)
-- Chronométrage et résultats en temps réel
-- Back-office admin complet
-- Accès privé via clé SPORTLYO2026
-
 ---
 
 ## Architecture
@@ -21,18 +12,9 @@ Plateforme de vente de tickets en ligne pour réserver des événements sportifs
 - **Frontend:** React 19 + Tailwind CSS + Shadcn/UI
 - **Database:** MongoDB
 - **Authentication:** JWT + Emergent Google OAuth
-- **AI:** OpenAI GPT-5.2 via Emergent LLM Key
-- **Payments:** Stripe (5% commission ajoutée)
+- **Payments:** Stripe (5% commission ajoutée, payée par le participant)
 - **PDF Generation:** fpdf2
 - **QR Code:** qrcode library
-
----
-
-## User Personas
-
-1. **Participant** - Sportifs cherchant des événements, utilisant le chrono personnel
-2. **Organisateur** - Clubs/associations créant événements avec options avancées
-3. **Admin** - Gestionnaire plateforme, suivi commissions et utilisateurs
 
 ---
 
@@ -41,50 +23,43 @@ Plateforme de vente de tickets en ligne pour réserver des événements sportifs
 ### Phase 1 - MVP
 - [x] Landing page avec hero dynamique, catégories, événements
 - [x] Catalogue d'événements avec filtres
-- [x] Page détail événement
+- [x] Page détail événement avec partage réseaux sociaux
 - [x] Authentification JWT + Google OAuth
 - [x] Dashboard participant et organisateur
 - [x] Back-office admin
-- [x] Chatbot IA "Coach AI"
 
 ### Phase 2 - Fonctionnalités Avancées
 - [x] Inscriptions avancées (quotas, tarifs, vagues, options, restrictions d'âge, équipes)
-- [x] Gestion participants (PPS - MOCKED, transfert dossards, liste d'attente, QR Code)
+- [x] Formulaire inscription avec prénom, nom, sexe, date de naissance
+- [x] Gestion participants (dossards, RFID simulé, QR Code, check-in)
 - [x] Paiements Stripe (5% commission, codes promo, remboursements)
-- [x] Chronométrage manuel participant (start/stop, résultats live, classement)
+- [x] Chronométrage (API RFID, résultats live, classements par catégorie)
 - [x] Communication (billet digital QR code)
 
-### Phase 2.1 - Modification d'événements
-- [x] Modale d'édition complète avec multi-épreuves/distances
+### Phase 2.5 - Dashboard Organisateur Enrichi (March 12, 2026)
+- [x] **Page gestion événement** (/organizer/event/:eventId)
+  - Stats : Inscrits, Places restantes, Taux de remplissage (%), Revenus, Payés
+  - Jauge de remplissage visuelle (globale + par épreuve)
+  - Auto-refresh toutes les 15s
+- [x] **Liste inscrits en temps réel**
+  - Table complète (dossard, participant, email, épreuve, catégorie, statut, check-in, prix)
+  - Filtres : recherche texte, épreuve, catégorie d'âge, statut de paiement
+  - Export CSV
+- [x] **Ajout manuel de participants** (sans paiement, avec dossard/RFID/QR auto-générés)
+- [x] **Gestion codes promo** (CRUD complet)
+  - Création : code, type (% ou fixe), valeur, max utilisations, date expiration
+  - Suppression
+- [x] **Partage réseaux sociaux** (Facebook, Twitter/X, WhatsApp, LinkedIn, copie lien)
+  - Sur page événement publique (dropdown hover)
+  - Sur page organisateur (boutons dédiés)
+- [x] **Intégration chronométrage** (infos endpoint RFID, compatibilité RaceResult/Chronotrack/MyLaps/Webscorer)
+- [x] **Contact admin** (formulaire demande remboursement/question technique)
+- [x] **Messages admin** (endpoint GET /api/admin/messages)
+- [x] **Logos SportLyo** officiels intégrés
 
-### Phase 2.2 - Rebranding SportLyo
-- [x] Renommage SportsConnect → SportLyo
-- [x] Page Coming Soon avec accès privé (SPORTLYO2026)
-- [x] Calendrier français personnalisé (Shadcn)
-- [x] Exports financiers CSV/PDF (admin + organisateur)
-- [x] Modèle commission 5% ajouté (participant paie)
-
-### Phase 2.3 - Inscriptions avancées + Logos (March 12, 2026)
-- [x] Formulaire d'inscription avec prénom, nom, sexe, date de naissance
-- [x] Calcul automatique catégorie d'âge
-- [x] Attribution dossard + puce RFID simulée
-- [x] Logos SportLyo officiels intégrés (dark pour fond clair, light pour fond sombre)
-- [x] Suppression routes backend dupliquées (checkin/scan, checkin/stats)
-
-### Phase 2.4 - Chronométrage Frontend (March 12, 2026)
-- [x] Page Check-in dédiée (/organizer/checkin/:eventId)
-  - Stats temps réel (inscrits, pointés, restants)
-  - Barre de progression
-  - Scanner QR code / saisie dossard
-  - Historique check-ins récents
-- [x] Bouton export CSV chronométrage sur dashboard organisateur
-- [x] Bouton check-in (Scan) sur dashboard organisateur
-- [x] Bouton résultats sur dashboard organisateur
-- [x] Page Résultats améliorée
-  - Filtre par catégorie d'âge
-  - Colonne catégorie avec rang catégorie
-  - Stats H/F
-  - Auto-refresh 10s
+### Exports
+- [x] CSV/PDF financiers admin et organisateur
+- [x] CSV chronométrage (liste inscrits pour logiciel chrono)
 
 ---
 
@@ -101,26 +76,28 @@ Plateforme de vente de tickets en ligne pour réserver des événements sportifs
 
 ## Prioritized Backlog
 
-### P0 - Communication (Next)
+### P1 - Communication & Production
 - [ ] Emails automatiques Resend (confirmation inscription + QR code)
 - [ ] Notifications SMS Twilio
-
-### P1 - Production Ready
 - [ ] Fermeture automatique inscriptions (quota/date)
-- [ ] Vérification PPS réelle avec API FFA
-- [ ] Import CSV de temps (chronométreurs externes)
-- [ ] Refactoring backend (server.py → modules)
+- [ ] Factures automatiques PDF pour participants/groupes
+- [ ] Gestion catégories personnalisables (âge, distances)
 
-### P2 - Medium Priority
-- [ ] Carte interactive parcours (Leaflet/Mapbox)
-- [ ] Analyse prédictive des ventes (IA)
-- [ ] Multi-langue (FR/EN)
-- [ ] Upload/validation certificat médical
+### P1.5 - Connexion Logiciels Chronométrage
+- [ ] Configuration UI webhook pour RaceResult/Chronotrack/MyLaps/Webscorer
+- [ ] Import CSV de temps (chronométreurs externes)
+- [ ] Location RFID sur plateforme
+
+### P2 - Communauté & Avancé
+- [ ] Communauté par organisation (messages, annonces)
+- [ ] Validation arrivées live (interface temps réel pendant course)
+- [ ] Vérification PPS réelle avec API FFA
+- [ ] Refactoring backend (server.py → modules séparés)
 
 ### P3 - Nice to Have
+- [ ] Carte interactive parcours (Leaflet/Mapbox)
 - [ ] Application mobile check-in
-- [ ] Partage réseaux sociaux
-- [ ] Badges/achievements
+- [ ] Multi-langue (FR/EN)
 - [ ] Statistiques avancées (répartition H/F, performances)
 
 ---
@@ -130,4 +107,4 @@ Plateforme de vente de tickets en ligne pour réserver des événements sportifs
 - **PPS:** Pass Prévention Santé FFA - simulé (MOCKED)
 - **RFID:** Endpoint /api/rfid-read simulé (MOCKED)
 - **Logos:** logo-dark.png (fond clair), logo-light.png (fond sombre)
-- **Accès privé:** ?preview=SPORTLYO2026 ou clé dans formulaire
+- **Accès privé:** ?preview=SPORTLYO2026
