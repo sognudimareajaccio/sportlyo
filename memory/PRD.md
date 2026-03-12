@@ -54,6 +54,9 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
   - Règlement de la course (section dépliable)
   - Nom de l'organisateur affiché clairement
   - Compteur temps réel par épreuve/course avec barres de progression animées
+  - Thématiques (badges), type de circuit, statut chronométreur
+  - Liens & Réseaux sociaux (Site web, Facebook, Instagram, X/Twitter, YouTube)
+- **Formulaire création enrichi** : Thématiques (multi-select tags), circuit, chronométreur Oui/Non, liens sociaux (5 champs)
 - **Formulaire d'inscription modernisé** : Wizard 3 étapes (Informations personnelles, Course & Options, Licence & Paiement) avec :
   - Date de naissance Jour/Mois/Année séparés, pays, ville, code postal, email, téléphone, nationalité
   - Sélection d'épreuve par cartes, taille T-shirt (XS-2XL), contact urgence, nom de club
