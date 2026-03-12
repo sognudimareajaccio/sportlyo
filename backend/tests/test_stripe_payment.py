@@ -178,7 +178,7 @@ class TestStripeCheckoutCreation:
         # Create checkout session
         checkout_data = {
             "registration_id": registration_id,
-            "origin_url": "https://lyo-runner-stage.preview.emergentagent.com"
+            "origin_url": "https://orga-landing-preview.preview.emergentagent.com"
         }
         
         response = requests.post(f"{BASE_URL}/api/payments/create-checkout",
@@ -252,7 +252,7 @@ class TestPaymentStatus:
                     headers=auth_headers,
                     json={
                         "registration_id": pending_reg["registration_id"],
-                        "origin_url": "https://lyo-runner-stage.preview.emergentagent.com"
+                        "origin_url": "https://orga-landing-preview.preview.emergentagent.com"
                     }
                 )
                 if checkout_response.status_code == 200:

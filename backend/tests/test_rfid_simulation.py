@@ -20,7 +20,7 @@ import json
 import random
 from datetime import datetime, timezone, timedelta
 
-API_URL = "https://lyo-runner-stage.preview.emergentagent.com/api"
+API_URL = "https://orga-landing-preview.preview.emergentagent.com/api"
 EVENT_ID = "evt_f79c5cfd5036"  # COURSE CORSICA FEVER
 
 # Login as organizer

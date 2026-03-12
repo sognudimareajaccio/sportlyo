@@ -24,6 +24,7 @@ import TimerPage from "./pages/TimerPage";
 import ResultsPage from "./pages/ResultsPage";
 import CheckInPage from "./pages/CheckInPage";
 import OrganizerEventPage from "./pages/OrganizerEventPage";
+import OrgaLandingPage from "./pages/OrgaLandingPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
 import ErrorBoundary from "./components/ErrorBoundary";
 

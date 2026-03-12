@@ -3,85 +3,92 @@ L'utilisateur souhaite créer une plateforme de vente de tickets en ligne pour d
 
 **PRODUCT REQUIREMENTS:**
 - **Rôles :**
-    - **Organisateurs :** Créent et gèrent des événements (lieu, date, description, quotas, tarifs, distances).
-    - **Participants :** S'inscrivent aux courses et suivent leurs performances.
-    - **Admin :** Supervise la plateforme, gère les utilisateurs et les finances.
+    - **Organisateurs :** Créent et gèrent des événements, les participants, les promotions, et suivent les performances.
+    - **Participants :** S'inscrivent aux courses, gèrent leurs documents (PPS), et accèdent à leurs billets.
+    - **Admin :** Supervise la plateforme, les utilisateurs et les finances.
 - **Fonctionnalités Clés :**
-    - **Inscriptions Avancées :** Formulaires personnalisables, quotas, gestion des catégories, fermeture automatique.
-    - **Gestion des Participants :** Attribution de dossards, gestion des puces RFID, check-in le jour J via scan QR code.
-    - **Paiements :** Modèle avec commission de 5% ajoutée au prix du billet et payée par le participant. L'organisateur reçoit 100% du prix du billet. Le back-office admin doit afficher une ventilation financière détaillée (commission, frais Stripe, revenu net plateforme). Gestion des codes promo.
-    - **Communication :** Emails automatisés (confirmation, envoi QR code), notifications SMS.
-    - **Chronométrage et Résultats :**
-        - Export CSV de la liste des inscrits pour les systèmes de chronométrage.
-        - API () pour recevoir les temps depuis un système de chronométrage externe (ex: RaceResult).
-        - Calcul et publication des classements en temps réel.
-    - **Exports :** Export CSV/PDF des relevés financiers pour l'admin et les organisateurs.
-    - **Accès :** Le site public doit afficher une page En cours de construction (), tandis que l'application complète est accessible via une URL privée ().
+    - **Inscriptions Avancées :** Formulaires modernes (wizards multi-étapes) avec collecte de nombreuses données (données personnelles, contact d'urgence, club, taille T-shirt, etc.).
+    - **Gestion des Documents :** Upload et validation de documents PPS (Parcours Prévention Santé). Logique de remise pour les licenciés FFA.
+    - **Page Événement Détaillée :** Affichage d'informations complètes : parcours OpenRunner, carte Google Maps, règlement, compteur de participants en temps réel, etc.
+    - **Paiements :** Modèle avec commission de 5% payée par le participant, géré par Stripe.
+    - **Dashboard Organisateur Centralisé :** Interface moderne avec cartes animées, statistiques, gestion des inscrits, création de codes promo, etc.
+    - **Gestion Admin :** Dashboard financier avec ventilation des revenus et jauges de remplissage.
+    - **Chronométrage et Résultats :** API () pour intégration, page de résultats en temps réel.
+    - **Page de Destination Organisateur :** Une page marketing pour convaincre les organisateurs de rejoindre la plateforme.
 
 **User's preferred language**: fr
 
 **what currently exists?**
-Une application full-stack (React/FastAPI/MongoDB) fonctionnelle. L'authentification (JWT + Google Auth) est en place. Le nom de la plateforme a été changé pour SportLyo et une page En cours de réalisation avec un système d'accès privé a été implémentée. Le modèle de commission (5% ajoutés, payés par le participant) a été entièrement implémenté et testé de bout en bout. Les fonctionnalités de création/modification d'événements (avec un sélecteur de date en français) et les exports financiers (CSV/PDF) pour l'admin et les organisateurs sont terminées. L'agent a commencé à implémenter un système d'inscription plus avancé pour la gestion du chronométrage.
+Une application full-stack (React/FastAPI/MongoDB) très avancée. Les fonctionnalités clés MVP sont terminées.
+Les points saillants récents incluent :
+- **Refonte UI/UX majeure :**
+    - Le tableau de bord organisateur a été modernisé avec des cartes animées.
+    - Les formulaires de création d'événement et d'inscription participant ont été transformés en wizards multi-étapes, très intuitifs et visuellement riches.
+- **Enrichissement des données :**
+    - La page de détail d'un événement est maintenant très complète, affichant des cartes, des parcours embarqués (OpenRunner), des compteurs de participants en temps réel, des liens vers les réseaux sociaux, etc.
+    - Le catalogue de sports a été étendu à 18 catégories, chacune avec une icône dédiée.
+- **Contenu :** La base de données a été purgée des anciens événements et remplie avec 19 événements de test réalistes et complets, chacun correspondant à une catégorie de sport.
+- **Navigation :** Un menu de navigation rapide a été ajouté à toutes les pages du tableau de bord organisateur pour une meilleure expérience.
 
 **Last working item**:
-- Last item agent was working on: L'agent a commencé la **Phase 1** de l'implémentation du système de chronométrage et d'inscriptions avancées. Il a modifié le backend pour inclure de nouveaux champs dans le modèle  (, , , , , , ) et a créé les nouvelles routes API pour le chronométrage (, , ). Il a ensuite commencé à mettre à jour le formulaire d'inscription côté frontend pour collecter ces nouvelles informations.
+- Last item agent was working on: L'utilisateur a demandé deux choses : 1) Remplacer les images des événements par des photos plus pertinentes pour chaque sport. 2) Créer une nouvelle page de destination pour les organisateurs (inspirée d'une URL fournie) et la lier au bouton En savoir plus de la page d'accueil. L'agent a commencé par créer le fichier de la nouvelle page () et a ajouté la route dans .
 - Status: IN PROGRESS
 - Agent Testing Done: N
 - Which testing method agent to use? both
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Le flux d'inscription est actuellement cassé car le frontend et le backend ne sont pas synchronisés suite aux modifications de la Phase 1. (P0)
+  - Issue 1: Finaliser la page de destination pour les organisateurs et mettre à jour les images des événements. (P0)
 
   Issues Detail:
   - Issue 1: 
-     - Attempted fixes: L'agent a ajouté les nouveaux champs au modèle de données backend et a commencé à modifier le formulaire frontend dans .
+     - Attempted fixes: L'agent a créé le fichier  et a configuré la route dans . Il a également commencé à mettre à jour les URLs des images dans la base de données mais n'a pas terminé.
      - Next debug checklist:
-        1. Finaliser la mise à jour du composant de formulaire d'inscription dans  pour inclure et valider tous les nouveaux champs (prénom, nom, sexe, date de naissance).
-        2. S'assurer que l'état (state) du formulaire gère correctement ces nouvelles données.
-        3. Vérifier que la requête  envoie bien toutes les nouvelles données requises par le backend.
-        4. Tester le flux d'inscription de bout en bout pour s'assurer qu'un utilisateur peut s'inscrire avec les nouvelles informations et que celles-ci sont correctement sauvegardées en base de données.
-     - Why fix this issue and what will be achieved with the fix? C'est la fonctionnalité principale de la plateforme. Sa résolution est nécessaire pour continuer le développement du système de chronométrage.
+        1.  Remplir le contenu de  en s'inspirant du design de  mais en l'adaptant à l'identité visuelle de SportLyo et en mettant en avant ses fonctionnalités uniques (Chronométrage, PPS, etc.).
+        2.  S'assurer que le bouton En savoir plus sur la  redirige bien vers .
+        3.  Vérifier et finaliser la mise à jour des images pour les 19 événements en base de données pour qu'elles correspondent à leur sport.
+        4.  Tester la nouvelle page et le flux de navigation.
+     - Why fix this issue and what will be achieved with the fix? Cela fournira un outil marketing clé pour attirer de nouveaux organisateurs sur la plateforme et améliorera l'attrait visuel de la page d'accueil avec des images pertinentes.
      - Status: IN PROGRESS
      - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? both
+     - Should Test frontend/backend/both after fix? frontend
      - Blocked on other issue: None
 
 **In progress Task List**:
-  - Task 1:  Finaliser l'implémentation de la Phase 1 du système d'inscriptions avancées et de chronométrage. (P0)
+  - Task 1: Création de la page de destination pour les organisateurs. (P0)
 
  Task Detail:
   - Task 1: 
-     - Where to resume: Continuer les modifications sur  pour terminer le nouveau formulaire d'inscription.
-     - What will be achieved with this? Un système d'inscription complet qui collecte toutes les données nécessaires pour l'attribution des dossards, des puces RFID et le calcul des catégories d'âge.
+     - Where to resume: .
+     - What will be achieved with this? Une page marketing complète et stylisée pour les organisateurs.
      - Status: IN PROGRESS
-     - Should Test frontend/backend/both after fix? both
+     - Should Test frontend/backend/both after fix? frontend
      - Blocked on something: None
 
 **Upcoming and Future Tasks**
-*   **Upcoming Tasks (P0):**
-    *   **Phase 2 - Intégration Chronométrage :**
-        *   Frontend : Créer un bouton sur le dashboard organisateur pour déclencher l'export CSV ().
-        *   Frontend : Créer une interface de check-in (potentiellement une page dédiée ou une modale) qui permet de scanner un QR code et d'appeler l'API .
-        *   Frontend : Améliorer la page des résultats pour qu'elle affiche les classements par catégorie et se rafraîchisse automatiquement en interrogeant l'API .
-    *   **Phase 3 - Communication :**
-        *   Intégrer Resend pour l'envoi d'emails automatiques de confirmation d'inscription, incluant le QR code du participant.
-*   **Future Tasks (P1):**
-    *   Fermeture automatique des inscriptions (quand le quota est atteint ou la date passée).
-    *   Implémenter un système de facturation automatique pour les participants.
-    *   Développer une application mobile pour le check-in.
-    *   Implémenter l'import de fichiers de temps (CSV) pour les chronométreurs n'utilisant pas l'API.
-    *   Ajouter des statistiques avancées (répartition H/F, performances).
-    *   Intégrer Twilio pour les notifications SMS.
+*   **Upcoming Tasks (P1):**
+    *   **Phase 3 - Communication :** Intégrer Resend pour l'envoi d'emails automatiques (confirmation d'inscription avec QR code).
+    *   **Gestion Communautaire :** Permettre aux organisateurs d'interagir avec leurs participants (communauté par événement).
+    *   **Facturation :** Implémenter un système de factures automatiques pour les participants ou les groupes.
+*   **Future Tasks (P2):**
+    *   Contact direct entre organisateur et administrateur pour les demandes de remboursement.
+    *   Plateforme de location de matériel RFID.
+    *   Fermeture automatique des inscriptions.
+    *   Développement d'une application mobile dédiée au check-in.
+    *   Import de fichiers de temps (CSV) depuis les logiciels de chronométrage.
+    *   Statistiques avancées pour les organisateurs.
+    *   Intégration Twilio pour les notifications SMS.
 
 **Completed work in this session**
-- **Recently completed:**
-  - **Modèle de Commission :** Implémentation complète du modèle où une commission de 5% est ajoutée au prix et payée par le participant. Testé de bout en bout.
-  - **Exports Financiers :** Ajout des exports CSV et PDF pour l'admin et les organisateurs, avec filtres par date.
-  - **Rebranding et Accès Privé :** La plateforme a été renommée SportLyo. Une page En cours de réalisation a été mise en place avec un accès via clé secrète ().
-  - **Aide à la configuration DNS :** Guidage de l'utilisateur pour la configuration de son nom de domaine .
-  - **Calendrier Amélioré :** Remplacement de l'input  par un calendrier Shadcn personnalisé, en français et aux couleurs du site.
-  - **Correction de Bug Critique :** Résolution d'un bug qui provoquait une page blanche lors de la création d'événement en ajoutant un  global et des protections dans le code.
+- **Refonte du Dashboard Organisateur** : Remplacement de la table par une grille de cartes animées. (DONE)
+- **Refonte Formulaire Création d'Événement** : Transformation en un wizard 4 étapes avec barre de progression, sélection de sport par cartes, et ajout de nombreux champs (adresse exacte, URL OpenRunner, règlement, thématiques, site web, réseaux sociaux, chronométreur). (DONE)
+- **Refonte Formulaire d'Inscription Participant** : Transformation en un wizard 3 étapes avec pré-remplissage des données, sélection d'épreuve par cartes, et ajout de champs (date de naissance, nationalité, contact d'urgence, taille T-shirt, N° PPS, N° licence FFA avec remise). (DONE)
+- **Enrichissement Page Détail Événement** : Ajout de l'embed OpenRunner, carte Google Maps, compteur de participants en temps réel par épreuve, section règlement, liens sociaux, etc. (DONE)
+- **Ajout d'un Menu de Navigation Organisateur** : Création et intégration d'un composant de navigation rapide sur toutes les pages du dashboard organisateur. (DONE)
+- **Expansion des Catégories de Sport** : Ajout de 13 nouveaux sports (VTT, Golf, CrossFit, etc.) sur toute la plateforme (backend, homepage, formulaire), portant le total à 18. (DONE)
+- **Nettoyage et Création de Contenu** : Suppression de tous les anciens événements et création de 19 nouveaux événements réalistes et complets, avec des données pour tous les nouveaux champs. (DONE)
+- **Mise à jour de la Page d'Accueil** : Ajout d'une section Explorez par thématique et affichage de toutes les nouvelles catégories de sport. (DONE)
+- **Tests** : L'agent de test a été utilisé avec succès après chaque développement majeur, garantissant une haute qualité et l'absence de régressions. (DONE)
 
 **Earlier issues found/mentioned but not fixed**
    - Aucune.
@@ -93,82 +100,74 @@ Une application full-stack (React/FastAPI/MongoDB) fonctionnelle. L'authentifica
 
 
 **Key Technical Concepts**
-- **Frontend:** React, TailwindCSS, Shadcn UI
+- **Frontend:** React, TailwindCSS, Shadcn UI,  (utilisé massivement pour les animations et wizards),  (icônes).
 - **Backend:** FastAPI (Python)
 - **Database:** MongoDB
 - **Authentication:** JWT, Google OAuth
-- **Payments:** Stripe
-- **PDF Generation:** fpdf2
 
 **key DB schema**
-- : inchangé.
-- : .
-- : Modèle considérablement étendu avec , , , , , , , ainsi qu'une ventilation financière détaillée (, , , , ).
+- ****: Étendu pour inclure , , , , , , , , , , .
+- ****: Étendu pour inclure , , , , , , , , , , , .
 
 **changes in tech stack**
-- Ajout de la dépendence  dans le backend pour la génération de PDF.
+- Aucune.
 
 **All files of reference**
-- : Fichier principal du backend, massivement modifié pour le nouveau modèle de commission, les exports, et le début de l'implémentation du système de chronométrage.
-- : Entièrement réécrit pour intégrer un tableau financier détaillé et les contrôles d'export.
-- : Mis à jour pour refléter les revenus corrects et ajouter les exports.
-- : En cours de modification pour intégrer le nouveau formulaire d'inscription.
-- : Modifié pour ajouter le  et le système de .
-- : Nouveau composant créé pour le sélecteur de date.
-- : Nouveau composant créé pour éviter les pages blanches.
-- : Nouvelle page créée.
+- : Fichier à compléter pour la page de destination des organisateurs.
+- : Modifié pour ajouter la route .
+- : Fichier massivement modifié pour ajouter de nouvelles catégories, thématiques et lier le bouton En savoir plus.
+- : Fichier massivement modifié pour la refonte du formulaire de création d'événement (wizard) et l'intégration du menu de navigation.
+- : Fichier massivement modifié pour la refonte du formulaire d'inscription (wizard) et l'affichage de toutes les nouvelles informations sur l'événement.
+- : Nouveau composant créé pour la navigation rapide.
+- : Fichier massivement étendu avec la logique pour tous les nouveaux champs des modèles  et .
 
 **Areas that need refactoring**:
-- Le fichier  est devenu un monolithe critique. Il contient la logique des utilisateurs, des événements, des paiements, des exports et maintenant du chronométrage. Il est impératif de proposer une refactorisation en divisant le code en plusieurs modules (, , , ) pour garantir la maintenabilité du projet.
+- ****: Ce fichier continue de grossir et sa complexité est un risque technique majeur. Une refactorisation en une architecture modulaire (ex: , , ) est de plus en plus critique et doit être proposée à l'utilisateur.
 
 **key api endpoints**
-- **Nouveaux endpoints :**
-  - : Exporte les données financières de l'admin (CSV/PDF).
-  - : Exporte les revenus d'un organisateur (CSV/PDF).
-  - : Enregistre un email depuis la page coming soon.
-  - : Endpoint pour recevoir les données de chronométrage RFID.
-  - : Exporte les participants pour le logiciel de chronométrage.
-  - : Valide le check-in d'un participant.
-- **Endpoints modifiés :**
-  - : Logique mise à jour pour les nouveaux champs et le calcul des frais.
-  - : Logique mise à jour pour le nouveau modèle de commission.
-  -  & : Entièrement revus pour le nouveau tableau de bord financier.
+- Les endpoints  et  ont été mis à jour pour accepter et traiter la multitude de nouveaux champs ajoutés aux formulaires.
+- Le endpoint  supporte désormais un plus grand nombre d'événements affichés.
 
 **Critical Info for New Agent**
-- **Priorité absolue :** Terminer la **Phase 1** du système d'inscriptions avancées en finalisant le formulaire frontend et en testant le flux de bout en bout. L'application est actuellement inutilisable pour les inscriptions.
-- **Accès à l'application :** Le site est protégé par une page En cours de réalisation. Pour accéder à la plateforme, il faut utiliser le paramètre d'URL .
-- **Refactorisation du backend :** Le fichier  est devenu trop complexe. Il est fortement recommandé de planifier et de proposer une refactorisation de l'architecture backend au client pour assurer la scalabilité et la maintenabilité future.
-- **Suivre le plan de l'utilisateur :** L'utilisateur a fourni une feuille de route très claire pour l'implémentation du chronométrage. Il est crucial de la suivre étape par étape (Phase 1, 2, 3).
+- **Priorité Absolue (P0) :** Compléter la page de destination pour les organisateurs (). Le fichier existe, il faut y ajouter le contenu en s'inspirant de l'exemple fourni par l'utilisateur tout en gardant une identité propre à SportLyo. Il faut également finaliser la mise à jour des images des événements.
+- **Refactorisation Backend :** Le monolithe  est un point de friction. Il est impératif de suggérer à l'utilisateur de planifier une refactorisation pour assurer la maintenabilité future du projet.
+- **Cache utilisateur :** Rappeler à l'utilisateur de vider son cache (Ctrl+Shift+R) ou d'utiliser la navigation privée est une bonne pratique, car il a déjà rencontré ce problème.
 
 **documents and test reports created in this job**
-- /app/memory/PRD.md
-- Plusieurs rapports dans 
-- Des fichiers d'export de test dans 
+-  (mis à jour à chaque )
+- De multiples rapports de test dans . Le dernier est .
 
 **Last 10 User Messages and any pending HUMAN messages**
--  : L'utilisateur a approuvé le plan de l'agent pour commencer l'implémentation du système de chronométrage.
-- User provided a very detailed plan for the timing/RFID integration architecture and asked the agent to follow it.
-- User asked for a summary of completed/pending features, which the agent provided.
-- User reported a bug (blank page on event creation), which the agent fixed and explained the need for redeployment.
-- User asked for an improved, French calendar for event creation, which the agent implemented.
-- User asked for test credentials and Stripe test card numbers.
-- User asked for guidance on linking their custom domain and the agent provided manual DNS instructions.
+10. : Demande d'ajouter 13 nouvelles catégories de sport.
+9. : Confirme et implémente l'ajout des 13 sports sur toute la plateforme (backend, frontend).
+8. : Demande de créer des événements pour ces nouvelles activités.
+7. : Confirme et crée 13 nouveaux événements réalistes.
+6. : Demande de mettre des photos correspondantes aux sports et de créer une page de destination pour les organisateurs.
+5. : Confirme le plan en 2 étapes : mettre à jour les images, puis créer la page.
+4. :  (génération de code pour la page organisateur).
+3. : (continue la génération de code).
+2. : .
+1. : (continue la génération de code et la mise à jour de la DB).
 
 **Project Health Check:**
-- **Broken:** Le flux d'inscription des participants est actuellement cassé en raison de la refonte en cours du formulaire et des données associées.
-- **Mocked:** L'intégration avec le matériel RFID est simulée via l'endpoint . Les communications par email (Resend) et SMS (Twilio) ne sont pas encore implémentées.
+- **Broken:** None.
+- **Mocked:** Les intégrations pour l'envoi d'emails (Resend) et de SMS (Twilio) sont toujours en attente et non implémentées.
 
 **3rd Party Integrations**
 - **Stripe:** Intégré pour les paiements.
 - **Google Auth:** Intégré pour la connexion.
-- **fpdf2:** Installé et utilisé pour la génération de PDF.
+- **fpdf2:** Utilisé pour la génération de PDF (existant).
+- **react-share:** Utilisé pour les boutons de partage social.
+- **qrcode.react:** Utilisé pour générer les QR codes des billets.
+- **framer-motion:** Fortement utilisé pour les animations et wizards.
+- **lucide-react:** Utilisé pour les icônes.
 - **Resend / Twilio:** Planifiés mais non implémentés.
 
 **Testing status**
-- Testing agent used after significant changes: YES (pour le modèle de paiement et les exports)
+- Testing agent used after significant changes: YES. L'agent de test a été utilisé intensivement et avec succès après chaque modification majeure, avec des rapports de test confirmant que 100% des tests sont passés.
 - Troubleshoot agent used after agent stuck in loop: NO
-- Test files created: None
-- Known regressions: Le flux d'inscription est cassé.
+- Test files created: []
+- Known regressions: None
 
 **Credentials to test flow:**
 | Rôle | Email | Mot de passe |
@@ -176,7 +175,7 @@ Une application full-stack (React/FastAPI/MongoDB) fonctionnelle. L'authentifica
 | Admin |  |  |
 | Organisateur |  |  |
 | Participant |  |  |
-| Participant (Nouveau) |  |  |
+| Participant (corrigé) |  |  |
 
 **What agent forgot to execute**
-L'agent n'a pas oublié de tâche, mais a laissé une fonctionnalité majeure (la refonte des inscriptions) dans un état incomplet, rendant une partie critique de l'application non fonctionnelle. La priorité absolue pour le nouvel agent est de terminer ce travail.</analysis>
+L'agent n'a pas oublié de tâche, mais a été interrompu au milieu de la dernière demande de l'utilisateur. La création de la page de destination pour les organisateurs est commencée mais pas terminée. De même, la mise à jour des images d'événements n'est que partiellement achevée.</analysis>
