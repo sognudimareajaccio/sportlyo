@@ -46,26 +46,17 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 - Logos SportLyo sur toutes les pages (navbar, login, register)
 - Dashboard organisateur avec cartes animées framer-motion (grille 3 colonnes)
 - Chaque carte : image, badge statut, date, lieu, jauge remplissage, revenus, boutons action
-- **Mini-menu de navigation rapide** : composant `OrganizerNav` avec cartes carrées (icônes orange, texte uppercase) intégré sur toutes les pages organisateur (/organizer, /organizer/event/{id}, /organizer/checkin/{id}). Adaptatif : 3 items sur le dashboard, 5 items sur les pages événement.
-- **Formulaire de création modernisé** : Wizard multi-étapes (4 steps) avec barre de progression, sélection de sport par cartes visuelles, zone d'upload image drag & drop, animations framer-motion entre les étapes.
+- **Mini-menu de navigation rapide** : composant `OrganizerNav` avec cartes carrées (icônes orange, texte uppercase) intégré sur toutes les pages organisateur
+- **Formulaire de création modernisé** : Wizard multi-étapes (4 steps) avec barre de progression, sélection de sport par cartes visuelles, zone d'upload image drag & drop
+- **Formulaire d'inscription modernisé** : Wizard 3 étapes avec pré-remplissage, sélection d'épreuve par cartes
+- **Page événement enrichie** : OpenRunner, Google Maps, compteur temps réel, règlement, liens sociaux
+- **Page d'accueil enrichie** : Section "Explorez par thématique", 18 catégories de sport
+- **Page de destination organisateurs** (`/organizers`) : Page marketing complète avec Hero, Stats, Features, Avantages, Sports, Écosystème, Support, CTA
 
-## Tâches Restantes
-- **Page événement enrichie** :
-  - Parcours OpenRunner intégré (iframe avec altimétrie + lien externe)
-  - Adresse exacte avec carte Google Maps embarquée + bouton "Comment s'y rendre"
-  - Règlement de la course (section dépliable)
-  - Nom de l'organisateur affiché clairement
-  - Compteur temps réel par épreuve/course avec barres de progression animées
-  - Thématiques (badges), type de circuit, statut chronométreur
-  - Liens & Réseaux sociaux (Site web, Facebook, Instagram, X/Twitter, YouTube)
-- **Formulaire création enrichi** : Thématiques (multi-select tags), circuit, chronométreur Oui/Non, liens sociaux (5 champs)
-- **Page d'accueil enrichie** : Nouvelle section "Trouvez votre défi" avec 6 thématiques colorées (Trail, Marathon, Course nocturne, Course caritative, Course d'obstacles, Ultra-trail)
-- **Données seed** : 6 événements complets créés (Trail Monts du Lyonnais, Marathon de Lyon, Triathlon Annecy, Cyclosportive Alpes, Lyonnaise by Night, Mud Race Lyon)
-- **Formulaire d'inscription modernisé** : Wizard 3 étapes (Informations personnelles, Course & Options, Licence & Paiement) avec :
-  - Date de naissance Jour/Mois/Année séparés, pays, ville, code postal, email, téléphone, nationalité
-  - Sélection d'épreuve par cartes, taille T-shirt (XS-2XL), contact urgence, nom de club
-  - PPS avec vérification + lien athle.fr, licence FFA avec remise 3€, code promo
-  - Email/téléphone pré-remplis depuis le compte, récapitulatif prix avec remises
+### Contenu (DONE)
+- 18 catégories de sport disponibles
+- 12 événements réalistes avec images pertinentes par sport (Unsplash)
+- Images mises à jour pour correspondre à chaque discipline sportive
 
 ## Comptes Test
 | Rôle | Email | Mot de passe |
@@ -77,6 +68,8 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 
 ## Sports Disponibles
 Cyclisme, Course à pied, Triathlon, Marche, Sports Mécaniques, Rallye Voitures, VTT, BMX, Cyclo-cross, Sports de raquette, Tir à l'arc, Kitesurf, Golf, Pétanque, Billard, Bowling, CrossFit, Sports de combat
+
+## Tâches Restantes
 
 ### P1 - Communication
 - Intégration Resend pour emails automatiques (confirmation inscription avec QR code)
