@@ -7,7 +7,8 @@ import {
   Plus, Calendar, Users, Euro, TrendingUp, Settings,
   Eye, Edit, Trash2, BarChart3, ChevronRight, Building2, QrCode, Scan,
   Upload, Image, X, Loader2, Download, FileText, MapPin,
-  Bike, Footprints, Medal, Car, ArrowRight, ArrowLeft, Mountain, Clock, Check
+  Bike, Footprints, Medal, Car, ArrowRight, ArrowLeft, Mountain, Clock, Check,
+  Route, FileText as FileTextIcon, Navigation
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '../components/ui/dialog';
@@ -59,7 +60,10 @@ const OrganizerDashboard = () => {
     allows_teams: false,
     min_age: '',
     max_age: '',
-    races: []
+    races: [],
+    route_url: '',
+    exact_address: '',
+    regulations: ''
   });
 
   const [upgradeData, setUpgradeData] = useState({
@@ -458,7 +462,7 @@ const OrganizerDashboard = () => {
                   date: '', max_participants: 100, price: 25, distances: '',
                   elevation_gain: '', image_url: '', requires_pps: false,
                   requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '',
-                  races: []
+                  races: [], route_url: '', exact_address: '', regulations: ''
                 });
                 setImagePreview(null);
               }
@@ -481,7 +485,7 @@ const OrganizerDashboard = () => {
                     {[
                       { n: 1, label: 'Sport & Lieu' },
                       { n: 2, label: 'Configuration' },
-                      { n: 3, label: 'Visuels' },
+                      { n: 3, label: 'Parcours & Visuels' },
                       { n: 4, label: 'Épreuves' }
                     ].map((s) => (
                       <div key={s.n} className="flex-1 flex flex-col items-center">
@@ -569,6 +573,19 @@ const OrganizerDashboard = () => {
                             data-testid="event-location-input"
                           />
                         </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-2 block">
+                          <Navigation className="w-3.5 h-3.5 inline mr-1" />Adresse exacte du départ
+                        </Label>
+                        <Input
+                          placeholder="12 Quai Claude Bernard, 69007 Lyon"
+                          value={newEvent.exact_address}
+                          onChange={(e) => setNewEvent(prev => ({ ...prev, exact_address: e.target.value }))}
+                          data-testid="event-exact-address-input"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">Sera affichée sur une carte avec itinéraire</p>
                       </div>
 
                       <div className="flex justify-end pt-2">
@@ -682,7 +699,7 @@ const OrganizerDashboard = () => {
                     </motion.div>
                   )}
 
-                  {/* STEP 3: Visuels */}
+                  {/* STEP 3: Parcours, Visuels & Règlement */}
                   {createStep === 3 && (
                     <motion.div
                       key="step3"
@@ -692,6 +709,26 @@ const OrganizerDashboard = () => {
                       transition={{ duration: 0.2 }}
                       className="p-6 space-y-5"
                     >
+                      {/* Route OpenRunner */}
+                      <div>
+                        <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
+                          <Route className="w-4 h-4 text-brand" /> Parcours OpenRunner
+                        </Label>
+                        <Input
+                          placeholder="https://www.openrunner.com/route/12345678"
+                          value={newEvent.route_url}
+                          onChange={(e) => setNewEvent(prev => ({ ...prev, route_url: e.target.value }))}
+                          data-testid="event-route-url-input"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">Collez le lien OpenRunner pour afficher le parcours avec altimétrie sur la page événement</p>
+                        {newEvent.route_url && newEvent.route_url.includes('openrunner.com') && (
+                          <div className="mt-2 p-2 bg-green-50 border border-green-200 text-green-700 text-xs flex items-center gap-1.5">
+                            <Check className="w-3.5 h-3.5" /> Lien OpenRunner détecté — le parcours sera affiché automatiquement
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Image */}
                       <div>
                         <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-3 block">Image de l'événement</Label>
                         {(imagePreview || newEvent.image_url) ? (
@@ -699,7 +736,7 @@ const OrganizerDashboard = () => {
                             <img
                               src={imagePreview || newEvent.image_url}
                               alt="Preview"
-                              className="w-full h-48 object-cover"
+                              className="w-full h-40 object-cover"
                             />
                             <button
                               type="button"
@@ -712,14 +749,14 @@ const OrganizerDashboard = () => {
                         ) : (
                           <div
                             onClick={() => fileInputRef.current?.click()}
-                            className="border-2 border-dashed border-slate-300 hover:border-brand p-8 text-center cursor-pointer transition-colors group"
+                            className="border-2 border-dashed border-slate-300 hover:border-brand p-6 text-center cursor-pointer transition-colors group"
                             data-testid="image-drop-zone"
                           >
-                            <Upload className="w-10 h-10 mx-auto mb-3 text-slate-300 group-hover:text-brand transition-colors" />
-                            <p className="font-heading font-bold text-sm uppercase tracking-wider text-slate-500 group-hover:text-brand">
-                              {uploadingImage ? 'Upload en cours...' : 'Cliquez pour uploader une image'}
+                            <Upload className="w-8 h-8 mx-auto mb-2 text-slate-300 group-hover:text-brand transition-colors" />
+                            <p className="font-heading font-bold text-xs uppercase tracking-wider text-slate-500 group-hover:text-brand">
+                              {uploadingImage ? 'Upload en cours...' : 'Cliquez pour uploader'}
                             </p>
-                            <p className="text-xs text-slate-400 mt-1">JPG, PNG, GIF ou WebP — Max 10MB</p>
+                            <p className="text-[10px] text-slate-400 mt-1">JPG, PNG, GIF ou WebP — Max 10MB</p>
                           </div>
                         )}
                         <input
@@ -730,7 +767,7 @@ const OrganizerDashboard = () => {
                           className="hidden"
                           id="event-image-upload"
                         />
-                        <div className="flex items-center gap-2 mt-3">
+                        <div className="flex items-center gap-2 mt-2">
                           <span className="text-xs text-slate-400">ou</span>
                           <Input
                             placeholder="URL de l'image (https://...)"
@@ -748,10 +785,24 @@ const OrganizerDashboard = () => {
                         <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-2 block">Description</Label>
                         <Textarea
                           placeholder="Décrivez votre événement : parcours, ambiance, services..."
-                          rows={4}
+                          rows={3}
                           value={newEvent.description}
                           onChange={(e) => setNewEvent(prev => ({ ...prev, description: e.target.value }))}
                           data-testid="event-description-input"
+                        />
+                      </div>
+
+                      {/* Règlement */}
+                      <div>
+                        <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
+                          <FileTextIcon className="w-4 h-4 text-brand" /> Règlement de la course
+                        </Label>
+                        <Textarea
+                          placeholder="Conditions de participation, matériel obligatoire, règles de sécurité..."
+                          rows={4}
+                          value={newEvent.regulations}
+                          onChange={(e) => setNewEvent(prev => ({ ...prev, regulations: e.target.value }))}
+                          data-testid="event-regulations-input"
                         />
                       </div>
 

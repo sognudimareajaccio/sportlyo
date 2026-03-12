@@ -160,6 +160,9 @@ class EventCreate(BaseModel):
     elevation_gain: Optional[int] = None
     image_url: Optional[str] = None
     route_data: Optional[dict] = None
+    route_url: Optional[str] = None
+    exact_address: Optional[str] = None
+    regulations: Optional[str] = None
     # Requirements
     requires_pps: bool = False
     requires_medical_cert: bool = False
@@ -811,6 +814,9 @@ async def create_event(event_data: EventCreate, current_user: dict = Depends(get
         "elevation_gain": event_data.elevation_gain,
         "image_url": event_data.image_url,
         "route_data": event_data.route_data,
+        "route_url": event_data.route_url,
+        "exact_address": event_data.exact_address,
+        "regulations": event_data.regulations,
         "requires_pps": event_data.requires_pps,
         "requires_medical_cert": event_data.requires_medical_cert,
         "min_age": event_data.min_age,

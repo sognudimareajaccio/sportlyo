@@ -1,0 +1,92 @@
+{
+  "summary": "Iteration 15: Comprehensive testing of new event detail page features - Parcours OpenRunner, Adresse exacte, Règlement, Nom organisateur, Compteurs épreuves. All 14 features verified successfully across frontend and backend.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "EVENT DETAIL PAGE - races-section with 3 race cards (Trail 42km, Ultra 80km, UTMB 170km)",
+    "EVENT DETAIL PAGE - Race cards display counters (0/200, 0/150, 0/150 format)",
+    "EVENT DETAIL PAGE - route-section 'Parcours & Altimétrie' visible",
+    "EVENT DETAIL PAGE - openrunner-embed iframe with correct src (embed/16658009)",
+    "EVENT DETAIL PAGE - openrunner-link 'Voir sur OpenRunner' with external link",
+    "EVENT DETAIL PAGE - map-section 'Lieu de départ' visible",
+    "EVENT DETAIL PAGE - exact-address displays: Place du Triangle de l Amitié, 74400 Chamonix-Mont-Blanc",
+    "EVENT DETAIL PAGE - directions-btn 'Comment s'y rendre' with Google Maps link",
+    "EVENT DETAIL PAGE - map-embed Google Maps iframe visible",
+    "EVENT DETAIL PAGE - regulations-section 'Règlement de la course' visible",
+    "EVENT DETAIL PAGE - regulations-toggle collapses/expands correctly",
+    "EVENT DETAIL PAGE - regulations-content shows 656 chars when expanded",
+    "EVENT DETAIL PAGE - organizer-section 'Organisé par' visible",
+    "EVENT DETAIL PAGE - organizer-name displays: Club Sportif Paris",
+    "ORGANIZER DASHBOARD - Login as organizer (club@paris-sport.fr) successful",
+    "ORGANIZER DASHBOARD - Create event dialog opens",
+    "ORGANIZER DASHBOARD - Step 1 has event-exact-address-input field",
+    "ORGANIZER DASHBOARD - Step 3 has event-route-url-input field (Parcours OpenRunner)",
+    "ORGANIZER DASHBOARD - Step 3 has event-regulations-input field",
+    "BACKEND API - GET /api/events/evt_db0c7b851cb9 returns route_url",
+    "BACKEND API - GET returns exact_address: Place du Triangle de l Amitié, 74400 Chamonix-Mont-Blanc",
+    "BACKEND API - GET returns regulations (656 chars)",
+    "BACKEND API - GET returns organizer_name: Club Sportif Paris",
+    "BACKEND API - GET returns 3 races with participant counters",
+    "BACKEND API - POST /api/events accepts and saves route_url, exact_address, regulations",
+    "BACKEND API - PUT /api/events/{id} updates route_url, exact_address, regulations correctly"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_event_fields.py",
+    "/app/test_reports/pytest/pytest_event_fields.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [],
+
+  "updated_files": [
+    "/app/backend/tests/test_event_fields.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (9/9 pytest tests passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+
+  "test_credentials": {
+    "organizer": "club@paris-sport.fr / club123",
+    "access_key": "SPORTLYO2026",
+    "url_param": "?preview=SPORTLYO2026",
+    "test_event": "evt_db0c7b851cb9"
+  },
+
+  "seed_data_creation": "Test event evt_db0c7b851cb9 (Trail du Mont Blanc 2026) has all new fields populated",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 15: Verified all new event detail page features. Test event evt_db0c7b851cb9 contains: route_url='https://www.openrunner.com/route/16658009', exact_address='Place du Triangle de l Amitié, 74400 Chamonix-Mont-Blanc', regulations (656 chars), organizer_name='Club Sportif Paris', 3 races (Trail 42km 0/200 95€, Ultra 80km 0/150 145€, UTMB 170km 0/150 250€). Key data-testids: races-section, race-card-{name}, route-section, openrunner-embed, openrunner-link, map-section, exact-address, directions-btn, map-embed, regulations-section, regulations-toggle, regulations-content, organizer-section, organizer-name. Creation form: Step 1 has event-exact-address-input, Step 3 has event-route-url-input and event-regulations-input. Backend EventCreate model accepts Optional[str] for route_url, exact_address, regulations.",
+
+  "features_verified": [
+    "Section 'Parcours & Altimétrie' with OpenRunner iframe embed",
+    "Link 'Voir sur OpenRunner' opens route in new tab",
+    "Section 'Lieu de départ' displays exact address",
+    "Button 'Comment s'y rendre' opens Google Maps directions",
+    "Google Maps embedded map visible",
+    "Section 'Règlement de la course' with collapsible toggle",
+    "Regulations content displayed when expanded",
+    "Section 'Organisé par' with organizer name",
+    "3 races with real-time counters (Trail 42km 0/200, Ultra 80km 0/150, UTMB 170km 0/150)",
+    "Animated progress bars on race cards",
+    "Creation wizard Step 1: 'Adresse exacte du départ' field",
+    "Creation wizard Step 3: 'Parcours OpenRunner' URL field",
+    "Creation wizard Step 3: 'Règlement de la course' textarea",
+    "Backend accepts and stores route_url, exact_address, regulations fields"
+  ]
+}

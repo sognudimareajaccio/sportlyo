@@ -5,7 +5,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { 
   MapPin, Calendar, Users, Mountain, ArrowLeft, Share2, 
-  Heart, CheckCircle, AlertCircle, Loader2, QrCode, Clock, Timer
+  Heart, CheckCircle, AlertCircle, Loader2, QrCode, Clock, Timer,
+  Route, FileText, Navigation, ExternalLink, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -52,6 +53,25 @@ const EventDetailPage = () => {
 
   const [promoDiscount, setPromoDiscount] = useState(null);
   const [checkingPromo, setCheckingPromo] = useState(false);
+  const [showRegulations, setShowRegulations] = useState(false);
+
+  const getOpenRunnerEmbedUrl = (url) => {
+    if (!url) return null;
+    const match = url.match(/openrunner\.com\/(?:route|r)\/(\d+)/);
+    if (match) return `https://www.openrunner.com/embed/${match[1]}`;
+    if (url.includes('openrunner.com/embed/')) return url;
+    return null;
+  };
+
+  const getMapUrl = (address) => {
+    if (!address) return null;
+    return `https://www.openstreetmap.org/export/embed.html?bbox=&layer=mapnik&marker=&query=${encodeURIComponent(address)}`;
+  };
+
+  const getDirectionsUrl = (address) => {
+    if (!address) return null;
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+  };
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -293,40 +313,63 @@ const EventDetailPage = () => {
               )}
             </motion.div>
 
-            {/* Races / Distances */}
+            {/* Races with real-time counter */}
             {event.races && event.races.length > 0 && (
               <motion.div
                 className="bg-white p-6 border border-slate-200"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
+                data-testid="races-section"
               >
                 <h2 className="font-heading text-xl font-bold uppercase mb-4">Épreuves disponibles</h2>
                 <div className="space-y-3">
-                  {event.races.map((race) => (
-                    <div 
-                      key={race.name}
-                      className={`flex items-center justify-between p-4 border rounded-sm ${
-                        race.current_participants >= race.max_participants 
-                          ? 'border-red-200 bg-red-50' 
-                          : 'border-slate-200 hover:border-brand'
-                      }`}
-                    >
-                      <div>
-                        <h3 className="font-heading font-bold">{race.name}</h3>
-                        <p className="text-sm text-slate-500">
-                          {race.distance_km && `${race.distance_km}km`}
-                          {race.elevation_gain && ` • ${race.elevation_gain}m D+`}
-                        </p>
+                  {event.races.map((race) => {
+                    const current = race.current_participants || 0;
+                    const max = race.max_participants || 0;
+                    const fillPct = max > 0 ? Math.round((current / max) * 100) : 0;
+                    const isFull = current >= max;
+                    return (
+                      <div 
+                        key={race.name}
+                        className={`p-4 border ${isFull ? 'border-red-200 bg-red-50' : 'border-slate-200 hover:border-brand'} transition-colors`}
+                        data-testid={`race-card-${race.name}`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <h3 className="font-heading font-bold text-lg">{race.name}</h3>
+                            <p className="text-sm text-slate-500">
+                              {race.distance_km && `${race.distance_km}km`}
+                              {race.elevation_gain && ` · ${race.elevation_gain}m D+`}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-heading text-2xl font-bold text-brand">{race.price}€</p>
+                          </div>
+                        </div>
+                        {/* Real-time counter */}
+                        <div className="mt-2">
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="text-slate-500 flex items-center gap-1">
+                              <Users className="w-3.5 h-3.5" />
+                              <span className="font-heading font-bold text-asphalt">{current}</span> / {max} inscrits
+                            </span>
+                            <span className={`font-heading font-bold ${isFull ? 'text-red-500' : fillPct >= 80 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                              {isFull ? 'COMPLET' : `${fillPct}%`}
+                            </span>
+                          </div>
+                          <div className="w-full h-2 bg-slate-100 overflow-hidden">
+                            <motion.div
+                              className={`h-full ${isFull ? 'bg-red-500' : fillPct >= 80 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${Math.min(fillPct, 100)}%` }}
+                              transition={{ duration: 0.8 }}
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-heading text-xl font-bold text-brand">{race.price}€</p>
-                        <p className="text-xs text-slate-500">
-                          {race.max_participants - (race.current_participants || 0)} places
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </motion.div>
             )}
@@ -350,13 +393,104 @@ const EventDetailPage = () => {
               </motion.div>
             )}
 
+            {/* Route / Parcours OpenRunner */}
+            {event.route_url && getOpenRunnerEmbedUrl(event.route_url) && (
+              <motion.div
+                className="bg-white border border-slate-200 overflow-hidden"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.15 }}
+                data-testid="route-section"
+              >
+                <div className="p-6 pb-0 flex items-center justify-between">
+                  <h2 className="font-heading text-xl font-bold uppercase flex items-center gap-2">
+                    <Route className="w-5 h-5 text-brand" /> Parcours & Altimétrie
+                  </h2>
+                  <a
+                    href={event.route_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-brand hover:underline flex items-center gap-1"
+                    data-testid="openrunner-link"
+                  >
+                    Voir sur OpenRunner <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+                <div className="mt-4">
+                  <iframe
+                    src={getOpenRunnerEmbedUrl(event.route_url)}
+                    width="100%"
+                    height="420"
+                    frameBorder="0"
+                    allowFullScreen
+                    title="Parcours OpenRunner"
+                    className="w-full"
+                    data-testid="openrunner-embed"
+                  />
+                </div>
+              </motion.div>
+            )}
+
+            {/* Map & Directions */}
+            {event.exact_address && (
+              <motion.div
+                className="bg-white border border-slate-200 overflow-hidden"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.2 }}
+                data-testid="map-section"
+              >
+                <div className="p-6 pb-4">
+                  <h2 className="font-heading text-xl font-bold uppercase flex items-center gap-2 mb-3">
+                    <Navigation className="w-5 h-5 text-brand" /> Lieu de départ
+                  </h2>
+                  <p className="text-slate-600 flex items-center gap-2 mb-4" data-testid="exact-address">
+                    <MapPin className="w-4 h-4 text-brand flex-shrink-0" />
+                    {event.exact_address}
+                  </p>
+                  <a
+                    href={getDirectionsUrl(event.exact_address)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex"
+                    data-testid="directions-btn"
+                  >
+                    <Button className="btn-primary gap-2">
+                      <Navigation className="w-4 h-4" /> Comment s'y rendre
+                    </Button>
+                  </a>
+                </div>
+                <iframe
+                  src={`https://www.openstreetmap.org/export/embed.html?bbox=&layer=mapnik`}
+                  width="100%"
+                  height="250"
+                  frameBorder="0"
+                  title="Carte"
+                  className="w-full border-t border-slate-200"
+                  style={{ display: 'none' }}
+                />
+                <div className="w-full h-[250px] border-t border-slate-200 bg-slate-100 relative">
+                  <iframe
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(event.exact_address)}&t=&z=14&ie=UTF8&iwloc=&output=embed`}
+                    width="100%"
+                    height="250"
+                    frameBorder="0"
+                    allowFullScreen
+                    title="Carte du lieu"
+                    className="w-full h-full"
+                    data-testid="map-embed"
+                  />
+                </div>
+              </motion.div>
+            )}
+
             {/* Options / Merchandising */}
             {event.options && event.options.length > 0 && (
               <motion.div
                 className="bg-white p-6 border border-slate-200"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.15 }}
+                transition={{ duration: 0.4, delay: 0.25 }}
               >
                 <h2 className="font-heading text-xl font-bold uppercase mb-4">Options & Merchandising</h2>
                 <div className="space-y-3">
@@ -384,17 +518,54 @@ const EventDetailPage = () => {
             )}
 
             {/* Description */}
-            <motion.div
-              className="bg-white p-6 border border-slate-200"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-            >
-              <h2 className="font-heading text-xl font-bold uppercase mb-4">Description</h2>
-              <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">
-                {event.description}
-              </p>
-            </motion.div>
+            {event.description && (
+              <motion.div
+                className="bg-white p-6 border border-slate-200"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.3 }}
+              >
+                <h2 className="font-heading text-xl font-bold uppercase mb-4">Description</h2>
+                <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">
+                  {event.description}
+                </p>
+              </motion.div>
+            )}
+
+            {/* Regulations */}
+            {event.regulations && (
+              <motion.div
+                className="bg-white border border-slate-200"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.35 }}
+                data-testid="regulations-section"
+              >
+                <button
+                  onClick={() => setShowRegulations(!showRegulations)}
+                  className="w-full p-6 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                  data-testid="regulations-toggle"
+                >
+                  <h2 className="font-heading text-xl font-bold uppercase flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-brand" /> Règlement de la course
+                  </h2>
+                  {showRegulations ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+                </button>
+                {showRegulations && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="px-6 pb-6"
+                  >
+                    <div className="border-t border-slate-100 pt-4">
+                      <p className="text-slate-600 leading-relaxed whitespace-pre-wrap text-sm" data-testid="regulations-content">
+                        {event.regulations}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </motion.div>
+            )}
 
             {/* PPS Info */}
             {event.requires_pps && (
@@ -402,7 +573,7 @@ const EventDetailPage = () => {
                 className="bg-blue-50 border border-blue-200 p-6"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.25 }}
+                transition={{ duration: 0.4, delay: 0.4 }}
               >
                 <h2 className="font-heading text-xl font-bold uppercase mb-2 text-blue-800">
                   Pass Prévention Santé Requis
@@ -426,10 +597,11 @@ const EventDetailPage = () => {
               className="bg-asphalt text-white p-6 border-l-4 border-brand"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.3 }}
+              transition={{ duration: 0.4, delay: 0.45 }}
+              data-testid="organizer-section"
             >
-              <h2 className="font-heading text-xl font-bold uppercase mb-2">Organisateur</h2>
-              <p className="text-slate-300">{event.organizer_name}</p>
+              <h2 className="font-heading text-lg font-bold uppercase mb-1">Organisé par</h2>
+              <p className="text-xl font-heading font-bold text-white" data-testid="organizer-name">{event.organizer_name}</p>
             </motion.div>
           </div>
 
