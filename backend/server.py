@@ -1007,6 +1007,15 @@ async def create_registration(reg_data: RegistrationCreate, current_user: dict =
     gender = reg_data.gender or "M"
     category = calculate_category(reg_data.birth_date, gender)
     
+    # Calculate age
+    participant_age = None
+    if reg_data.birth_date:
+        try:
+            birth = datetime.fromisoformat(reg_data.birth_date)
+            participant_age = (datetime.now(timezone.utc) - birth.replace(tzinfo=timezone.utc)).days // 365
+        except:
+            pass
+    
     # Calculate price
     base_price = get_current_price(event)
     
@@ -1073,6 +1082,10 @@ async def create_registration(reg_data: RegistrationCreate, current_user: dict =
         "status": "confirmed",
         "pps_number": reg_data.pps_number or current_user.get('pps_number'),
         "pps_verified": pps_verified,
+        "pps_document_url": None,
+        "pps_uploaded_at": None,
+        "pps_status": None,
+        "age": participant_age,
         "medical_cert_url": None,
         "medical_cert_verified": False,
         "qr_code": qr_code,
@@ -2693,7 +2706,77 @@ async def add_waitlist_email(data: dict):
 # ============== FILE UPLOAD ==============
 
 ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+ALLOWED_DOC_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+@api_router.post("/registrations/{registration_id}/upload-pps")
+async def upload_pps_document(
+    registration_id: str,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Participant uploads PPS document for a registration"""
+    reg = await db.registrations.find_one({"registration_id": registration_id}, {"_id": 0})
+    if not reg:
+        raise HTTPException(status_code=404, detail="Inscription introuvable")
+    if reg['user_id'] != current_user['user_id'] and current_user['role'] not in ['admin', 'organizer']:
+        raise HTTPException(status_code=403, detail="Non autorisé")
+    
+    ext = Path(file.filename).suffix.lower()
+    if ext not in ALLOWED_DOC_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Type de fichier non autorisé. Utilisez: {', '.join(ALLOWED_DOC_EXTENSIONS)}")
+    
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="Fichier trop volumineux (max 10MB)")
+    
+    unique_filename = f"pps_{registration_id}_{uuid.uuid4().hex[:8]}{ext}"
+    file_path = UPLOAD_DIR / unique_filename
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    pps_url = f"/api/uploads/{unique_filename}"
+    await db.registrations.update_one(
+        {"registration_id": registration_id},
+        {"$set": {
+            "pps_document_url": pps_url,
+            "pps_uploaded_at": datetime.now(timezone.utc).isoformat(),
+            "pps_verified": False,
+            "pps_status": "pending"
+        }}
+    )
+    
+    return {"message": "PPS téléchargé avec succès", "url": pps_url}
+
+@api_router.post("/registrations/{registration_id}/verify-pps")
+async def verify_pps_document(
+    registration_id: str,
+    request: Request,
+    current_user: dict = Depends(get_current_user)
+):
+    """Organizer verifies or rejects a PPS document"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    
+    data = await request.json()
+    action = data.get('action', 'approve')
+    
+    reg = await db.registrations.find_one({"registration_id": registration_id}, {"_id": 0})
+    if not reg:
+        raise HTTPException(status_code=404, detail="Inscription introuvable")
+    
+    if action == 'approve':
+        await db.registrations.update_one(
+            {"registration_id": registration_id},
+            {"$set": {"pps_verified": True, "pps_status": "approved"}}
+        )
+        return {"message": "PPS vérifié et approuvé"}
+    else:
+        await db.registrations.update_one(
+            {"registration_id": registration_id},
+            {"$set": {"pps_verified": False, "pps_status": "rejected"}}
+        )
+        return {"message": "PPS rejeté"}
 
 @api_router.post("/upload/image")
 async def upload_image(

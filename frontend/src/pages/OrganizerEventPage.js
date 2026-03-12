@@ -5,7 +5,8 @@ import { fr } from 'date-fns/locale';
 import {
   ArrowLeft, Users, Euro, TrendingUp, Download, Plus, Trash2,
   Search, QrCode, Share2, Copy, CheckCircle, Clock, Tag,
-  Send, AlertCircle, Loader2, UserPlus, BarChart3, Settings, ExternalLink
+  Send, AlertCircle, Loader2, UserPlus, BarChart3, Settings, ExternalLink,
+  FileText, Eye, XCircle
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -190,6 +191,14 @@ const OrganizerEventPage = () => {
       document.body.appendChild(a); a.click(); a.remove();
       toast.success('Export téléchargé');
     } catch { toast.error('Erreur export'); }
+  };
+
+  const handleVerifyPps = async (registrationId, action) => {
+    try {
+      await api.post(`/registrations/${registrationId}/verify-pps`, { action });
+      toast.success(action === 'approve' ? 'PPS approuvé' : 'PPS rejeté');
+      fetchData();
+    } catch { toast.error('Erreur'); }
   };
 
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/events/${eventId}` : '';
@@ -396,6 +405,8 @@ const OrganizerEventPage = () => {
                       <th className="text-left p-3 font-heading font-bold uppercase text-xs">Email</th>
                       <th className="text-left p-3 font-heading font-bold uppercase text-xs">Épreuve</th>
                       <th className="text-left p-3 font-heading font-bold uppercase text-xs">Cat.</th>
+                      <th className="text-center p-3 font-heading font-bold uppercase text-xs">Âge</th>
+                      <th className="text-left p-3 font-heading font-bold uppercase text-xs">PPS</th>
                       <th className="text-left p-3 font-heading font-bold uppercase text-xs">Statut</th>
                       <th className="text-left p-3 font-heading font-bold uppercase text-xs">Check-in</th>
                       <th className="text-right p-3 font-heading font-bold uppercase text-xs">Prix</th>
@@ -403,7 +414,7 @@ const OrganizerEventPage = () => {
                   </thead>
                   <tbody>
                     {filteredRegistrations.length === 0 ? (
-                      <tr><td colSpan={8} className="p-8 text-center text-slate-500">Aucun inscrit trouvé</td></tr>
+                      <tr><td colSpan={10} className="p-8 text-center text-slate-500">Aucun inscrit trouvé</td></tr>
                     ) : (
                       filteredRegistrations.map(reg => (
                         <tr key={reg.registration_id} className="border-b hover:bg-slate-50">
@@ -418,6 +429,39 @@ const OrganizerEventPage = () => {
                           <td className="p-3 text-sm">{reg.selected_race || '-'}</td>
                           <td className="p-3">
                             <span className="text-xs font-heading bg-slate-100 px-2 py-0.5 rounded-sm">{reg.category || '-'}</span>
+                          </td>
+                          <td className="p-3 text-center text-sm font-medium">
+                            {reg.age ? `${reg.age} ans` : reg.birth_date ? `${Math.floor((new Date() - new Date(reg.birth_date)) / (365.25*24*60*60*1000))} ans` : '-'}
+                          </td>
+                          <td className="p-3">
+                            {!reg.pps_document_url && !reg.pps_number ? (
+                              <span className="text-xs text-slate-400">—</span>
+                            ) : reg.pps_status === 'approved' ? (
+                              <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                                <CheckCircle className="w-3 h-3" /> Vérifié
+                              </span>
+                            ) : reg.pps_status === 'rejected' ? (
+                              <span className="flex items-center gap-1 text-xs text-red-600 font-medium">
+                                <XCircle className="w-3 h-3" /> Rejeté
+                              </span>
+                            ) : reg.pps_document_url ? (
+                              <div className="flex items-center gap-1">
+                                <a href={reg.pps_document_url} target="_blank" rel="noopener noreferrer"
+                                  className="text-brand hover:underline" title="Voir le document">
+                                  <Eye className="w-4 h-4" />
+                                </a>
+                                <button onClick={() => handleVerifyPps(reg.registration_id, 'approve')}
+                                  className="text-green-600 hover:text-green-800 p-0.5" title="Approuver" data-testid={`approve-pps-${reg.registration_id}`}>
+                                  <CheckCircle className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => handleVerifyPps(reg.registration_id, 'reject')}
+                                  className="text-red-500 hover:text-red-700 p-0.5" title="Rejeter" data-testid={`reject-pps-${reg.registration_id}`}>
+                                  <XCircle className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-orange-500">En attente</span>
+                            )}
                           </td>
                           <td className="p-3">
                             <span className={`text-xs font-bold px-2 py-1 rounded-sm ${

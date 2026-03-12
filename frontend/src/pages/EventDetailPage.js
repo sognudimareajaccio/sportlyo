@@ -411,12 +411,12 @@ const EventDetailPage = () => {
                   Cet événement nécessite un PPS valide de la Fédération Française d'Athlétisme (5€/an).
                 </p>
                 <a 
-                  href="https://pps.athle.fr/" 
+                  href="https://pps.athle.fr/?locale=fr" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-blue-600 font-medium hover:underline"
                 >
-                  Obtenir mon PPS →
+                  Acheter mon PPS sur athle.fr →
                 </a>
               </motion.div>
             )}
@@ -565,6 +565,10 @@ const EventDetailPage = () => {
                               data-testid="birth-date-input"
                               required
                             />
+                            {formData.birth_date && (() => {
+                              const age = Math.floor((new Date() - new Date(formData.birth_date)) / (365.25 * 24 * 60 * 60 * 1000));
+                              return <p className="text-xs mt-1 text-slate-500" data-testid="age-display">{age} ans</p>;
+                            })()}
                           </div>
                         </div>
 
@@ -657,8 +661,8 @@ const EventDetailPage = () => {
                               data-testid="pps-input"
                             />
                             <p className="text-xs text-slate-500 mt-1">
-                              <a href="https://pps.athle.fr/" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
-                                Obtenir un PPS
+                              <a href="https://pps.athle.fr/?locale=fr" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
+                                Acheter un PPS sur athle.fr
                               </a>
                             </p>
                           </div>

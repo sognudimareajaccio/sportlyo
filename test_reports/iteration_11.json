@@ -1,0 +1,108 @@
+{
+  "summary": "Iteration 11: Tested PPS upload/verification workflow and age display features. All 12 backend tests passed (100%). All UI tests passed - age display, PPS link, PPS columns in organizer table verified.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "Backend Test 1: POST /api/registrations/{id}/upload-pps requires authentication - PASSED",
+    "Backend Test 2: Upload PPS fails for non-existent registration (404) - PASSED",
+    "Backend Test 3: Upload PPS rejects invalid file types (.exe, etc.) - PASSED",
+    "Backend Test 4: Upload PPS success with PDF file - PASSED",
+    "Backend Test 5: POST /api/registrations/{id}/verify-pps requires organizer/admin role - PASSED",
+    "Backend Test 6: Organizer can approve PPS (action=approve) - PASSED",
+    "Backend Test 7: Organizer can reject PPS (action=reject) - PASSED",
+    "Backend Test 8: Admin can also approve PPS - PASSED",
+    "Backend Test 9: Registration contains pps_status field after verification - PASSED",
+    "Backend Test 10: Registrations include age field when birth_date provided - PASSED",
+    "Backend Test 11: Organizer registrations endpoint returns pps_status and pps_document_url fields - PASSED",
+    "Backend Test 12: Events have requires_pps field - PASSED",
+    "UI Test 1: EventDetailPage loads with PPS badge for events requiring PPS - PASSED",
+    "UI Test 2: PPS info section visible on EventDetailPage ('Pass Prévention Santé Requis') - PASSED",
+    "UI Test 3: PPS link to https://pps.athle.fr/?locale=fr visible on EventDetailPage - PASSED",
+    "UI Test 4: Registration form shows birth_date input with data-testid='birth-date-input' - PASSED",
+    "UI Test 5: Age display (data-testid='age-display') shows calculated age (e.g., '35 ans') - PASSED",
+    "UI Test 6: PPS number input field visible in registration form for events requiring PPS - PASSED",
+    "UI Test 7: PPS link in registration dialog ('Acheter un PPS sur athle.fr') - PASSED",
+    "UI Test 8: OrganizerEventPage has Age column (ÂGE) in registrations table - PASSED",
+    "UI Test 9: OrganizerEventPage has PPS column in registrations table - PASSED",
+    "UI Test 10: Registrations table shows age values (e.g., '35 ans') - PASSED",
+    "UI Test 11: Participant dashboard loads successfully - PASSED",
+    "UI Test 12: Participant login works (pierre@test.com) - PASSED",
+    "UI Test 13: Organizer login works (club@paris-sport.fr) - PASSED"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_pps_upload.py",
+    "/app/test_reports/pytest/pytest_pps_upload.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [],
+
+  "updated_files": [
+    "/app/backend/tests/test_pps_upload.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (12/12 pytest tests passed)",
+    "frontend": "100% (All 13 UI tests passed)"
+  },
+
+  "test_credentials": {
+    "participant": "pierre@test.com / test1234",
+    "organizer": "club@paris-sport.fr / club123",
+    "admin": "admin@sportsconnect.fr / admin123",
+    "access_key": "SPORTLYO2026",
+    "url_param": "?preview=SPORTLYO2026",
+    "event_with_pps": "evt_91314edc7df8 (TEST_Trail de Montagne 2e94df)",
+    "event_with_registrations": "evt_f79c5cfd5036 (COURSE CORSICA FEVER)"
+  },
+
+  "seed_data_creation": "PPS document uploaded to pierre@test.com's registration during testing",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 11 completed. All PPS upload/verification features tested and working: 1) POST /api/registrations/{id}/upload-pps allows participant to upload PPS doc (PDF/JPG/PNG, max 10MB). 2) POST /api/registrations/{id}/verify-pps with action=approve/reject allows organizer/admin to verify. 3) EventDetailPage shows age calculation (data-testid='age-display') under birth_date field. 4) PPS link to https://pps.athle.fr/?locale=fr visible on EventDetailPage and in registration dialog. 5) OrganizerEventPage registrations table has Age (ÂGE) and PPS columns. 6) PPS approve/reject buttons (data-testid='approve-pps-{reg_id}') appear when document is uploaded. Note: ParticipantDashboard PPS upload section only shows for events with requires_pps=true - currently only evt_91314edc7df8 has this.",
+
+  "mocked_apis": {
+    "RFID_integration": "POST /api/rfid-read is simulated - no real hardware (MOCKED)",
+    "PPS_number_verification": "Returns simulated success - auto-validates PPS format (MOCKED)",
+    "Stripe": "Uses test API key sk_test_emergent (MOCKED)"
+  },
+
+  "feature_details": {
+    "new_features_tested": [
+      "POST /api/registrations/{id}/upload-pps - Participant uploads PPS document",
+      "POST /api/registrations/{id}/verify-pps - Organizer approves/rejects PPS",
+      "Age display in registration form (data-testid='age-display')",
+      "PPS link to https://pps.athle.fr/?locale=fr",
+      "OrganizerEventPage Age (ÂGE) column in registrations table",
+      "OrganizerEventPage PPS column with approve/reject buttons",
+      "Registration stores age field when birth_date provided"
+    ],
+    "endpoints_tested": [
+      "POST /api/registrations/{id}/upload-pps",
+      "POST /api/registrations/{id}/verify-pps",
+      "GET /api/registrations (participant's registrations)",
+      "GET /api/organizer/registrations/{event_id}",
+      "GET /api/events (requires_pps field check)"
+    ],
+    "ui_components_verified": [
+      "EventDetailPage - PPS badge, PPS info section, PPS link",
+      "Registration dialog - birth_date input, age display, PPS number input, PPS link",
+      "OrganizerEventPage - Age column, PPS column headers",
+      "ParticipantDashboard - PPS upload section (conditional on requires_pps)"
+    ]
+  }
+}

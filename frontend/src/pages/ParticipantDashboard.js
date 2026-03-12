@@ -1,16 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { 
   Calendar, MapPin, Trophy, Settings, ChevronRight, 
-  Download, Ticket, User, TrendingUp 
+  Download, Ticket, User, TrendingUp, Upload, CheckCircle, Clock, XCircle, FileText, ExternalLink
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../context/AuthContext';
 import { registrationsApi, recommendationsApi } from '../services/api';
+import api from '../services/api';
 import EventCard from '../components/EventCard';
+import { toast } from 'sonner';
 
 const ParticipantDashboard = () => {
   const { user } = useAuth();
@@ -18,24 +20,43 @@ const ParticipantDashboard = () => {
   const [registrations, setRegistrations] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [uploadingPps, setUploadingPps] = useState(null);
+  const ppsInputRef = useRef(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [regsRes, recsRes] = await Promise.all([
-          registrationsApi.getAll(),
-          recommendationsApi.get()
-        ]);
-        setRegistrations(regsRes.data.registrations);
-        setRecommendations(recsRes.data.recommendations);
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  const fetchData = async () => {
+    try {
+      const [regsRes, recsRes] = await Promise.all([
+        registrationsApi.getAll(),
+        recommendationsApi.get()
+      ]);
+      setRegistrations(regsRes.data.registrations);
+      setRecommendations(recsRes.data.recommendations);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  const handlePpsUpload = async (registrationId, file) => {
+    if (!file) return;
+    setUploadingPps(registrationId);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      await api.post(`/registrations/${registrationId}/upload-pps`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      toast.success('PPS téléchargé ! L\'organisateur le vérifiera sous peu.');
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Erreur lors du téléchargement');
+    } finally {
+      setUploadingPps(null);
+    }
+  };
 
   const upcomingRegistrations = registrations
     .filter(r => r.event && new Date(r.event.date) > new Date())
@@ -161,6 +182,58 @@ const ParticipantDashboard = () => {
                       Voir l'événement
                     </Button>
                   </Link>
+
+                  {/* PPS Upload Section */}
+                  {reg.event?.requires_pps && (
+                    <div className="mt-3 pt-3 border-t border-slate-100">
+                      {reg.pps_status === 'approved' ? (
+                        <div className="flex items-center gap-2 text-green-600 text-sm" data-testid={`pps-approved-${reg.registration_id}`}>
+                          <CheckCircle className="w-4 h-4" />
+                          <span className="font-medium">PPS vérifié</span>
+                        </div>
+                      ) : reg.pps_status === 'rejected' ? (
+                        <div>
+                          <div className="flex items-center gap-2 text-red-600 text-sm mb-2">
+                            <XCircle className="w-4 h-4" />
+                            <span className="font-medium">PPS rejeté — renvoyez un document</span>
+                          </div>
+                          <label className="cursor-pointer">
+                            <input type="file" accept=".jpg,.jpeg,.png,.pdf" className="hidden"
+                              onChange={(e) => handlePpsUpload(reg.registration_id, e.target.files[0])} />
+                            <Button variant="outline" size="sm" className="w-full gap-2 text-red-600 border-red-200" asChild>
+                              <span><Upload className="w-3 h-3" /> Renvoyer PPS</span>
+                            </Button>
+                          </label>
+                        </div>
+                      ) : reg.pps_document_url ? (
+                        <div className="flex items-center gap-2 text-orange-600 text-sm" data-testid={`pps-pending-${reg.registration_id}`}>
+                          <Clock className="w-4 h-4" />
+                          <span className="font-medium">PPS en cours de vérification</span>
+                        </div>
+                      ) : (
+                        <div>
+                          <a href="https://pps.athle.fr/?locale=fr" target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-xs text-brand hover:underline mb-2">
+                            <ExternalLink className="w-3 h-3" /> Acheter un PPS sur athle.fr
+                          </a>
+                          <label className="cursor-pointer" data-testid={`pps-upload-${reg.registration_id}`}>
+                            <input type="file" accept=".jpg,.jpeg,.png,.pdf" className="hidden"
+                              onChange={(e) => handlePpsUpload(reg.registration_id, e.target.files[0])} />
+                            <Button variant="outline" size="sm" className="w-full gap-2"
+                              disabled={uploadingPps === reg.registration_id} asChild>
+                              <span>
+                                {uploadingPps === reg.registration_id ? (
+                                  <><Clock className="w-3 h-3 animate-spin" /> Envoi...</>
+                                ) : (
+                                  <><Upload className="w-3 h-3" /> Télécharger mon PPS</>
+                                )}
+                              </span>
+                            </Button>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </div>
