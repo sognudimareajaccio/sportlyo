@@ -30,6 +30,7 @@ const AdminDashboard = () => {
   const [exportStartDate, setExportStartDate] = useState('');
   const [exportEndDate, setExportEndDate] = useState('');
   const [events, setEvents] = useState([]);
+  const [eventFilter, setEventFilter] = useState('all');
 
   useEffect(() => {
     if (user?.role !== 'admin') {
@@ -94,11 +95,26 @@ const AdminDashboard = () => {
     }
   };
 
+  // Re-fetch payments when event filter changes
+  useEffect(() => {
+    const fetchPayments = async () => {
+      try {
+        const params = new URLSearchParams({ page: '1', limit: '100' });
+        if (eventFilter !== 'all') params.append('event_id', eventFilter);
+        const res = await adminApi.getPayments({ page: 1, limit: 100, event_id: eventFilter !== 'all' ? eventFilter : undefined });
+        setPayments(res.data.payments);
+        setPaymentTotals(res.data.totals);
+      } catch {}
+    };
+    if (!loading) fetchPayments();
+  }, [eventFilter]);
+
   const handleExport = async (format) => {
     try {
       const params = new URLSearchParams({ format });
       if (exportStartDate) params.append('start_date', exportStartDate);
       if (exportEndDate) params.append('end_date', exportEndDate);
+      if (eventFilter !== 'all') params.append('event_id', eventFilter);
       
       const res = await api.get(`/admin/payments/export?${params.toString()}`, {
         responseType: 'blob'
@@ -412,9 +428,23 @@ const AdminDashboard = () => {
 
         {activeTab === 'payments' && (
           <div className="space-y-6">
-            {/* Export Controls */}
+            {/* Event Filter + Export Controls */}
             <div className="bg-white border border-slate-200 p-4" data-testid="export-controls">
               <div className="flex flex-wrap items-end gap-4">
+                <div>
+                  <label className="block text-xs font-heading uppercase text-slate-500 mb-1">Événement</label>
+                  <Select value={eventFilter} onValueChange={setEventFilter}>
+                    <SelectTrigger className="w-56" data-testid="event-filter">
+                      <SelectValue placeholder="Tous les événements" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous les événements</SelectItem>
+                      {events.map(evt => (
+                        <SelectItem key={evt.event_id} value={evt.event_id}>{evt.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div>
                   <label className="block text-xs font-heading uppercase text-slate-500 mb-1">Date début</label>
                   <Input

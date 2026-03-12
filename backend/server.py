@@ -2302,14 +2302,18 @@ async def update_user_role(user_id: str, request: Request, current_user: dict = 
 async def get_all_payments(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
+    event_id: str = Query(None),
     current_user: dict = Depends(get_current_user)
 ):
     if current_user['role'] != 'admin':
         raise HTTPException(status_code=403, detail="Admin only")
     
     skip = (page - 1) * limit
-    total = await db.payment_transactions.count_documents({})
-    payments = await db.payment_transactions.find({}, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    query = {}
+    if event_id:
+        query["event_id"] = event_id
+    total = await db.payment_transactions.count_documents(query)
+    payments = await db.payment_transactions.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
     # Enrich with event and user info
     for p in payments:
@@ -2327,8 +2331,11 @@ async def get_all_payments(
             p["event_title"] = event.get("title", "")
             p["organizer_name"] = event.get("organizer_name", "")
     
-    # Calculate totals across ALL completed transactions
-    all_completed = await db.payment_transactions.find({"payment_status": "completed"}, {"_id": 0}).to_list(10000)
+    # Calculate totals across completed transactions (with same filter)
+    totals_query = {"payment_status": "completed"}
+    if event_id:
+        totals_query["event_id"] = event_id
+    all_completed = await db.payment_transactions.find(totals_query, {"_id": 0}).to_list(10000)
     totals = {
         "total_base_price": round(sum(t.get('base_price', t.get('organizer_amount', 0)) for t in all_completed), 2),
         "total_service_fees": round(sum(t.get('service_fee', 0) for t in all_completed), 2),
@@ -2547,12 +2554,14 @@ async def export_admin_payments(
     format: str = Query("csv", regex="^(csv|pdf)$"),
     start_date: str = Query(None),
     end_date: str = Query(None),
+    event_id: str = Query(None),
     current_user: dict = Depends(get_current_user)
 ):
     if current_user['role'] != 'admin':
         raise HTTPException(status_code=403, detail="Admin only")
     
-    payments = await _get_completed_payments(start_date, end_date)
+    event_ids = [event_id] if event_id else None
+    payments = await _get_completed_payments(start_date, end_date, event_ids)
     
     period = ""
     if start_date and end_date:
@@ -2562,8 +2571,13 @@ async def export_admin_payments(
     elif end_date:
         period = f" jusqu'au {end_date}"
     
-    title = f"SportLyo - Bilan financier{period}"
-    filename = f"bilan_financier_{datetime.now().strftime('%Y%m%d')}"
+    event_name = ""
+    if event_id:
+        evt = await db.events.find_one({"event_id": event_id}, {"_id": 0, "title": 1})
+        event_name = f" - {evt['title']}" if evt else ""
+    
+    title = f"SportLyo - Bilan financier{event_name}{period}"
+    filename = f"bilan_financier{'_' + event_id if event_id else ''}_{datetime.now().strftime('%Y%m%d')}"
     
     if format == "csv":
         output = _generate_csv(payments, title)
