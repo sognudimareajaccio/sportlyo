@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, MapPin, Calendar, ArrowRight, ChevronRight, Bike, Footprints, Medal, Car, Moon, Heart, Mountain, Zap, Route as RouteIcon, Timer, Target, Wind, Flag, CircleDot, Dumbbell, Swords } from 'lucide-react';
+import { Search, MapPin, Calendar, ArrowRight, ChevronRight, Bike, Footprints, Medal, Car, Moon, Heart, Mountain, Zap, Route as RouteIcon, Timer, Target, Wind, Flag, CircleDot, Dumbbell, Swords, Users, Repeat, Flame } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import EventCard from '../components/EventCard';
@@ -198,46 +198,116 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Themes Section */}
+      {/* Défis Sportifs Section */}
       <section className="section-padding" data-testid="themes-section">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-end justify-between mb-12">
-            <div>
-              <span className="text-brand font-heading font-bold uppercase tracking-widest text-sm">
-                Thématiques
-              </span>
-              <h2 className="font-heading text-4xl md:text-5xl font-bold tracking-tight uppercase mt-2">
-                Trouvez votre défi
-              </h2>
-            </div>
+          <div className="mb-12">
+            <span className="text-brand font-heading font-bold uppercase tracking-widest text-sm">
+              Défis sportifs
+            </span>
+            <h2 className="font-heading text-4xl md:text-5xl font-bold tracking-tight uppercase mt-2">
+              Trouvez votre défi
+            </h2>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          {/* Standalone defis */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
             {[
-              { id: 'Trail', icon: Mountain, color: 'text-emerald-600', bg: 'bg-emerald-50 hover:bg-emerald-600' },
-              { id: 'Marathon', icon: Footprints, color: 'text-brand', bg: 'bg-orange-50 hover:bg-brand' },
-              { id: 'Course nocturne', icon: Moon, color: 'text-indigo-600', bg: 'bg-indigo-50 hover:bg-indigo-600' },
-              { id: 'Course caritative', icon: Heart, color: 'text-pink-600', bg: 'bg-pink-50 hover:bg-pink-600' },
-              { id: 'Course d\'obstacles', icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50 hover:bg-amber-600' },
-              { id: 'Ultra-trail', icon: RouteIcon, color: 'text-violet-600', bg: 'bg-violet-50 hover:bg-violet-600' },
-            ].map((theme, idx) => (
+              { id: 'Course en relais', icon: Users, color: 'text-sky-600', bg: 'bg-sky-50 hover:bg-sky-600' },
+              { id: 'Ekiden', icon: Repeat, color: 'text-teal-600', bg: 'bg-teal-50 hover:bg-teal-600' },
+              { id: 'Gravel race', icon: Mountain, color: 'text-stone-600', bg: 'bg-stone-50 hover:bg-stone-600' },
+            ].map((item, idx) => (
               <motion.div
-                key={theme.id}
+                key={item.id}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: idx * 0.08 }}
+                transition={{ duration: 0.4, delay: idx * 0.06 }}
                 viewport={{ once: true }}
               >
                 <Link
-                  to={`/events?theme=${encodeURIComponent(theme.id)}`}
-                  className={`block p-5 border border-slate-200 text-center group transition-all ${theme.bg} hover:border-transparent hover:text-white`}
-                  data-testid={`theme-${theme.id}`}
+                  to={`/events?theme=${encodeURIComponent(item.id)}`}
+                  className={`block p-5 border border-slate-200 text-center group transition-all ${item.bg} hover:border-transparent hover:text-white`}
+                  data-testid={`theme-${item.id}`}
                 >
-                  <theme.icon className={`w-10 h-10 mx-auto mb-3 ${theme.color} group-hover:text-white transition-colors`} />
-                  <h3 className="font-heading font-bold uppercase tracking-wider text-xs">
-                    {theme.id}
-                  </h3>
+                  <item.icon className={`w-10 h-10 mx-auto mb-3 ${item.color} group-hover:text-white transition-colors`} />
+                  <h3 className="font-heading font-bold uppercase tracking-wider text-xs">{item.id}</h3>
                 </Link>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Grouped defis */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                title: 'Running',
+                icon: Footprints,
+                accent: 'border-brand',
+                accentBg: 'bg-brand',
+                items: [
+                  { id: 'Marathon', icon: Footprints, color: 'text-brand', bg: 'bg-orange-50 hover:bg-brand' },
+                  { id: 'Trail', icon: Mountain, color: 'text-emerald-600', bg: 'bg-emerald-50 hover:bg-emerald-600' },
+                  { id: 'Ultra-trail', icon: RouteIcon, color: 'text-violet-600', bg: 'bg-violet-50 hover:bg-violet-600' },
+                  { id: 'Course nocturne', icon: Moon, color: 'text-indigo-600', bg: 'bg-indigo-50 hover:bg-indigo-600' },
+                  { id: "Course d'obstacles", icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50 hover:bg-amber-600' },
+                ]
+              },
+              {
+                title: 'Endurance',
+                icon: Timer,
+                accent: 'border-sky-500',
+                accentBg: 'bg-sky-500',
+                items: [
+                  { id: 'Triathlon', icon: Medal, color: 'text-sky-600', bg: 'bg-sky-50 hover:bg-sky-600' },
+                  { id: 'Raid multisports', icon: Mountain, color: 'text-cyan-600', bg: 'bg-cyan-50 hover:bg-cyan-600' },
+                ]
+              },
+              {
+                title: 'Cyclisme',
+                icon: Bike,
+                accent: 'border-emerald-500',
+                accentBg: 'bg-emerald-500',
+                items: [
+                  { id: 'Cyclosportive', icon: Bike, color: 'text-emerald-600', bg: 'bg-emerald-50 hover:bg-emerald-600' },
+                  { id: 'VTT', icon: Mountain, color: 'text-lime-600', bg: 'bg-lime-50 hover:bg-lime-600' },
+                ]
+              },
+              {
+                title: 'Fitness',
+                icon: Dumbbell,
+                accent: 'border-rose-500',
+                accentBg: 'bg-rose-500',
+                items: [
+                  { id: 'CrossFit', icon: Dumbbell, color: 'text-rose-600', bg: 'bg-rose-50 hover:bg-rose-600' },
+                  { id: 'Hyrox', icon: Flame, color: 'text-orange-600', bg: 'bg-orange-50 hover:bg-orange-600' },
+                ]
+              },
+            ].map((group, gIdx) => (
+              <motion.div
+                key={group.title}
+                className={`border border-slate-200 overflow-hidden`}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: gIdx * 0.1 }}
+                viewport={{ once: true }}
+              >
+                <div className={`flex items-center gap-3 px-5 py-3 ${group.accentBg} text-white`}>
+                  <group.icon className="w-5 h-5" />
+                  <h3 className="font-heading font-bold uppercase tracking-wider text-sm">{group.title}</h3>
+                </div>
+                <div className="p-3 space-y-2">
+                  {group.items.map((item) => (
+                    <Link
+                      key={item.id}
+                      to={`/events?theme=${encodeURIComponent(item.id)}`}
+                      className={`flex items-center gap-3 p-3 border border-slate-100 group transition-all ${item.bg} hover:border-transparent hover:text-white`}
+                      data-testid={`theme-${item.id}`}
+                    >
+                      <item.icon className={`w-5 h-5 flex-shrink-0 ${item.color} group-hover:text-white transition-colors`} />
+                      <span className="font-heading font-bold uppercase tracking-wider text-xs">{item.id}</span>
+                    </Link>
+                  ))}
+                </div>
               </motion.div>
             ))}
           </div>
