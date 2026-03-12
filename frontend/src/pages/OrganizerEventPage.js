@@ -579,18 +579,127 @@ const OrganizerEventPage = () => {
             {/* Timing Integration */}
             <div className="bg-white border border-slate-200 p-6">
               <h3 className="font-heading text-lg font-bold uppercase mb-4">Intégration Chronométrage</h3>
-              <p className="text-slate-600 mb-4">Connectez votre logiciel de chronométrage pour récupérer les temps automatiquement.</p>
-              <div className="bg-slate-50 p-4 rounded-sm mb-4">
-                <p className="font-heading text-sm font-bold uppercase mb-2">Endpoint RFID</p>
-                <code className="text-sm text-brand break-all">{`POST ${window.location.origin}/api/rfid-read`}</code>
-                <p className="text-xs text-slate-500 mt-2">
-                  Compatible : RaceResult, Chronotrack, MyLaps, Webscorer
-                </p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Body : {`{ "chip_id": "...", "timestamp": "ISO8601", "checkpoint": "start|finish", "event_id": "${eventId}" }`}
-                </p>
+              <p className="text-slate-600 mb-6">Connectez votre logiciel de chronométrage pour récupérer les temps automatiquement. Copiez le code ci-dessous et transmettez-le à votre prestataire chronométrage.</p>
+              
+              {/* Endpoint */}
+              <div className="bg-asphalt text-white p-4 mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-heading text-sm font-bold uppercase tracking-wider text-slate-400">Endpoint API</span>
+                  <button onClick={() => { navigator.clipboard.writeText(`POST ${window.location.origin}/api/rfid-read`); toast.success('Copié !'); }}
+                    className="text-xs text-slate-400 hover:text-white flex items-center gap-1"><Copy className="w-3 h-3" /> Copier</button>
+                </div>
+                <code className="text-brand font-mono text-lg">{`POST ${window.location.origin}/api/rfid-read`}</code>
+                <p className="text-xs text-slate-400 mt-2">Compatible : RaceResult, Chronotrack, MyLaps, Webscorer</p>
               </div>
-              <div className="flex gap-3">
+
+              {/* JSON Body */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-heading text-sm font-bold uppercase">Body JSON</span>
+                  <button onClick={() => {
+                    navigator.clipboard.writeText(JSON.stringify({ chip_id: "NUMERO_PUCE", timestamp: new Date().toISOString(), checkpoint: "start", event_id: eventId }, null, 2));
+                    toast.success('JSON copié !');
+                  }} className="text-xs text-slate-500 hover:text-brand flex items-center gap-1"><Copy className="w-3 h-3" /> Copier</button>
+                </div>
+                <pre className="bg-slate-50 border p-4 text-sm overflow-x-auto font-mono">
+{JSON.stringify({
+  chip_id: "NUMERO_PUCE_RFID",
+  timestamp: "2026-03-15T09:00:00.000Z",
+  checkpoint: "start | finish",
+  event_id: eventId
+}, null, 2)}
+                </pre>
+              </div>
+
+              {/* cURL */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-heading text-sm font-bold uppercase">cURL — Départ</span>
+                  <button onClick={() => {
+                    const cmd = `curl -X POST ${window.location.origin}/api/rfid-read \\\n  -H "Content-Type: application/json" \\\n  -d '{"chip_id":"PUCE_123","timestamp":"${new Date().toISOString()}","checkpoint":"start","event_id":"${eventId}"}'`;
+                    navigator.clipboard.writeText(cmd); toast.success('cURL copié !');
+                  }} className="text-xs text-slate-500 hover:text-brand flex items-center gap-1" data-testid="copy-curl-start"><Copy className="w-3 h-3" /> Copier</button>
+                </div>
+                <pre className="bg-slate-900 text-green-400 p-4 text-xs overflow-x-auto font-mono rounded-sm">
+{`curl -X POST ${window.location.origin}/api/rfid-read \\
+  -H "Content-Type: application/json" \\
+  -d '{"chip_id":"PUCE_123","timestamp":"${new Date().toISOString()}","checkpoint":"start","event_id":"${eventId}"}'`}
+                </pre>
+              </div>
+
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-heading text-sm font-bold uppercase">cURL — Arrivée</span>
+                  <button onClick={() => {
+                    const cmd = `curl -X POST ${window.location.origin}/api/rfid-read \\\n  -H "Content-Type: application/json" \\\n  -d '{"chip_id":"PUCE_123","timestamp":"${new Date().toISOString()}","checkpoint":"finish","event_id":"${eventId}"}'`;
+                    navigator.clipboard.writeText(cmd); toast.success('cURL copié !');
+                  }} className="text-xs text-slate-500 hover:text-brand flex items-center gap-1" data-testid="copy-curl-finish"><Copy className="w-3 h-3" /> Copier</button>
+                </div>
+                <pre className="bg-slate-900 text-green-400 p-4 text-xs overflow-x-auto font-mono rounded-sm">
+{`curl -X POST ${window.location.origin}/api/rfid-read \\
+  -H "Content-Type: application/json" \\
+  -d '{"chip_id":"PUCE_123","timestamp":"${new Date().toISOString()}","checkpoint":"finish","event_id":"${eventId}"}'`}
+                </pre>
+              </div>
+
+              {/* Python */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-heading text-sm font-bold uppercase">Python</span>
+                  <button onClick={() => {
+                    const code = `import requests\nfrom datetime import datetime, timezone\n\nAPI_URL = "${window.location.origin}/api/rfid-read"\nEVENT_ID = "${eventId}"\n\ndef send_rfid(chip_id, checkpoint="finish"):\n    response = requests.post(API_URL, json={\n        "chip_id": chip_id,\n        "timestamp": datetime.now(timezone.utc).isoformat(),\n        "checkpoint": checkpoint,\n        "event_id": EVENT_ID\n    })\n    print(response.json())\n    return response.json()\n\n# Exemples\nsend_rfid("PUCE_123", "start")   # Signal départ\nsend_rfid("PUCE_123", "finish")  # Signal arrivée`;
+                    navigator.clipboard.writeText(code); toast.success('Code Python copié !');
+                  }} className="text-xs text-slate-500 hover:text-brand flex items-center gap-1" data-testid="copy-python"><Copy className="w-3 h-3" /> Copier</button>
+                </div>
+                <pre className="bg-slate-900 text-blue-300 p-4 text-xs overflow-x-auto font-mono rounded-sm">
+{`import requests
+from datetime import datetime, timezone
+
+API_URL = "${window.location.origin}/api/rfid-read"
+EVENT_ID = "${eventId}"
+
+def send_rfid(chip_id, checkpoint="finish"):
+    response = requests.post(API_URL, json={
+        "chip_id": chip_id,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "checkpoint": checkpoint,
+        "event_id": EVENT_ID
+    })
+    print(response.json())
+    return response.json()
+
+# Exemples
+send_rfid("PUCE_123", "start")   # Signal départ
+send_rfid("PUCE_123", "finish")  # Signal arrivée`}
+                </pre>
+              </div>
+
+              {/* Bulk Import */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-heading text-sm font-bold uppercase">Import en masse (Bulk)</span>
+                  <button onClick={() => {
+                    const code = `curl -X POST ${window.location.origin}/api/rfid-read/bulk \\\n  -H "Content-Type: application/json" \\\n  -d '{"event_id":"${eventId}","readings":[\n    {"chip_id":"PUCE_1","timestamp":"2026-03-15T09:00:00Z","checkpoint":"start"},\n    {"chip_id":"PUCE_1","timestamp":"2026-03-15T09:45:00Z","checkpoint":"finish"},\n    {"chip_id":"PUCE_2","timestamp":"2026-03-15T09:00:00Z","checkpoint":"start"},\n    {"chip_id":"PUCE_2","timestamp":"2026-03-15T09:52:00Z","checkpoint":"finish"}\n  ]}'`;
+                    navigator.clipboard.writeText(code); toast.success('Bulk copié !');
+                  }} className="text-xs text-slate-500 hover:text-brand flex items-center gap-1" data-testid="copy-bulk"><Copy className="w-3 h-3" /> Copier</button>
+                </div>
+                <pre className="bg-slate-900 text-yellow-300 p-4 text-xs overflow-x-auto font-mono rounded-sm">
+{`POST ${window.location.origin}/api/rfid-read/bulk
+
+{
+  "event_id": "${eventId}",
+  "readings": [
+    {"chip_id":"PUCE_1","timestamp":"2026-03-15T09:00:00Z","checkpoint":"start"},
+    {"chip_id":"PUCE_1","timestamp":"2026-03-15T09:45:13Z","checkpoint":"finish"},
+    {"chip_id":"PUCE_2","timestamp":"2026-03-15T09:00:00Z","checkpoint":"start"},
+    {"chip_id":"PUCE_2","timestamp":"2026-03-15T09:52:47Z","checkpoint":"finish"}
+  ]
+}`}
+                </pre>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-4 border-t">
                 <Button variant="outline" onClick={handleExportCSV} className="gap-2" data-testid="export-timing-csv">
                   <Download className="w-4 h-4" /> Export CSV Chronométrage
                 </Button>
