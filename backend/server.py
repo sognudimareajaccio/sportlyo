@@ -6,6 +6,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import asyncio
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional, Dict, Any
@@ -21,6 +22,7 @@ from io import BytesIO
 import httpx
 import shutil
 import csv
+from email_service import send_email, email_welcome, email_registration_confirmed, email_new_registration_organizer
 
 ROOT_DIR = Path(__file__).parent
 UPLOAD_DIR = ROOT_DIR / "uploads"
@@ -413,7 +415,14 @@ async def register(user_data: UserCreate):
     
     await db.users.insert_one(user_doc)
     token = create_token(user_id, "participant")
-    
+
+    # Send welcome email (fire and forget)
+    try:
+        subj, html = email_welcome(user_data.name)
+        asyncio.create_task(send_email(user_data.email, subj, html))
+    except Exception as e:
+        logger.error(f"Welcome email error: {e}")
+
     return {
         "token": token,
         "user": {
@@ -1168,7 +1177,41 @@ async def create_registration(reg_data: RegistrationCreate, current_user: dict =
             {"event_id": reg_data.event_id, "waves.wave_id": reg_data.selected_wave},
             {"$inc": {"waves.$.current_participants": 1}}
         )
-    
+
+    # Send confirmation email to participant
+    try:
+        subj, html = email_registration_confirmed(
+            participant_name=f"{first_name} {last_name}",
+            event_title=event['title'],
+            race_name=reg_data.selected_race or "",
+            bib_number=bib_number,
+            event_date=event.get('date', ''),
+            event_location=event.get('location', ''),
+            amount=total_to_pay,
+            qr_code=qr_code
+        )
+        asyncio.create_task(send_email(current_user['email'], subj, html))
+    except Exception as e:
+        logger.error(f"Registration email error: {e}")
+
+    # Notify organizer
+    try:
+        organizer = await db.users.find_one({"user_id": event.get('organizer_id')}, {"_id": 0})
+        if organizer:
+            updated_event = await db.events.find_one({"event_id": reg_data.event_id}, {"_id": 0})
+            subj_o, html_o = email_new_registration_organizer(
+                organizer_name=organizer.get('name', 'Organisateur'),
+                participant_name=f"{first_name} {last_name}",
+                event_title=event['title'],
+                race_name=reg_data.selected_race or "",
+                bib_number=bib_number,
+                current_count=updated_event.get('current_participants', 0),
+                max_count=updated_event.get('max_participants', 0)
+            )
+            asyncio.create_task(send_email(organizer['email'], subj_o, html_o))
+    except Exception as e:
+        logger.error(f"Organizer notification email error: {e}")
+
     return {
         "registration_id": registration_id,
         "bib_number": bib_number,
