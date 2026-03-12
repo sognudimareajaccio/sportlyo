@@ -1052,7 +1052,7 @@ const OrganizerDashboard = () => {
                         <td className="p-4">
                           <div className="flex items-center justify-end gap-2">
                             <Link to={`/events/${event.event_id}`}>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" title="Voir">
                                 <Eye className="w-4 h-4" />
                               </Button>
                             </Link>
@@ -1065,8 +1065,32 @@ const OrganizerDashboard = () => {
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Link to={`/organizer/events/${event.event_id}/registrations`}>
-                              <Button variant="ghost" size="sm">
+                            <Link to={`/organizer/checkin/${event.event_id}`}>
+                              <Button variant="ghost" size="sm" title="Check-in" data-testid={`checkin-event-${event.event_id}`}>
+                                <Scan className="w-4 h-4" />
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Export chronométrage (CSV)"
+                              data-testid={`export-timing-${event.event_id}`}
+                              onClick={async () => {
+                                try {
+                                  const res = await api.get(`/organizer/events/${event.event_id}/export-timing`, { responseType: 'blob' });
+                                  const blob = new Blob([res.data], { type: 'text/csv' });
+                                  const url = window.URL.createObjectURL(blob);
+                                  const a = document.createElement('a'); a.href = url;
+                                  a.download = `timing_${event.event_id}.csv`;
+                                  document.body.appendChild(a); a.click(); a.remove();
+                                  toast.success('Export chronométrage téléchargé');
+                                } catch { toast.error('Erreur export'); }
+                              }}
+                            >
+                              <Download className="w-4 h-4" />
+                            </Button>
+                            <Link to={`/results/${event.event_id}`}>
+                              <Button variant="ghost" size="sm" title="Résultats">
                                 <BarChart3 className="w-4 h-4" />
                               </Button>
                             </Link>

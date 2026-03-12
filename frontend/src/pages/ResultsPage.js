@@ -12,16 +12,25 @@ const ResultsPage = () => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRace, setSelectedRace] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [categories, setCategories] = useState([]);
+  const [stats, setStats] = useState(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   const fetchResults = async () => {
     try {
+      const params = new URLSearchParams();
+      if (selectedRace !== 'all') params.append('race', selectedRace);
+      if (selectedCategory !== 'all') params.append('category', selectedCategory);
+      
       const [eventRes, resultsRes] = await Promise.all([
         api.get(`/events/${eventId}`),
-        api.get(`/timing/results/${eventId}${selectedRace !== 'all' ? `?race=${selectedRace}` : ''}`)
+        api.get(`/timing/results/${eventId}?${params}`)
       ]);
       setEvent(eventRes.data);
       setResults(resultsRes.data.results);
+      setCategories(resultsRes.data.categories || []);
+      setStats(resultsRes.data.stats || null);
     } catch (error) {
       console.error('Error fetching results:', error);
     } finally {
@@ -31,7 +40,7 @@ const ResultsPage = () => {
 
   useEffect(() => {
     fetchResults();
-  }, [eventId, selectedRace]);
+  }, [eventId, selectedRace, selectedCategory]);
 
   // Auto-refresh every 10 seconds
   useEffect(() => {
@@ -39,7 +48,7 @@ const ResultsPage = () => {
     
     const interval = setInterval(fetchResults, 10000);
     return () => clearInterval(interval);
-  }, [autoRefresh, eventId, selectedRace]);
+  }, [autoRefresh, eventId, selectedRace, selectedCategory]);
 
   const getMedalColor = (rank) => {
     switch (rank) {
@@ -81,10 +90,10 @@ const ResultsPage = () => {
       <div className="sticky top-16 z-40 bg-white border-b">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               {event?.races && event.races.length > 0 && (
                 <Select value={selectedRace} onValueChange={setSelectedRace}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-48" data-testid="results-race-filter">
                     <SelectValue placeholder="Toutes les épreuves" />
                   </SelectTrigger>
                   <SelectContent>
@@ -95,7 +104,25 @@ const ResultsPage = () => {
                   </SelectContent>
                 </Select>
               )}
+              {categories.length > 0 && (
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-40" data-testid="results-category-filter">
+                    <SelectValue placeholder="Catégorie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes catégories</SelectItem>
+                    {categories.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <span className="text-sm text-slate-500">{results.length} résultat(s)</span>
+              {stats && (
+                <span className="text-xs text-slate-400">
+                  H: {stats.male} | F: {stats.female}
+                </span>
+              )}
             </div>
             
             <div className="flex items-center gap-2">
@@ -131,6 +158,7 @@ const ResultsPage = () => {
                   <th className="text-left p-4 font-heading font-bold uppercase text-sm w-20">Rang</th>
                   <th className="text-left p-4 font-heading font-bold uppercase text-sm">Participant</th>
                   <th className="text-left p-4 font-heading font-bold uppercase text-sm">Dossard</th>
+                  <th className="text-left p-4 font-heading font-bold uppercase text-sm">Cat.</th>
                   {event?.races && event.races.length > 1 && (
                     <th className="text-left p-4 font-heading font-bold uppercase text-sm">Épreuve</th>
                   )}
@@ -156,9 +184,17 @@ const ResultsPage = () => {
                         </span>
                       </div>
                     </td>
-                    <td className="p-4 font-medium">{result.user_name}</td>
+                    <td className="p-4 font-medium">
+                      {result.first_name ? `${result.first_name} ${result.last_name}` : result.user_name}
+                    </td>
                     <td className="p-4">
                       <span className="bib-number text-sm py-0.5 px-2">{result.bib_number}</span>
+                    </td>
+                    <td className="p-4">
+                      <span className="text-xs font-heading font-bold bg-slate-100 px-2 py-1 rounded-sm">
+                        {result.category || '-'}
+                        {result.category_rank && <span className="text-brand ml-1">#{result.category_rank}</span>}
+                      </span>
                     </td>
                     {event?.races && event.races.length > 1 && (
                       <td className="p-4 text-slate-500">{result.selected_race || '-'}</td>
