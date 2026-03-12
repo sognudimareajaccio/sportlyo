@@ -65,10 +65,8 @@ const LoginPage = () => {
           transition={{ duration: 0.5 }}
         >
           <div className="text-center mb-8">
-            <Link to="/" className="inline-flex items-center space-x-2 mb-6">
-              <div className="w-10 h-10 bg-brand flex items-center justify-center">
-                <span className="text-white font-heading font-bold text-xl">SC</span>
-              </div>
+            <Link to="/" className="inline-block mb-6">
+              <img src="/logo-auth.png" alt="SportLyo" className="h-12 mx-auto" data-testid="login-logo" />
             </Link>
             <h1 className="font-heading text-3xl font-bold uppercase">Connexion</h1>
             <p className="text-slate-500 mt-2">Accédez à votre espace personnel</p>
