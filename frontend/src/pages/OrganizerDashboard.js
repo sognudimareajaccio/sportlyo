@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   Plus, Calendar, Users, Euro, TrendingUp, Settings,
   Eye, Edit, Trash2, BarChart3, ChevronRight, Building2, QrCode, Scan,
-  Upload, Image, X, Loader2, Download, FileText, MapPin
+  Upload, Image, X, Loader2, Download, FileText, MapPin,
+  Bike, Footprints, Medal, Car, ArrowRight, ArrowLeft, Mountain, Clock, Check
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '../components/ui/dialog';
@@ -22,11 +23,11 @@ import DateTimePicker from '../components/DateTimePicker';
 import OrganizerNav from '../components/OrganizerNav';
 
 const sportOptions = [
-  { value: 'cycling', label: 'Cyclisme' },
-  { value: 'running', label: 'Course à pied' },
-  { value: 'triathlon', label: 'Triathlon' },
-  { value: 'walking', label: 'Marche' },
-  { value: 'motorsport', label: 'Sports Mécaniques' }
+  { value: 'cycling', label: 'Cyclisme', icon: Bike },
+  { value: 'running', label: 'Course à pied', icon: Footprints },
+  { value: 'triathlon', label: 'Triathlon', icon: Medal },
+  { value: 'walking', label: 'Marche', icon: Footprints },
+  { value: 'motorsport', label: 'Sports Mécaniques', icon: Car }
 ];
 
 const OrganizerDashboard = () => {
@@ -40,6 +41,7 @@ const OrganizerDashboard = () => {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
+  const [createStep, setCreateStep] = useState(1);
 
   const [newEvent, setNewEvent] = useState({
     title: '',
@@ -121,6 +123,7 @@ const OrganizerDashboard = () => {
       await eventsApi.create(eventData);
       toast.success('Événement créé avec succès !');
       setShowCreateDialog(false);
+      setCreateStep(1);
       setNewEvent({
         title: '', description: '', sport_type: 'running', location: '',
         date: '', max_participants: 100, price: 25, distances: '',
@@ -446,150 +449,276 @@ const OrganizerDashboard = () => {
               <h1 className="font-heading text-2xl font-bold">Espace Organisateur</h1>
               <p className="text-slate-400">Gérez vos événements et suivez vos performances</p>
             </div>
-            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+            <Dialog open={showCreateDialog} onOpenChange={(open) => { setShowCreateDialog(open); if (!open) setCreateStep(1); }}>
               <DialogTrigger asChild>
                 <Button className="btn-primary" data-testid="create-event-btn">
                   <Plus className="w-4 h-4 mr-2" />
                   Nouvel événement
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle className="font-heading text-xl uppercase">Créer un événement</DialogTitle>
-                  <DialogDescription className="sr-only">Formulaire de création d'événement</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 pt-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2">
-                      <Label>Titre *</Label>
-                      <Input
-                        placeholder="Marathon de Paris 2026"
-                        value={newEvent.title}
-                        onChange={(e) => setNewEvent(prev => ({ ...prev, title: e.target.value }))}
-                        data-testid="event-title-input"
-                      />
-                    </div>
-                    <div>
-                      <Label>Type de sport *</Label>
-                      <Select
-                        value={newEvent.sport_type}
-                        onValueChange={(value) => setNewEvent(prev => ({ ...prev, sport_type: value }))}
-                      >
-                        <SelectTrigger data-testid="event-sport-select">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {sportOptions.map(opt => (
-                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Date *</Label>
-                      <DateTimePicker
-                        value={newEvent.date}
-                        onChange={(val) => setNewEvent(prev => ({ ...prev, date: val }))}
-                        placeholder="Choisir la date de l'événement"
-                        testId="event-date-input"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label>Lieu *</Label>
-                      <Input
-                        placeholder="Paris, France"
-                        value={newEvent.location}
-                        onChange={(e) => setNewEvent(prev => ({ ...prev, location: e.target.value }))}
-                        data-testid="event-location-input"
-                      />
-                    </div>
-                    <div>
-                      <Label>Participants max</Label>
-                      <Input
-                        type="number"
-                        value={newEvent.max_participants}
-                        onChange={(e) => setNewEvent(prev => ({ ...prev, max_participants: parseInt(e.target.value) }))}
-                      />
-                    </div>
-                    <div>
-                      <Label>Prix (€)</Label>
-                      <Input
-                        type="number"
-                        value={newEvent.price}
-                        onChange={(e) => setNewEvent(prev => ({ ...prev, price: parseFloat(e.target.value) }))}
-                        data-testid="event-price-input"
-                      />
-                    </div>
-                    <div>
-                      <Label>Distances (séparées par virgule)</Label>
-                      <Input
-                        placeholder="10km, 21km, 42km"
-                        value={newEvent.distances}
-                        onChange={(e) => setNewEvent(prev => ({ ...prev, distances: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <Label>Dénivelé (m)</Label>
-                      <Input
-                        type="number"
-                        placeholder="500"
-                        value={newEvent.elevation_gain}
-                        onChange={(e) => setNewEvent(prev => ({ ...prev, elevation_gain: e.target.value }))}
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label>Image de l'événement</Label>
-                      <div className="mt-2">
-                        {/* Image Preview */}
-                        {(imagePreview || newEvent.image_url) && (
-                          <div className="relative mb-3 inline-block">
-                            <img 
-                              src={imagePreview || newEvent.image_url} 
-                              alt="Preview" 
-                              className="h-32 w-auto object-cover rounded border"
+              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
+                <div className="p-6 pb-0">
+                  <DialogHeader>
+                    <DialogTitle className="font-heading text-xl uppercase">Créer un événement</DialogTitle>
+                    <DialogDescription className="sr-only">Formulaire de création d'événement</DialogDescription>
+                  </DialogHeader>
+
+                  {/* Step indicator */}
+                  <div className="flex items-center gap-1 mt-5 mb-2" data-testid="create-step-indicator">
+                    {[
+                      { n: 1, label: 'Sport & Lieu' },
+                      { n: 2, label: 'Configuration' },
+                      { n: 3, label: 'Visuels' },
+                      { n: 4, label: 'Épreuves' }
+                    ].map((s) => (
+                      <div key={s.n} className="flex-1 flex flex-col items-center">
+                        <div className={`w-full h-1.5 rounded-full transition-colors duration-300 ${createStep >= s.n ? 'bg-brand' : 'bg-slate-200'}`} />
+                        <span className={`text-[10px] font-heading uppercase tracking-wider mt-1.5 transition-colors ${createStep >= s.n ? 'text-brand font-bold' : 'text-slate-400'}`}>
+                          {s.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <AnimatePresence mode="wait">
+                  {/* STEP 1: Sport & Lieu */}
+                  {createStep === 1 && (
+                    <motion.div
+                      key="step1"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.2 }}
+                      className="p-6 space-y-5"
+                    >
+                      <div>
+                        <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-2 block">Nom de l'événement *</Label>
+                        <Input
+                          placeholder="Ex: Marathon de Lyon 2026"
+                          value={newEvent.title}
+                          onChange={(e) => setNewEvent(prev => ({ ...prev, title: e.target.value }))}
+                          className="h-12 text-lg font-heading"
+                          data-testid="event-title-input"
+                        />
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-3 block">Type de sport *</Label>
+                        <div className="grid grid-cols-5 gap-2" data-testid="sport-type-grid">
+                          {sportOptions.map((opt) => {
+                            const Icon = opt.icon;
+                            const selected = newEvent.sport_type === opt.value;
+                            return (
+                              <motion.button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => setNewEvent(prev => ({ ...prev, sport_type: opt.value }))}
+                                className={`p-3 border text-center transition-all ${
+                                  selected
+                                    ? 'border-brand bg-brand/5 ring-1 ring-brand'
+                                    : 'border-slate-200 hover:border-brand/50'
+                                }`}
+                                whileHover={{ y: -2 }}
+                                whileTap={{ scale: 0.97 }}
+                                data-testid={`sport-option-${opt.value}`}
+                              >
+                                <Icon className={`w-7 h-7 mx-auto mb-1.5 transition-colors ${selected ? 'text-brand' : 'text-slate-400'}`} />
+                                <span className={`font-heading text-[10px] uppercase tracking-wider font-bold block ${selected ? 'text-brand' : 'text-slate-500'}`}>
+                                  {opt.label}
+                                </span>
+                              </motion.button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-2 block">
+                            <Calendar className="w-3.5 h-3.5 inline mr-1" />Date *
+                          </Label>
+                          <DateTimePicker
+                            value={newEvent.date}
+                            onChange={(val) => setNewEvent(prev => ({ ...prev, date: val }))}
+                            placeholder="Choisir la date"
+                            testId="event-date-input"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-2 block">
+                            <MapPin className="w-3.5 h-3.5 inline mr-1" />Lieu *
+                          </Label>
+                          <Input
+                            placeholder="Paris, France"
+                            value={newEvent.location}
+                            onChange={(e) => setNewEvent(prev => ({ ...prev, location: e.target.value }))}
+                            data-testid="event-location-input"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end pt-2">
+                        <Button
+                          onClick={() => {
+                            if (!newEvent.title || !newEvent.date || !newEvent.location) {
+                              toast.error('Remplissez le titre, la date et le lieu');
+                              return;
+                            }
+                            setCreateStep(2);
+                          }}
+                          className="btn-primary gap-2"
+                          data-testid="step-next-1"
+                        >
+                          Suivant <ArrowRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* STEP 2: Configuration */}
+                  {createStep === 2 && (
+                    <motion.div
+                      key="step2"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.2 }}
+                      className="p-6 space-y-5"
+                    >
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-slate-50 border border-slate-200 p-4">
+                          <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
+                            <Users className="w-4 h-4 text-brand" /> Participants max
+                          </Label>
+                          <Input
+                            type="number"
+                            value={newEvent.max_participants}
+                            onChange={(e) => setNewEvent(prev => ({ ...prev, max_participants: parseInt(e.target.value) || 0 }))}
+                            className="text-lg font-heading font-bold border-0 bg-transparent p-0 h-auto focus-visible:ring-0"
+                          />
+                        </div>
+                        <div className="bg-slate-50 border border-slate-200 p-4">
+                          <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
+                            <Euro className="w-4 h-4 text-brand" /> Prix de base (€)
+                          </Label>
+                          <Input
+                            type="number"
+                            value={newEvent.price}
+                            onChange={(e) => setNewEvent(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                            className="text-lg font-heading font-bold border-0 bg-transparent p-0 h-auto focus-visible:ring-0"
+                            data-testid="event-price-input"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
+                            <MapPin className="w-4 h-4 text-brand" /> Distances
+                          </Label>
+                          <Input
+                            placeholder="10km, 21km, 42km"
+                            value={newEvent.distances}
+                            onChange={(e) => setNewEvent(prev => ({ ...prev, distances: e.target.value }))}
+                          />
+                          <p className="text-[10px] text-slate-400 mt-1">Séparées par des virgules</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
+                            <Mountain className="w-4 h-4 text-brand" /> Dénivelé (m)
+                          </Label>
+                          <Input
+                            type="number"
+                            placeholder="500"
+                            value={newEvent.elevation_gain}
+                            onChange={(e) => setNewEvent(prev => ({ ...prev, elevation_gain: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-6 p-4 bg-slate-50 border border-slate-200">
+                        <label className="flex items-center gap-2 cursor-pointer" data-testid="requires-pps-toggle">
+                          <input
+                            type="checkbox"
+                            checked={newEvent.requires_pps}
+                            onChange={(e) => setNewEvent(prev => ({ ...prev, requires_pps: e.target.checked }))}
+                            className="w-4 h-4 accent-brand"
+                          />
+                          <span className="text-sm font-medium">PPS obligatoire</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={newEvent.allows_teams}
+                            onChange={(e) => setNewEvent(prev => ({ ...prev, allows_teams: e.target.checked }))}
+                            className="w-4 h-4 accent-brand"
+                          />
+                          <span className="text-sm font-medium">Équipes autorisées</span>
+                        </label>
+                      </div>
+
+                      <div className="flex justify-between pt-2">
+                        <Button variant="outline" onClick={() => setCreateStep(1)} className="gap-2" data-testid="step-prev-2">
+                          <ArrowLeft className="w-4 h-4" /> Retour
+                        </Button>
+                        <Button onClick={() => setCreateStep(3)} className="btn-primary gap-2" data-testid="step-next-2">
+                          Suivant <ArrowRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* STEP 3: Visuels */}
+                  {createStep === 3 && (
+                    <motion.div
+                      key="step3"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.2 }}
+                      className="p-6 space-y-5"
+                    >
+                      <div>
+                        <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-3 block">Image de l'événement</Label>
+                        {(imagePreview || newEvent.image_url) ? (
+                          <div className="relative rounded overflow-hidden border border-slate-200">
+                            <img
+                              src={imagePreview || newEvent.image_url}
+                              alt="Preview"
+                              className="w-full h-48 object-cover"
                             />
                             <button
                               type="button"
                               onClick={removeImage}
-                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                              className="absolute top-3 right-3 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow-lg"
                             >
                               <X className="w-4 h-4" />
                             </button>
                           </div>
-                        )}
-                        
-                        {/* Upload Button */}
-                        <div className="flex gap-2">
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/jpeg,image/png,image/gif,image/webp"
-                            onChange={handleImageUpload}
-                            className="hidden"
-                            id="event-image-upload"
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
+                        ) : (
+                          <div
                             onClick={() => fileInputRef.current?.click()}
-                            disabled={uploadingImage}
-                            className="flex items-center gap-2"
+                            className="border-2 border-dashed border-slate-300 hover:border-brand p-8 text-center cursor-pointer transition-colors group"
+                            data-testid="image-drop-zone"
                           >
-                            {uploadingImage ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Upload...
-                              </>
-                            ) : (
-                              <>
-                                <Upload className="w-4 h-4" />
-                                Uploader une image
-                              </>
-                            )}
-                          </Button>
-                          <span className="text-xs text-slate-500 self-center">
-                            ou
-                          </span>
+                            <Upload className="w-10 h-10 mx-auto mb-3 text-slate-300 group-hover:text-brand transition-colors" />
+                            <p className="font-heading font-bold text-sm uppercase tracking-wider text-slate-500 group-hover:text-brand">
+                              {uploadingImage ? 'Upload en cours...' : 'Cliquez pour uploader une image'}
+                            </p>
+                            <p className="text-xs text-slate-400 mt-1">JPG, PNG, GIF ou WebP — Max 10MB</p>
+                          </div>
+                        )}
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                          id="event-image-upload"
+                        />
+                        <div className="flex items-center gap-2 mt-3">
+                          <span className="text-xs text-slate-400">ou</span>
                           <Input
                             placeholder="URL de l'image (https://...)"
                             value={newEvent.image_url}
@@ -597,105 +726,132 @@ const OrganizerDashboard = () => {
                               setNewEvent(prev => ({ ...prev, image_url: e.target.value }));
                               setImagePreview(null);
                             }}
-                            className="flex-1"
+                            className="flex-1 text-sm"
                           />
                         </div>
-                        <p className="text-xs text-slate-500 mt-1">
-                          JPG, PNG, GIF ou WebP. Max 10MB.
-                        </p>
                       </div>
-                    </div>
-                    <div className="col-span-2">
-                      <Label>Description</Label>
-                      <Textarea
-                        placeholder="Décrivez votre événement..."
-                        rows={4}
-                        value={newEvent.description}
-                        onChange={(e) => setNewEvent(prev => ({ ...prev, description: e.target.value }))}
-                        data-testid="event-description-input"
-                      />
-                    </div>
 
-                    {/* Races / Distances with prices */}
-                    <div className="col-span-2 border-t pt-4 mt-2">
-                      <div className="flex items-center justify-between mb-3">
-                        <Label className="text-base font-bold">Épreuves / Distances avec tarifs</Label>
+                      <div>
+                        <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-2 block">Description</Label>
+                        <Textarea
+                          placeholder="Décrivez votre événement : parcours, ambiance, services..."
+                          rows={4}
+                          value={newEvent.description}
+                          onChange={(e) => setNewEvent(prev => ({ ...prev, description: e.target.value }))}
+                          data-testid="event-description-input"
+                        />
+                      </div>
+
+                      <div className="flex justify-between pt-2">
+                        <Button variant="outline" onClick={() => setCreateStep(2)} className="gap-2" data-testid="step-prev-3">
+                          <ArrowLeft className="w-4 h-4" /> Retour
+                        </Button>
+                        <div className="flex gap-2">
+                          <Button onClick={() => setCreateStep(4)} variant="outline" className="gap-2" data-testid="step-next-3">
+                            Ajouter des épreuves <ArrowRight className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            onClick={handleCreateEvent}
+                            disabled={creating}
+                            className="btn-primary gap-2"
+                            data-testid="submit-event-btn"
+                          >
+                            {creating ? <><Loader2 className="w-4 h-4 animate-spin" /> Création...</> : <><Check className="w-4 h-4" /> Créer l'événement</>}
+                          </Button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* STEP 4: Épreuves */}
+                  {createStep === 4 && (
+                    <motion.div
+                      key="step4"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.2 }}
+                      className="p-6 space-y-5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 block">Épreuves / Distances avec tarifs</Label>
+                          <p className="text-xs text-slate-400 mt-0.5">Optionnel — définissez des tarifs différents par distance</p>
+                        </div>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={() => addRace(false)}
+                          className="gap-1"
+                          data-testid="add-race-btn"
                         >
-                          <Plus className="w-4 h-4 mr-1" /> Ajouter épreuve
+                          <Plus className="w-4 h-4" /> Ajouter
                         </Button>
                       </div>
-                      
+
                       {newEvent.races && newEvent.races.length > 0 ? (
                         <div className="space-y-3">
                           {newEvent.races.map((race, index) => (
-                            <div key={index} className="flex gap-2 items-start p-3 bg-slate-50 rounded">
+                            <motion.div
+                              key={index}
+                              className="flex gap-2 items-start p-4 bg-slate-50 border border-slate-200"
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.2 }}
+                            >
                               <div className="flex-1">
                                 <Input
                                   placeholder="Nom (ex: 10km, Marathon)"
                                   value={race.name}
                                   onChange={(e) => updateRace(index, 'name', e.target.value, false)}
-                                  className="mb-2"
+                                  className="mb-2 font-heading font-bold"
                                 />
                                 <div className="grid grid-cols-3 gap-2">
                                   <div>
-                                    <Label className="text-xs">Prix (€)</Label>
-                                    <Input
-                                      type="number"
-                                      value={race.price}
-                                      onChange={(e) => updateRace(index, 'price', parseFloat(e.target.value), false)}
-                                    />
+                                    <Label className="text-[10px] font-heading uppercase tracking-wider text-slate-400">Prix (€)</Label>
+                                    <Input type="number" value={race.price} onChange={(e) => updateRace(index, 'price', parseFloat(e.target.value), false)} />
                                   </div>
                                   <div>
-                                    <Label className="text-xs">Places max</Label>
-                                    <Input
-                                      type="number"
-                                      value={race.max_participants}
-                                      onChange={(e) => updateRace(index, 'max_participants', parseInt(e.target.value), false)}
-                                    />
+                                    <Label className="text-[10px] font-heading uppercase tracking-wider text-slate-400">Places max</Label>
+                                    <Input type="number" value={race.max_participants} onChange={(e) => updateRace(index, 'max_participants', parseInt(e.target.value), false)} />
                                   </div>
                                   <div>
-                                    <Label className="text-xs">Distance (km)</Label>
-                                    <Input
-                                      type="number"
-                                      value={race.distance_km}
-                                      onChange={(e) => updateRace(index, 'distance_km', e.target.value, false)}
-                                    />
+                                    <Label className="text-[10px] font-heading uppercase tracking-wider text-slate-400">Distance (km)</Label>
+                                    <Input type="number" value={race.distance_km} onChange={(e) => updateRace(index, 'distance_km', e.target.value, false)} />
                                   </div>
                                 </div>
                               </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeRace(index, false)}
-                                className="text-red-500"
-                              >
+                              <Button type="button" variant="ghost" size="sm" onClick={() => removeRace(index, false)} className="text-red-500 mt-1">
                                 <X className="w-4 h-4" />
                               </Button>
-                            </div>
+                            </motion.div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-slate-500 text-center py-4 bg-slate-50 rounded">
-                          Aucune épreuve ajoutée. Cliquez sur "Ajouter épreuve" pour définir des tarifs par distance.
-                        </p>
+                        <div className="text-center py-8 bg-slate-50 border border-dashed border-slate-300">
+                          <Clock className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                          <p className="text-sm text-slate-500">Aucune épreuve ajoutée</p>
+                          <p className="text-xs text-slate-400 mt-1">Cliquez sur "Ajouter" pour définir des épreuves avec tarifs distincts</p>
+                        </div>
                       )}
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handleCreateEvent}
-                    disabled={creating}
-                    className="w-full btn-primary"
-                    data-testid="submit-event-btn"
-                  >
-                    {creating ? 'Création...' : 'Créer l\'événement'}
-                  </Button>
-                </div>
+
+                      <div className="flex justify-between pt-2">
+                        <Button variant="outline" onClick={() => setCreateStep(3)} className="gap-2" data-testid="step-prev-4">
+                          <ArrowLeft className="w-4 h-4" /> Retour
+                        </Button>
+                        <Button
+                          onClick={handleCreateEvent}
+                          disabled={creating}
+                          className="btn-primary gap-2"
+                          data-testid="submit-event-btn-final"
+                        >
+                          {creating ? <><Loader2 className="w-4 h-4 animate-spin" /> Création...</> : <><Check className="w-4 h-4" /> Créer l'événement</>}
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </DialogContent>
             </Dialog>
 
