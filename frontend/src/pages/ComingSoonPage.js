@@ -116,25 +116,28 @@ const ComingSoonPage = ({ onAccessGranted }) => {
             </span>
           </motion.div>
 
+          {/* App Icon */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.7, delay: 0.4, type: 'spring', stiffness: 120 }}
+            className="mb-8"
+          >
+            <div className="relative mx-auto w-32 h-32 md:w-40 md:h-40">
+              <div className="absolute -inset-3 bg-[#ff4500]/20 rounded-[28%] blur-2xl animate-pulse" />
+              <img src="/app-icon.png" alt="SportLyo" className="relative w-full h-full rounded-[22%] shadow-2xl shadow-[#ff4500]/30" />
+            </div>
+          </motion.div>
+
           <motion.h1
-            className="font-heading text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black uppercase leading-[0.85] tracking-tighter"
+            className="font-heading text-5xl sm:text-6xl md:text-7xl font-black uppercase leading-[0.85] tracking-tighter"
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
           >
-            <span className="block text-white">Sport</span>
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#ff4500] to-[#ff6a33]">Lyo</span>
+            <span className="text-white">Sport</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff4500] to-[#ff6a33]">Lyo</span>
           </motion.h1>
-
-          <motion.p
-            className="mt-6 text-lg md:text-xl text-slate-400 max-w-lg mx-auto leading-relaxed"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.7 }}
-          >
-            La plateforme qui révolutionne l'inscription aux événements sportifs.
-            <span className="text-white font-medium"> Simple. Rapide. Puissante.</span>
-          </motion.p>
 
           {/* Email CTA */}
           <motion.div
