@@ -21,7 +21,7 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 ### Phase 1 - Core (DONE)
 - Authentification JWT + Google OAuth
 - Création/gestion d'événements (CRUD)
-- Inscription aux événements avec données personnelles (nom, prénom, date de naissance, sexe, calcul âge)
+- Inscription aux événements avec données personnelles
 - Système de paiement Stripe avec commission 5%
 - Attribution automatique de dossards
 - Page publique "Coming Soon"
@@ -30,33 +30,26 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 - API RFID pour chronométrage (`/api/rfid-read`)
 - Page de résultats avec classements temps réel par catégorie
 - Interface de check-in par QR code
-- Dashboard de gestion par événement (`/organizer/event/{id}`)
+- Dashboard de gestion par événement
 - Gestion des inscrits (ajout manuel, export CSV)
-- Codes promo
-- Partage réseaux sociaux
-- Guide d'intégration chronométrage (snippets cURL/Python)
-- Export chronométrage CSV
+- Codes promo, partage réseaux sociaux
 - Upload/validation de documents PPS
 - Billet digital avec QR code
 - Dashboard admin avec jauges de remplissage
-- Filtres par événement sur exports financiers
-- Simulation chronométrage (test_rfid_simulation.py)
 
 ### UI/UX (DONE)
-- Logos SportLyo sur toutes les pages (navbar, login, register)
-- Dashboard organisateur avec cartes animées framer-motion (grille 3 colonnes)
-- Chaque carte : image, badge statut, date, lieu, jauge remplissage, revenus, boutons action
-- **Mini-menu de navigation rapide** : composant `OrganizerNav` avec cartes carrées (icônes orange, texte uppercase) intégré sur toutes les pages organisateur
-- **Formulaire de création modernisé** : Wizard multi-étapes (4 steps) avec barre de progression, sélection de sport par cartes visuelles, zone d'upload image drag & drop
-- **Formulaire d'inscription modernisé** : Wizard 3 étapes avec pré-remplissage, sélection d'épreuve par cartes
-- **Page événement enrichie** : OpenRunner, Google Maps, compteur temps réel, règlement, liens sociaux
-- **Page d'accueil enrichie** : Section "Explorez par thématique", 18 catégories de sport
-- **Page de destination organisateurs** (`/organizers`) : Page marketing complète avec Hero, Stats, Features, Avantages, Sports, Écosystème, Support, CTA
+- Dashboard organisateur avec cartes animées framer-motion
+- Formulaire de création modernisé : Wizard multi-étapes (4 steps)
+- Formulaire d'inscription modernisé : Wizard 3 étapes
+- Page événement enrichie : OpenRunner, Google Maps, compteur temps réel
+- Page de destination organisateurs (`/organizers`)
+- **Section "Trouvez votre défi"** : 44 défis sportifs organisés en 7 groupes colorés (Running, Autres défis course, Multisport & Fun, Hivernaux & Extrêmes, Obstacles & Fitness, Défis Vélo, Endurance Outdoor)
+- **Module de recherche EventsPage refondu** : Hero search glass-morphism, pilules de catégories avec icônes, filtres actifs en badges, vue grille/liste
 
 ### Contenu (DONE)
 - 18 catégories de sport disponibles
-- 12 événements réalistes avec images pertinentes par sport (Unsplash)
-- Images mises à jour pour correspondre à chaque discipline sportive
+- 12 événements réalistes avec images Unsplash pertinentes
+- 44 défis sportifs cliquables avec redirection vers /events?search=
 
 ## Comptes Test
 | Rôle | Email | Mot de passe |
