@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, MapPin, Calendar, ArrowRight, ChevronRight, Bike, Footprints, Medal, Car } from 'lucide-react';
+import { Search, MapPin, Calendar, ArrowRight, ChevronRight, Bike, Footprints, Medal, Car, Moon, Heart, Mountain, Zap, Route as RouteIcon, Timer } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import EventCard from '../components/EventCard';
@@ -181,6 +181,52 @@ const HomePage = () => {
                 </motion.div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* Themes Section */}
+      <section className="section-padding" data-testid="themes-section">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-end justify-between mb-12">
+            <div>
+              <span className="text-brand font-heading font-bold uppercase tracking-widest text-sm">
+                Thématiques
+              </span>
+              <h2 className="font-heading text-4xl md:text-5xl font-bold tracking-tight uppercase mt-2">
+                Trouvez votre défi
+              </h2>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {[
+              { id: 'Trail', icon: Mountain, color: 'text-emerald-600', bg: 'bg-emerald-50 hover:bg-emerald-600' },
+              { id: 'Marathon', icon: Footprints, color: 'text-brand', bg: 'bg-orange-50 hover:bg-brand' },
+              { id: 'Course nocturne', icon: Moon, color: 'text-indigo-600', bg: 'bg-indigo-50 hover:bg-indigo-600' },
+              { id: 'Course caritative', icon: Heart, color: 'text-pink-600', bg: 'bg-pink-50 hover:bg-pink-600' },
+              { id: 'Course d\'obstacles', icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50 hover:bg-amber-600' },
+              { id: 'Ultra-trail', icon: RouteIcon, color: 'text-violet-600', bg: 'bg-violet-50 hover:bg-violet-600' },
+            ].map((theme, idx) => (
+              <motion.div
+                key={theme.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: idx * 0.08 }}
+                viewport={{ once: true }}
+              >
+                <Link
+                  to={`/events?theme=${encodeURIComponent(theme.id)}`}
+                  className={`block p-5 border border-slate-200 text-center group transition-all ${theme.bg} hover:border-transparent hover:text-white`}
+                  data-testid={`theme-${theme.id}`}
+                >
+                  <theme.icon className={`w-10 h-10 mx-auto mb-3 ${theme.color} group-hover:text-white transition-colors`} />
+                  <h3 className="font-heading font-bold uppercase tracking-wider text-xs">
+                    {theme.id}
+                  </h3>
+                </Link>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
