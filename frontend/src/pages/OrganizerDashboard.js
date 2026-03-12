@@ -947,10 +947,20 @@ const OrganizerDashboard = () => {
         <div className="bg-white border border-slate-200 p-4 mb-6" data-testid="organizer-export">
           <div className="flex flex-wrap items-end gap-4">
             <div>
-              <label className="block text-xs font-heading uppercase text-slate-500 mb-1">Relevé de paiements</label>
-              <p className="text-sm text-slate-600">Téléchargez votre relevé financier</p>
+              <label className="block text-xs font-heading uppercase text-slate-500 mb-1">Événement</label>
+              <Select defaultValue="all" onValueChange={(v) => document.getElementById('org-event-filter').value = v}>
+                <SelectTrigger className="w-52" data-testid="org-event-filter">
+                  <SelectValue placeholder="Tous mes événements" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous mes événements</SelectItem>
+                  {events.map(evt => (
+                    <SelectItem key={evt.event_id} value={evt.event_id}>{evt.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <input type="hidden" id="org-event-filter" defaultValue="all" />
             </div>
-            <div className="flex-1" />
             <div>
               <label className="block text-xs font-heading uppercase text-slate-500 mb-1">Du</label>
               <Input type="date" id="org-start-date" className="w-40" data-testid="org-export-start" />
@@ -967,9 +977,11 @@ const OrganizerDashboard = () => {
                 try {
                   const start = document.getElementById('org-start-date').value;
                   const end = document.getElementById('org-end-date').value;
+                  const evtId = document.getElementById('org-event-filter').value;
                   const params = new URLSearchParams({ format: 'csv' });
                   if (start) params.append('start_date', start);
                   if (end) params.append('end_date', end);
+                  if (evtId && evtId !== 'all') params.append('event_id', evtId);
                   const res = await api.get(`/organizer/payments/export?${params}`, { responseType: 'blob' });
                   const blob = new Blob([res.data], { type: 'text/csv' });
                   const url = window.URL.createObjectURL(blob);
@@ -989,9 +1001,11 @@ const OrganizerDashboard = () => {
                 try {
                   const start = document.getElementById('org-start-date').value;
                   const end = document.getElementById('org-end-date').value;
+                  const evtId = document.getElementById('org-event-filter').value;
                   const params = new URLSearchParams({ format: 'pdf' });
                   if (start) params.append('start_date', start);
                   if (end) params.append('end_date', end);
+                  if (evtId && evtId !== 'all') params.append('event_id', evtId);
                   const res = await api.get(`/organizer/payments/export?${params}`, { responseType: 'blob' });
                   const blob = new Blob([res.data], { type: 'application/pdf' });
                   const url = window.URL.createObjectURL(blob);

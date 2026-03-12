@@ -2599,16 +2599,22 @@ async def export_organizer_payments(
     format: str = Query("csv", regex="^(csv|pdf)$"),
     start_date: str = Query(None),
     end_date: str = Query(None),
+    event_id: str = Query(None),
     current_user: dict = Depends(get_current_user)
 ):
     if current_user['role'] not in ['organizer', 'admin']:
         raise HTTPException(status_code=403, detail="Organizer only")
     
-    # Get organizer's events
-    org_events = await db.events.find(
-        {"organizer_id": current_user['user_id']}, {"_id": 0, "event_id": 1}
-    ).to_list(1000)
-    event_ids = [e['event_id'] for e in org_events]
+    if event_id:
+        event_ids = [event_id]
+        evt = await db.events.find_one({"event_id": event_id}, {"_id": 0, "title": 1})
+        event_name = evt['title'] if evt else event_id
+    else:
+        org_events = await db.events.find(
+            {"organizer_id": current_user['user_id']}, {"_id": 0, "event_id": 1}
+        ).to_list(1000)
+        event_ids = [e['event_id'] for e in org_events]
+        event_name = None
     
     if not event_ids:
         raise HTTPException(status_code=404, detail="Aucun événement trouvé")
@@ -2619,8 +2625,9 @@ async def export_organizer_payments(
     if start_date and end_date:
         period = f" du {start_date} au {end_date}"
     
-    title = f"Releve de paiements - {current_user.get('name', 'Organisateur')}{period}"
-    filename = f"releve_organisateur_{datetime.now().strftime('%Y%m%d')}"
+    evt_label = f" - {event_name}" if event_name else ""
+    title = f"Releve de paiements - {current_user.get('name', 'Organisateur')}{evt_label}{period}"
+    filename = f"releve_organisateur{'_' + event_id if event_id else ''}_{datetime.now().strftime('%Y%m%d')}"
     
     if format == "csv":
         output = _generate_csv(payments, title)
