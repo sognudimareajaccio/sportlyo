@@ -56,6 +56,15 @@ const ProtectedRoute = ({ children, requiredRole }) => {
   return children;
 };
 
+// Scroll to top on route change
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+};
+
 // App Router Component
 const AppRouter = () => {
   const location = useLocation();
@@ -65,6 +74,8 @@ const AppRouter = () => {
   }
 
   return (
+    <>
+    <ScrollToTop />
     <Routes>
       {/* Public routes with Layout */}
       <Route element={<Layout />}>
@@ -152,6 +163,7 @@ const AppRouter = () => {
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 };
 
