@@ -88,9 +88,7 @@ const Navbar = () => {
 
   const navLinks = [
     { label: 'Événements', href: '/events' },
-    { label: 'Cyclisme', href: '/events?sport_type=cycling' },
-    { label: 'Course', href: '/events?sport_type=running' },
-    { label: 'Triathlon', href: '/events?sport_type=triathlon' },
+    { label: 'Organisateurs', href: '/organizers' },
   ];
 
   return (
@@ -213,10 +211,19 @@ const Navbar = () => {
               </div>
             ) : (
               <>
-                <Button variant="ghost" onClick={() => navigate('/login')} data-testid="login-btn">
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate('/login')}
+                  className="font-heading font-bold text-sm uppercase tracking-wider hover:text-brand transition-colors"
+                  data-testid="login-btn"
+                >
                   Connexion
                 </Button>
-                <Button className="btn-primary" onClick={() => navigate('/register')} data-testid="register-btn">
+                <Button
+                  className="bg-brand hover:bg-brand/90 text-white font-heading font-bold text-sm uppercase tracking-wider px-6"
+                  onClick={() => navigate('/register')}
+                  data-testid="register-btn"
+                >
                   Inscription
                 </Button>
               </>
