@@ -46,6 +46,7 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 - Logos SportLyo sur toutes les pages (navbar, login, register)
 - Dashboard organisateur avec cartes animées framer-motion (grille 3 colonnes)
 - Chaque carte : image, badge statut, date, lieu, jauge remplissage, revenus, boutons action
+- **Mini-menu de navigation rapide** : composant `OrganizerNav` avec cartes carrées (icônes orange, texte uppercase) intégré sur toutes les pages organisateur (/organizer, /organizer/event/{id}, /organizer/checkin/{id}). Adaptatif : 3 items sur le dashboard, 5 items sur les pages événement.
 
 ## Comptes Test
 | Rôle | Email | Mot de passe |
