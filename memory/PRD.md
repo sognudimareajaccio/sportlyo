@@ -57,6 +57,8 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
   - Thématiques (badges), type de circuit, statut chronométreur
   - Liens & Réseaux sociaux (Site web, Facebook, Instagram, X/Twitter, YouTube)
 - **Formulaire création enrichi** : Thématiques (multi-select tags), circuit, chronométreur Oui/Non, liens sociaux (5 champs)
+- **Page d'accueil enrichie** : Nouvelle section "Trouvez votre défi" avec 6 thématiques colorées (Trail, Marathon, Course nocturne, Course caritative, Course d'obstacles, Ultra-trail)
+- **Données seed** : 6 événements complets créés (Trail Monts du Lyonnais, Marathon de Lyon, Triathlon Annecy, Cyclosportive Alpes, Lyonnaise by Night, Mud Race Lyon)
 - **Formulaire d'inscription modernisé** : Wizard 3 étapes (Informations personnelles, Course & Options, Licence & Paiement) avec :
   - Date de naissance Jour/Mois/Année séparés, pays, ville, code postal, email, téléphone, nationalité
   - Sélection d'épreuve par cartes, taille T-shirt (XS-2XL), contact urgence, nom de club
