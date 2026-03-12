@@ -23,6 +23,7 @@ import PaymentCancelPage from "./pages/PaymentCancelPage";
 import TimerPage from "./pages/TimerPage";
 import ResultsPage from "./pages/ResultsPage";
 import CheckInPage from "./pages/CheckInPage";
+import OrganizerEventPage from "./pages/OrganizerEventPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
 import ErrorBoundary from "./components/ErrorBoundary";
 
@@ -121,6 +122,14 @@ const AppRouter = () => {
           element={
             <ProtectedRoute>
               <CheckInPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/organizer/event/:eventId"
+          element={
+            <ProtectedRoute>
+              <OrganizerEventPage />
             </ProtectedRoute>
           }
         />

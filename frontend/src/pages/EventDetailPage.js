@@ -219,9 +219,25 @@ const EventDetailPage = () => {
           <button className="bg-white/90 backdrop-blur p-2 rounded-sm hover:bg-white transition-colors">
             <Heart className="w-5 h-5" />
           </button>
-          <button className="bg-white/90 backdrop-blur p-2 rounded-sm hover:bg-white transition-colors">
-            <Share2 className="w-5 h-5" />
-          </button>
+          <div className="relative group">
+            <button className="bg-white/90 backdrop-blur p-2 rounded-sm hover:bg-white transition-colors" data-testid="share-btn">
+              <Share2 className="w-5 h-5" />
+            </button>
+            <div className="absolute right-0 top-full mt-2 bg-white shadow-lg border border-slate-200 rounded-sm p-2 hidden group-hover:block z-50 min-w-[180px]">
+              <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, '_blank', 'width=600,height=400')} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2" data-testid="share-facebook">
+                <span className="w-4 h-4 bg-[#1877F2] rounded-full inline-block" /> Facebook
+              </button>
+              <button onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(event.title)}`, '_blank', 'width=600,height=400')} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2" data-testid="share-twitter">
+                <span className="w-4 h-4 bg-[#1DA1F2] rounded-full inline-block" /> Twitter / X
+              </button>
+              <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(event.title + ' ' + window.location.href)}`, '_blank')} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2" data-testid="share-whatsapp">
+                <span className="w-4 h-4 bg-[#25D366] rounded-full inline-block" /> WhatsApp
+              </button>
+              <button onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success('Lien copié !'); }} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2" data-testid="share-copy">
+                <span className="w-4 h-4 bg-slate-400 rounded-full inline-block" /> Copier le lien
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12 text-white">

@@ -1029,8 +1029,10 @@ const OrganizerDashboard = () => {
                     {events.map((event) => (
                       <tr key={event.event_id} className="border-b last:border-b-0 hover:bg-slate-50">
                         <td className="p-4">
-                          <div className="font-medium">{event.title}</div>
-                          <div className="text-sm text-slate-500">{event.location}</div>
+                          <Link to={`/organizer/event/${event.event_id}`} className="hover:text-brand">
+                            <div className="font-medium">{event.title}</div>
+                            <div className="text-sm text-slate-500">{event.location}</div>
+                          </Link>
                         </td>
                         <td className="p-4">
                           {format(new Date(event.date), 'd MMM yyyy', { locale: fr })}

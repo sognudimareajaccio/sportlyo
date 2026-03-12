@@ -1251,6 +1251,162 @@ async def get_event_registrations(event_id: str, current_user: dict = Depends(ge
     
     return {"registrations": registrations, "event": event}
 
+@api_router.post("/organizer/events/{event_id}/add-participant")
+async def add_participant_manually(event_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    """Organizer manually adds a participant (no payment required)"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    
+    event = await db.events.find_one({"event_id": event_id}, {"_id": 0})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement introuvable")
+    if event['organizer_id'] != current_user['user_id'] and current_user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Non autorisé")
+    
+    data = await request.json()
+    first_name = data.get('first_name', '')
+    last_name = data.get('last_name', '')
+    email = data.get('email', '')
+    gender = data.get('gender', 'M')
+    birth_date = data.get('birth_date', '')
+    selected_race = data.get('selected_race')
+    
+    if not first_name or not last_name or not email:
+        raise HTTPException(status_code=400, detail="Prénom, nom et email requis")
+    
+    registration_id = f"reg_{uuid.uuid4().hex[:12]}"
+    bib_number = generate_bib_number(event_id, selected_race or "")
+    rfid_chip_id = generate_rfid_chip_id()
+    category = calculate_category(birth_date, gender)
+    
+    base_price = event.get('price', 0)
+    if selected_race and event.get('races'):
+        for race in event['races']:
+            if race['name'] == selected_race:
+                base_price = race.get('price', base_price)
+                break
+    
+    qr_data = f"SPORTSCONNECT:{registration_id}:{bib_number}"
+    qr_code = generate_qr_code(qr_data)
+    
+    registration_doc = {
+        "registration_id": registration_id,
+        "event_id": event_id,
+        "user_id": f"manual_{uuid.uuid4().hex[:8]}",
+        "user_name": f"{first_name} {last_name}",
+        "user_email": email,
+        "first_name": first_name,
+        "last_name": last_name,
+        "gender": gender,
+        "birth_date": birth_date,
+        "category": category,
+        "bib_number": bib_number,
+        "rfid_chip_id": rfid_chip_id,
+        "selected_race": selected_race,
+        "selected_wave": data.get('selected_wave'),
+        "selected_options": None,
+        "emergency_contact": data.get('emergency_contact', ''),
+        "emergency_phone": data.get('emergency_phone', ''),
+        "custom_fields_data": None,
+        "team_id": None,
+        "payment_status": "completed",
+        "payment_id": "manual",
+        "checkout_session_id": None,
+        "base_price": base_price,
+        "service_fee": 0,
+        "amount_paid": 0,
+        "stripe_fee": 0,
+        "platform_net": 0,
+        "organizer_amount": 0,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "status": "confirmed",
+        "pps_number": data.get('pps_number'),
+        "pps_verified": False,
+        "medical_cert_url": None,
+        "medical_cert_verified": False,
+        "qr_code": qr_code,
+        "checked_in": False,
+        "checked_in_at": None,
+        "race_started": False,
+        "race_start_time": None,
+        "race_finished": False,
+        "race_finish_time": None,
+        "race_duration_seconds": None,
+        "manual_entry": True
+    }
+    
+    await db.registrations.insert_one(registration_doc)
+    await db.events.update_one({"event_id": event_id}, {"$inc": {"current_participants": 1}})
+    if selected_race and event.get('races'):
+        await db.events.update_one(
+            {"event_id": event_id, "races.name": selected_race},
+            {"$inc": {"races.$.current_participants": 1}}
+        )
+    
+    return {"message": f"Participant {first_name} {last_name} ajouté", "registration_id": registration_id, "bib_number": bib_number}
+
+@api_router.get("/organizer/promo-codes")
+async def get_organizer_promo_codes(current_user: dict = Depends(get_current_user)):
+    """Get all promo codes created by this organizer"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    
+    query = {"organizer_id": current_user['user_id']}
+    if current_user['role'] == 'admin':
+        query = {}
+    
+    promos = await db.promo_codes.find(query, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return {"promo_codes": promos}
+
+@api_router.delete("/organizer/promo-codes/{promo_id}")
+async def delete_promo_code(promo_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete a promo code"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    
+    result = await db.promo_codes.delete_one({"promo_id": promo_id, "organizer_id": current_user['user_id']})
+    if result.deleted_count == 0:
+        if current_user['role'] == 'admin':
+            await db.promo_codes.delete_one({"promo_id": promo_id})
+        else:
+            raise HTTPException(status_code=404, detail="Code promo non trouvé")
+    
+    return {"message": "Code promo supprimé"}
+
+@api_router.post("/organizer/contact-admin")
+async def contact_admin(request: Request, current_user: dict = Depends(get_current_user)):
+    """Organizer contacts admin (e.g., for refund request)"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    
+    data = await request.json()
+    
+    message_doc = {
+        "message_id": f"msg_{uuid.uuid4().hex[:12]}",
+        "from_user_id": current_user['user_id'],
+        "from_name": current_user['name'],
+        "from_email": current_user['email'],
+        "subject": data.get('subject', ''),
+        "message": data.get('message', ''),
+        "type": data.get('type', 'general'),
+        "event_id": data.get('event_id'),
+        "registration_id": data.get('registration_id'),
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.admin_messages.insert_one(message_doc)
+    return {"message": "Message envoyé à l'administrateur"}
+
+@api_router.get("/admin/messages")
+async def get_admin_messages(current_user: dict = Depends(get_current_user)):
+    """Admin gets all messages from organizers"""
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin requis")
+    
+    messages = await db.admin_messages.find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return {"messages": messages}
+
 # ============== WAITLIST ==============
 
 @api_router.post("/waitlist")
