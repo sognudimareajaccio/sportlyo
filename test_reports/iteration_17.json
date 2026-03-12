@@ -1,0 +1,94 @@
+{
+  "summary": "Iteration 17: Comprehensive testing of new event fields (themes, circuit_type, has_timer, social links) from sportsnconnect.com. Backend: 15/15 tests passed - all new fields are accepted by POST /api/events and returned correctly by GET /api/events/{id}. Frontend: All new form fields verified in organizer dashboard create event form (Step 2: themes multi-select tags, circuit type dropdown, timer Oui/Non buttons; Step 3: 5 social link inputs with icons). Event detail page displays themes badges, circuit type, timer status, and social links section correctly.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "Backend: GET /api/events/{id} returns themes array correctly",
+    "Backend: GET /api/events/{id} returns circuit_type field",
+    "Backend: GET /api/events/{id} returns has_timer boolean",
+    "Backend: GET /api/events/{id} returns website_url",
+    "Backend: GET /api/events/{id} returns facebook_url",
+    "Backend: GET /api/events/{id} returns instagram_url",
+    "Backend: GET /api/events/{id} returns twitter_url",
+    "Backend: GET /api/events/{id} returns youtube_url",
+    "Backend: Test event evt_a94ac9884e9a contains themes: Trail, Ultra-trail, Course nature",
+    "Backend: POST /api/events accepts themes array",
+    "Backend: POST /api/events accepts circuit_type field",
+    "Backend: POST /api/events accepts has_timer=true",
+    "Backend: POST /api/events accepts has_timer=false",
+    "Backend: POST /api/events accepts all social link fields",
+    "Backend: POST /api/events accepts all new fields together",
+    "Frontend: Step 2 themes-grid found with data-testid='themes-grid'",
+    "Frontend: Step 2 theme tags clickable (Trail, Marathon, Semi-marathon, 10km, Ultra-trail, Course nature, Course sur route, Marche nordique, Triathlon, Duathlon, Cyclisme, VTT, Gravel, Course d'obstacles, Course caritative, Course nocturne)",
+    "Frontend: Step 2 circuit-type-select dropdown found with data-testid='circuit-type-select'",
+    "Frontend: Step 2 has-timer-yes button found with data-testid='has-timer-yes'",
+    "Frontend: Step 2 has-timer-no button found with data-testid='has-timer-no'",
+    "Frontend: Step 3 event-website input found with data-testid='event-website'",
+    "Frontend: Step 3 event-facebook input found with data-testid='event-facebook'",
+    "Frontend: Step 3 event-instagram input found with data-testid='event-instagram'",
+    "Frontend: Step 3 event-twitter input found with data-testid='event-twitter'",
+    "Frontend: Step 3 event-youtube input found with data-testid='event-youtube'",
+    "Frontend: Event detail page shows event-meta-section with themes badges",
+    "Frontend: Event detail page shows circuit-type-display with data-testid='circuit-type-display'",
+    "Frontend: Event detail page shows timer-display with data-testid='timer-display'",
+    "Frontend: Event detail page shows social-links-section with data-testid='social-links-section'",
+    "Frontend: Event detail page social-website link found with data-testid='social-website'",
+    "Frontend: Event detail page social-facebook link found with data-testid='social-facebook'",
+    "Frontend: Event detail page social-instagram link found with data-testid='social-instagram'",
+    "Frontend: Event detail page social-twitter link found with data-testid='social-twitter'",
+    "Frontend: Event detail page social-youtube link found with data-testid='social-youtube'"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_new_event_fields.py",
+    "/app/test_reports/pytest/pytest_new_event_fields.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [],
+
+  "updated_files": [
+    "/app/backend/tests/test_new_event_fields.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (15/15 pytest tests passed)",
+    "frontend": "100% (all form fields and display elements verified)"
+  },
+
+  "test_credentials": {
+    "organizer": "club@paris-sport.fr / club123",
+    "preview_access": "?preview=SPORTLYO2026",
+    "test_event": "evt_a94ac9884e9a (Ultra Trail du Vercors 2026)"
+  },
+
+  "seed_data_creation": "Test event evt_a94ac9884e9a exists with themes=['Trail','Ultra-trail','Course nature'], circuit_type='boucle', has_timer=true, and all social URLs populated",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 17: Verified new event fields from sportsnconnect.com. Key data-testids: Step 2 form: themes-grid, theme-{name}, circuit-type-select, has-timer-yes, has-timer-no. Step 3 form: event-website, event-facebook, event-instagram, event-twitter, event-youtube. Event detail page: event-meta-section (themes + circuit + timer), social-links-section, social-website, social-facebook, social-instagram, social-twitter, social-youtube. Backend EventCreate model has: themes (List[str]), circuit_type (str), has_timer (bool), website_url, facebook_url, instagram_url, twitter_url, youtube_url (all Optional[str]).",
+
+  "features_verified": [
+    "Backend POST /api/events accepts new fields: themes, circuit_type, has_timer, website_url, facebook_url, instagram_url, twitter_url, youtube_url",
+    "Backend GET /api/events/{id} returns all new fields correctly",
+    "Frontend Step 2: Thématiques multi-select with clickable tag buttons (orange when selected, grey when not)",
+    "Frontend Step 2: Type de circuit dropdown (boucle, aller-retour, point-a-point, multi-boucles, semi-boucle)",
+    "Frontend Step 2: Avez-vous un chronométreur? with Oui/Non buttons",
+    "Frontend Step 3: 5 social link input fields with icons (Globe, Facebook, Instagram, Twitter/X, YouTube)",
+    "Event detail page: Thématiques section displays badges for selected themes",
+    "Event detail page: Circuit type and timer status displayed",
+    "Event detail page: Liens & Réseaux sociaux section with clickable buttons to external URLs"
+  ]
+}

@@ -8,7 +8,7 @@ import {
   Eye, Edit, Trash2, BarChart3, ChevronRight, Building2, QrCode, Scan,
   Upload, Image, X, Loader2, Download, FileText, MapPin,
   Bike, Footprints, Medal, Car, ArrowRight, ArrowLeft, Mountain, Clock, Check,
-  Route, FileText as FileTextIcon, Navigation
+  Route, Navigation, Globe, Facebook, Instagram, Youtube, Twitter, Tag, Timer
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '../components/ui/dialog';
@@ -63,7 +63,15 @@ const OrganizerDashboard = () => {
     races: [],
     route_url: '',
     exact_address: '',
-    regulations: ''
+    regulations: '',
+    themes: [],
+    circuit_type: '',
+    has_timer: null,
+    website_url: '',
+    facebook_url: '',
+    instagram_url: '',
+    twitter_url: '',
+    youtube_url: ''
   });
 
   const [upgradeData, setUpgradeData] = useState({
@@ -462,7 +470,9 @@ const OrganizerDashboard = () => {
                   date: '', max_participants: 100, price: 25, distances: '',
                   elevation_gain: '', image_url: '', requires_pps: false,
                   requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '',
-                  races: [], route_url: '', exact_address: '', regulations: ''
+                  races: [], route_url: '', exact_address: '', regulations: '',
+                  themes: [], circuit_type: '', has_timer: null,
+                  website_url: '', facebook_url: '', instagram_url: '', twitter_url: '', youtube_url: ''
                 });
                 setImagePreview(null);
               }
@@ -688,6 +698,80 @@ const OrganizerDashboard = () => {
                         </label>
                       </div>
 
+                      {/* Thématiques */}
+                      <div>
+                        <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
+                          <Tag className="w-4 h-4 text-brand" /> Thématiques
+                        </Label>
+                        <div className="flex flex-wrap gap-2" data-testid="themes-grid">
+                          {['Trail', 'Marathon', 'Semi-marathon', '10km', 'Ultra-trail', 'Course nature', 'Course sur route', 'Marche nordique', 'Triathlon', 'Duathlon', 'Cyclisme', 'VTT', 'Gravel', 'Course d\'obstacles', 'Course caritative', 'Course nocturne'].map(theme => {
+                            const selected = (newEvent.themes || []).includes(theme);
+                            return (
+                              <button
+                                key={theme}
+                                type="button"
+                                onClick={() => setNewEvent(prev => ({
+                                  ...prev,
+                                  themes: selected ? prev.themes.filter(t => t !== theme) : [...(prev.themes || []), theme]
+                                }))}
+                                className={`px-3 py-1.5 text-xs font-heading font-bold uppercase tracking-wider border transition-all ${
+                                  selected ? 'border-brand bg-brand text-white' : 'border-slate-200 text-slate-500 hover:border-brand/50'
+                                }`}
+                                data-testid={`theme-${theme}`}
+                              >
+                                {theme}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Circuit & Chronométreur */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
+                            <Route className="w-4 h-4 text-brand" /> Type de circuit
+                          </Label>
+                          <Select value={newEvent.circuit_type} onValueChange={(v) => setNewEvent(prev => ({ ...prev, circuit_type: v }))}>
+                            <SelectTrigger data-testid="circuit-type-select"><SelectValue placeholder="Choisir un circuit..." /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="boucle">Boucle</SelectItem>
+                              <SelectItem value="aller-retour">Aller-retour</SelectItem>
+                              <SelectItem value="point-a-point">Point à point</SelectItem>
+                              <SelectItem value="multi-boucles">Multi-boucles</SelectItem>
+                              <SelectItem value="semi-boucle">Semi-boucle</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
+                            <Timer className="w-4 h-4 text-brand" /> Avez-vous un chronométreur ?
+                          </Label>
+                          <div className="flex gap-2 mt-1">
+                            <button
+                              type="button"
+                              onClick={() => setNewEvent(prev => ({ ...prev, has_timer: true }))}
+                              className={`flex-1 py-2 border text-sm font-heading font-bold uppercase tracking-wider transition-all ${
+                                newEvent.has_timer === true ? 'border-brand bg-brand text-white' : 'border-slate-200 text-slate-500 hover:border-brand/50'
+                              }`}
+                              data-testid="has-timer-yes"
+                            >
+                              Oui
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setNewEvent(prev => ({ ...prev, has_timer: false }))}
+                              className={`flex-1 py-2 border text-sm font-heading font-bold uppercase tracking-wider transition-all ${
+                                newEvent.has_timer === false ? 'border-brand bg-brand text-white' : 'border-slate-200 text-slate-500 hover:border-brand/50'
+                              }`}
+                              data-testid="has-timer-no"
+                            >
+                              Non
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="flex justify-between pt-2">
                         <Button variant="outline" onClick={() => setCreateStep(1)} className="gap-2" data-testid="step-prev-2">
                           <ArrowLeft className="w-4 h-4" /> Retour
@@ -795,7 +879,7 @@ const OrganizerDashboard = () => {
                       {/* Règlement */}
                       <div>
                         <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
-                          <FileTextIcon className="w-4 h-4 text-brand" /> Règlement de la course
+                          <FileText className="w-4 h-4 text-brand" /> Règlement de la course
                         </Label>
                         <Textarea
                           placeholder="Conditions de participation, matériel obligatoire, règles de sécurité..."
@@ -804,6 +888,33 @@ const OrganizerDashboard = () => {
                           onChange={(e) => setNewEvent(prev => ({ ...prev, regulations: e.target.value }))}
                           data-testid="event-regulations-input"
                         />
+                      </div>
+
+                      {/* Social Links */}
+                      <div>
+                        <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-3 block">Réseaux sociaux & site web</Label>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Globe className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                            <Input placeholder="https://www.monsite.com" value={newEvent.website_url} onChange={(e) => setNewEvent(prev => ({ ...prev, website_url: e.target.value }))} data-testid="event-website" />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Facebook className="w-4 h-4 text-[#1877F2] flex-shrink-0" />
+                            <Input placeholder="https://facebook.com/..." value={newEvent.facebook_url} onChange={(e) => setNewEvent(prev => ({ ...prev, facebook_url: e.target.value }))} data-testid="event-facebook" />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Instagram className="w-4 h-4 text-[#E4405F] flex-shrink-0" />
+                            <Input placeholder="https://instagram.com/..." value={newEvent.instagram_url} onChange={(e) => setNewEvent(prev => ({ ...prev, instagram_url: e.target.value }))} data-testid="event-instagram" />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Twitter className="w-4 h-4 text-slate-800 flex-shrink-0" />
+                            <Input placeholder="https://x.com/..." value={newEvent.twitter_url} onChange={(e) => setNewEvent(prev => ({ ...prev, twitter_url: e.target.value }))} data-testid="event-twitter" />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Youtube className="w-4 h-4 text-[#FF0000] flex-shrink-0" />
+                            <Input placeholder="https://youtube.com/..." value={newEvent.youtube_url} onChange={(e) => setNewEvent(prev => ({ ...prev, youtube_url: e.target.value }))} data-testid="event-youtube" />
+                          </div>
+                        </div>
                       </div>
 
                       <div className="flex justify-between pt-2">

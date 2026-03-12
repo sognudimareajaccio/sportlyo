@@ -163,6 +163,16 @@ class EventCreate(BaseModel):
     route_url: Optional[str] = None
     exact_address: Optional[str] = None
     regulations: Optional[str] = None
+    # Thématiques & Circuit
+    themes: Optional[List[str]] = None
+    circuit_type: Optional[str] = None
+    has_timer: Optional[bool] = None
+    # Social & Web
+    website_url: Optional[str] = None
+    facebook_url: Optional[str] = None
+    instagram_url: Optional[str] = None
+    twitter_url: Optional[str] = None
+    youtube_url: Optional[str] = None
     # Requirements
     requires_pps: bool = False
     requires_medical_cert: bool = False
@@ -826,6 +836,14 @@ async def create_event(event_data: EventCreate, current_user: dict = Depends(get
         "route_url": event_data.route_url,
         "exact_address": event_data.exact_address,
         "regulations": event_data.regulations,
+        "themes": event_data.themes,
+        "circuit_type": event_data.circuit_type,
+        "has_timer": event_data.has_timer,
+        "website_url": event_data.website_url,
+        "facebook_url": event_data.facebook_url,
+        "instagram_url": event_data.instagram_url,
+        "twitter_url": event_data.twitter_url,
+        "youtube_url": event_data.youtube_url,
         "requires_pps": event_data.requires_pps,
         "requires_medical_cert": event_data.requires_medical_cert,
         "min_age": event_data.min_age,

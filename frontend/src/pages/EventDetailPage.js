@@ -7,7 +7,7 @@ import {
   MapPin, Calendar, Users, Mountain, ArrowLeft, Share2, 
   Heart, CheckCircle, AlertCircle, Loader2, QrCode, Clock, Timer,
   Route, FileText, Navigation, ExternalLink, ChevronDown, ChevronUp,
-  ArrowRight, Check, Phone, Mail, User, Globe, Shirt
+  ArrowRight, Check, Phone, Mail, User, Globe, Shirt, Facebook, Instagram, Youtube, Twitter
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -629,6 +629,84 @@ const EventDetailPage = () => {
                 >
                   Acheter mon PPS sur athle.fr →
                 </a>
+              </motion.div>
+            )}
+
+            {/* Themes & Circuit */}
+            {((event.themes && event.themes.length > 0) || event.circuit_type || event.has_timer !== null) && (
+              <motion.div
+                className="bg-white p-6 border border-slate-200"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.4 }}
+                data-testid="event-meta-section"
+              >
+                {event.themes && event.themes.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="font-heading text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">Thématiques</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {event.themes.map(t => (
+                        <span key={t} className="px-2.5 py-1 bg-brand/10 text-brand text-xs font-heading font-bold uppercase tracking-wider">{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-6 text-sm">
+                  {event.circuit_type && (
+                    <div data-testid="circuit-type-display">
+                      <span className="text-slate-500">Circuit : </span>
+                      <span className="font-heading font-bold capitalize">{event.circuit_type.replace(/-/g, ' ')}</span>
+                    </div>
+                  )}
+                  {event.has_timer !== null && (
+                    <div data-testid="timer-display">
+                      <span className="text-slate-500">Chronométreur : </span>
+                      <span className={`font-heading font-bold ${event.has_timer ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        {event.has_timer ? 'Oui' : 'Non'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Social Links */}
+            {(event.website_url || event.facebook_url || event.instagram_url || event.twitter_url || event.youtube_url) && (
+              <motion.div
+                className="bg-white p-6 border border-slate-200"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.42 }}
+                data-testid="social-links-section"
+              >
+                <h2 className="font-heading text-xl font-bold uppercase mb-4">Liens & Réseaux sociaux</h2>
+                <div className="flex flex-wrap gap-3">
+                  {event.website_url && (
+                    <a href={event.website_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-200 hover:border-brand hover:text-brand transition-colors text-sm font-medium" data-testid="social-website">
+                      <Globe className="w-4 h-4" /> Site web
+                    </a>
+                  )}
+                  {event.facebook_url && (
+                    <a href={event.facebook_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-200 hover:border-[#1877F2] hover:text-[#1877F2] transition-colors text-sm font-medium" data-testid="social-facebook">
+                      <Facebook className="w-4 h-4" /> Facebook
+                    </a>
+                  )}
+                  {event.instagram_url && (
+                    <a href={event.instagram_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-200 hover:border-[#E4405F] hover:text-[#E4405F] transition-colors text-sm font-medium" data-testid="social-instagram">
+                      <Instagram className="w-4 h-4" /> Instagram
+                    </a>
+                  )}
+                  {event.twitter_url && (
+                    <a href={event.twitter_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-200 hover:border-slate-800 hover:text-slate-800 transition-colors text-sm font-medium" data-testid="social-twitter">
+                      <Twitter className="w-4 h-4" /> X / Twitter
+                    </a>
+                  )}
+                  {event.youtube_url && (
+                    <a href={event.youtube_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-200 hover:border-[#FF0000] hover:text-[#FF0000] transition-colors text-sm font-medium" data-testid="social-youtube">
+                      <Youtube className="w-4 h-4" /> YouTube
+                    </a>
+                  )}
+                </div>
               </motion.div>
             )}
 
