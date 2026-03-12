@@ -6,7 +6,7 @@ import { Input } from '../components/ui/input';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { toast } from 'sonner';
-
+import OrganizerNav from '../components/OrganizerNav';
 const CheckInPage = () => {
   const { eventId } = useParams();
   const { user } = useAuth();
@@ -123,6 +123,9 @@ const CheckInPage = () => {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Navigation rapide */}
+        <OrganizerNav eventId={eventId} />
+
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="bg-white border border-slate-200 p-5 text-center">

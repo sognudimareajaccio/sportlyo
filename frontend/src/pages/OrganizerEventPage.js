@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { toast } from 'sonner';
-
+import OrganizerNav from '../components/OrganizerNav';
 const OrganizerEventPage = () => {
   const { eventId } = useParams();
   const { user } = useAuth();
@@ -262,6 +262,9 @@ const OrganizerEventPage = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Navigation rapide */}
+        <OrganizerNav eventId={eventId} />
+
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <div className="bg-white border border-slate-200 p-5">

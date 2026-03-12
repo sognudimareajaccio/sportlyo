@@ -19,6 +19,7 @@ import { eventsApi, authApi } from '../services/api';
 import api from '../services/api';
 import { toast } from 'sonner';
 import DateTimePicker from '../components/DateTimePicker';
+import OrganizerNav from '../components/OrganizerNav';
 
 const sportOptions = [
   { value: 'cycling', label: 'Cyclisme' },
@@ -942,6 +943,9 @@ const OrganizerDashboard = () => {
             </motion.div>
           ))}
         </div>
+
+        {/* Navigation rapide */}
+        <OrganizerNav onCreateEvent={() => setShowCreateDialog(true)} />
 
         {/* Export Section */}
         <div className="bg-white border border-slate-200 p-4 mb-6" data-testid="organizer-export">
