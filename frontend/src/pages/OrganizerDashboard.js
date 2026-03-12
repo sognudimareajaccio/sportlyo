@@ -8,7 +8,8 @@ import {
   Eye, Edit, Trash2, BarChart3, ChevronRight, Building2, QrCode, Scan,
   Upload, Image, X, Loader2, Download, FileText, MapPin,
   Bike, Footprints, Medal, Car, ArrowRight, ArrowLeft, Mountain, Clock, Check,
-  Route, Navigation, Globe, Facebook, Instagram, Youtube, Twitter, Tag, Timer
+  Route, Navigation, Globe, Facebook, Instagram, Youtube, Twitter, Tag, Timer,
+  Target, Wind, Flag, CircleDot, Dumbbell, Swords
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '../components/ui/dialog';
@@ -28,7 +29,20 @@ const sportOptions = [
   { value: 'running', label: 'Course à pied', icon: Footprints },
   { value: 'triathlon', label: 'Triathlon', icon: Medal },
   { value: 'walking', label: 'Marche', icon: Footprints },
-  { value: 'motorsport', label: 'Sports Mécaniques', icon: Car }
+  { value: 'motorsport', label: 'Sports Mécaniques', icon: Car },
+  { value: 'rallye', label: 'Rallye Voitures', icon: Car },
+  { value: 'vtt', label: 'VTT', icon: Mountain },
+  { value: 'bmx', label: 'BMX', icon: Bike },
+  { value: 'cyclocross', label: 'Cyclo-cross', icon: Bike },
+  { value: 'racquet', label: 'Sports de raquette', icon: Target },
+  { value: 'archery', label: 'Tir à l\'arc', icon: Target },
+  { value: 'kitesurf', label: 'Kitesurf', icon: Wind },
+  { value: 'golf', label: 'Golf', icon: Flag },
+  { value: 'petanque', label: 'Pétanque', icon: CircleDot },
+  { value: 'billard', label: 'Billard', icon: CircleDot },
+  { value: 'bowling', label: 'Bowling', icon: CircleDot },
+  { value: 'crossfit', label: 'CrossFit', icon: Dumbbell },
+  { value: 'combat', label: 'Sports de combat', icon: Swords }
 ];
 
 const OrganizerDashboard = () => {
@@ -532,7 +546,7 @@ const OrganizerDashboard = () => {
 
                       <div>
                         <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-3 block">Type de sport *</Label>
-                        <div className="grid grid-cols-5 gap-2" data-testid="sport-type-grid">
+                        <div className="grid grid-cols-6 gap-2 max-h-[220px] overflow-y-auto pr-1" data-testid="sport-type-grid">
                           {sportOptions.map((opt) => {
                             const Icon = opt.icon;
                             const selected = newEvent.sport_type === opt.value;

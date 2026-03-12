@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, MapPin, Calendar, ArrowRight, ChevronRight, Bike, Footprints, Medal, Car, Moon, Heart, Mountain, Zap, Route as RouteIcon, Timer } from 'lucide-react';
+import { Search, MapPin, Calendar, ArrowRight, ChevronRight, Bike, Footprints, Medal, Car, Moon, Heart, Mountain, Zap, Route as RouteIcon, Timer, Target, Wind, Flag, CircleDot, Dumbbell, Swords } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import EventCard from '../components/EventCard';
@@ -12,7 +12,20 @@ const sportIcons = {
   running: Footprints,
   triathlon: Medal,
   walking: Footprints,
-  motorsport: Car
+  motorsport: Car,
+  rallye: Car,
+  vtt: Mountain,
+  bmx: Bike,
+  cyclocross: Bike,
+  racquet: Target,
+  archery: Target,
+  kitesurf: Wind,
+  golf: Flag,
+  petanque: CircleDot,
+  billard: CircleDot,
+  bowling: CircleDot,
+  crossfit: Dumbbell,
+  combat: Swords
 };
 
 const heroImages = [

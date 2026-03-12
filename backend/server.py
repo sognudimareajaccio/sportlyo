@@ -2738,7 +2738,20 @@ async def get_categories():
         {"id": "triathlon", "name": "Triathlon", "icon": "medal", "count": 0},
         {"id": "running", "name": "Course à pied", "icon": "footprints", "count": 0},
         {"id": "walking", "name": "Marche", "icon": "walking", "count": 0},
-        {"id": "motorsport", "name": "Sports Mécaniques", "icon": "car", "count": 0}
+        {"id": "motorsport", "name": "Sports Mécaniques", "icon": "car", "count": 0},
+        {"id": "rallye", "name": "Rallye Voitures", "icon": "car", "count": 0},
+        {"id": "vtt", "name": "VTT", "icon": "mountain", "count": 0},
+        {"id": "bmx", "name": "BMX", "icon": "bike", "count": 0},
+        {"id": "cyclocross", "name": "Cyclo-cross", "icon": "bike", "count": 0},
+        {"id": "racquet", "name": "Sports de raquette", "icon": "target", "count": 0},
+        {"id": "archery", "name": "Tir à l'arc", "icon": "target", "count": 0},
+        {"id": "kitesurf", "name": "Kitesurf", "icon": "wind", "count": 0},
+        {"id": "golf", "name": "Golf", "icon": "flag", "count": 0},
+        {"id": "petanque", "name": "Pétanque", "icon": "circle", "count": 0},
+        {"id": "billard", "name": "Billard", "icon": "circle", "count": 0},
+        {"id": "bowling", "name": "Bowling", "icon": "circle", "count": 0},
+        {"id": "crossfit", "name": "CrossFit", "icon": "dumbbell", "count": 0},
+        {"id": "combat", "name": "Sports de combat", "icon": "swords", "count": 0}
     ]
     
     for cat in categories:
