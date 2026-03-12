@@ -56,14 +56,7 @@ const ComingSoonPage = ({ onAccessGranted }) => {
           transition={{ duration: 0.6 }}
           className="mb-8"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-14 h-14 bg-brand flex items-center justify-center">
-              <span className="text-white font-heading font-bold text-2xl">SL</span>
-            </div>
-            <span className="font-heading text-4xl font-extrabold tracking-tight">
-              SPORT<span className="text-brand">LYO</span>
-            </span>
-          </div>
+          <img src="/logo-light.png" alt="SportLyo" className="h-16" />
         </motion.div>
 
         {/* Tagline */}

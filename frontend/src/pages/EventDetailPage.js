@@ -144,6 +144,10 @@ const EventDetailPage = () => {
     try {
       const regRes = await registrationsApi.create({
         event_id: eventId,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        gender: formData.gender,
+        birth_date: formData.birth_date,
         selected_race: formData.selected_race || null,
         selected_wave: formData.selected_wave || null,
         selected_options: formData.selected_options.length > 0 ? formData.selected_options : null,
@@ -496,6 +500,58 @@ const EventDetailPage = () => {
                         </DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4 pt-4">
+                        {/* Personal Info */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label>Prénom *</Label>
+                            <Input
+                              placeholder="Jean"
+                              value={formData.first_name}
+                              onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
+                              data-testid="first-name-input"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label>Nom *</Label>
+                            <Input
+                              placeholder="Dupont"
+                              value={formData.last_name}
+                              onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
+                              data-testid="last-name-input"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label>Sexe *</Label>
+                            <Select
+                              value={formData.gender}
+                              onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}
+                            >
+                              <SelectTrigger data-testid="gender-select">
+                                <SelectValue placeholder="Sexe" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="M">Homme</SelectItem>
+                                <SelectItem value="F">Femme</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label>Date de naissance *</Label>
+                            <Input
+                              type="date"
+                              value={formData.birth_date}
+                              onChange={(e) => setFormData(prev => ({ ...prev, birth_date: e.target.value }))}
+                              data-testid="birth-date-input"
+                              required
+                            />
+                          </div>
+                        </div>
+
                         {/* Race Selection */}
                         {event.races && event.races.length > 1 && (
                           <div>

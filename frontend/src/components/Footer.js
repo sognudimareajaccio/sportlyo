@@ -9,11 +9,8 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Brand */}
           <div>
-            <div className="flex items-center space-x-2 mb-6">
-              <div className="w-10 h-10 bg-brand flex items-center justify-center">
-                <span className="text-white font-heading font-bold text-xl">SL</span>
-              </div>
-              <span className="font-heading font-bold text-xl">SPORTLYO</span>
+            <div className="flex items-center mb-6">
+              <img src="/logo-light.png" alt="SportLyo" className="h-10" />
             </div>
             <p className="text-slate-400 text-sm leading-relaxed mb-6">
               La plateforme de référence pour réserver vos événements sportifs. 
