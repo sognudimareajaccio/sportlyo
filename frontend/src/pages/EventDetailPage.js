@@ -78,14 +78,6 @@ const EventDetailPage = () => {
   const [pendingRegistration, setPendingRegistration] = useState(null);
   const [processingPayment, setProcessingPayment] = useState(false);
 
-  const getOpenRunnerEmbedUrl = (url) => {
-    if (!url) return null;
-    const match = url.match(/openrunner\.com\/(?:route|r)\/(\d+)/);
-    if (match) return `https://www.openrunner.com/embed/${match[1]}`;
-    if (url.includes('openrunner.com/embed/')) return url;
-    return null;
-  };
-
   const getMapUrl = (address) => {
     if (!address) return null;
     return `https://www.openstreetmap.org/export/embed.html?bbox=&layer=mapnik&marker=&query=${encodeURIComponent(address)}`;
@@ -481,43 +473,7 @@ const EventDetailPage = () => {
               </motion.div>
             )}
 
-            {/* Route / Parcours OpenRunner */}
-            {event.route_url && getOpenRunnerEmbedUrl(event.route_url) && (
-              <motion.div
-                className="bg-white border border-slate-200 overflow-hidden"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.15 }}
-                data-testid="route-section"
-              >
-                <div className="p-6 pb-0 flex items-center justify-between">
-                  <h2 className="font-heading text-xl font-bold uppercase flex items-center gap-2">
-                    <Route className="w-5 h-5 text-brand" /> Parcours & Altimétrie
-                  </h2>
-                  <a
-                    href={event.route_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-brand hover:underline flex items-center gap-1"
-                    data-testid="openrunner-link"
-                  >
-                    Voir sur OpenRunner <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                </div>
-                <div className="mt-4">
-                  <iframe
-                    src={getOpenRunnerEmbedUrl(event.route_url)}
-                    width="100%"
-                    height="420"
-                    frameBorder="0"
-                    allowFullScreen
-                    title="Parcours OpenRunner"
-                    className="w-full"
-                    data-testid="openrunner-embed"
-                  />
-                </div>
-              </motion.div>
-            )}
+            {/* Route / Parcours - Désactivé */}
 
             {/* Map & Directions */}
             {event.exact_address && (

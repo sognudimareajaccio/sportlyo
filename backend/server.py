@@ -1021,14 +1021,15 @@ async def create_registration(reg_data: RegistrationCreate, current_user: dict =
             if event.get('max_age') and age > event['max_age']:
                 raise HTTPException(status_code=400, detail=f"Age maximum: {event['max_age']} ans")
     
-    # Check PPS requirement
+    # Check PPS requirement - NOT blocking, stored as pending
     pps_verified = False
+    pps_pending = False
     if event.get('requires_pps'):
         pps_number = reg_data.pps_number or current_user.get('pps_number')
-        if not pps_number:
-            raise HTTPException(status_code=400, detail="PPS (Pass Prévention Santé) required for this event")
-        # In production, verify against FFA database
-        pps_verified = True
+        if pps_number:
+            pps_verified = True
+        else:
+            pps_pending = True
     
     # Check for existing registration
     existing = await db.registrations.find_one({
@@ -1140,6 +1141,7 @@ async def create_registration(reg_data: RegistrationCreate, current_user: dict =
         "status": "confirmed",
         "pps_number": reg_data.pps_number or current_user.get('pps_number'),
         "pps_verified": pps_verified,
+        "pps_pending": pps_pending,
         "pps_document_url": None,
         "pps_uploaded_at": None,
         "pps_status": None,

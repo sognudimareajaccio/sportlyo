@@ -807,25 +807,6 @@ const OrganizerDashboard = () => {
                       transition={{ duration: 0.2 }}
                       className="p-6 space-y-5"
                     >
-                      {/* Route OpenRunner */}
-                      <div>
-                        <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
-                          <Route className="w-4 h-4 text-brand" /> Parcours OpenRunner
-                        </Label>
-                        <Input
-                          placeholder="https://www.openrunner.com/route/12345678"
-                          value={newEvent.route_url}
-                          onChange={(e) => setNewEvent(prev => ({ ...prev, route_url: e.target.value }))}
-                          data-testid="event-route-url-input"
-                        />
-                        <p className="text-[10px] text-slate-400 mt-1">Collez le lien OpenRunner pour afficher le parcours avec altimétrie sur la page événement</p>
-                        {newEvent.route_url && newEvent.route_url.includes('openrunner.com') && (
-                          <div className="mt-2 p-2 bg-green-50 border border-green-200 text-green-700 text-xs flex items-center gap-1.5">
-                            <Check className="w-3.5 h-3.5" /> Lien OpenRunner détecté — le parcours sera affiché automatiquement
-                          </div>
-                        )}
-                      </div>
-
                       {/* Image */}
                       <div>
                         <Label className="text-sm font-heading uppercase tracking-wider text-slate-500 mb-3 block">Image de l'événement</Label>
