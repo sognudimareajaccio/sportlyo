@@ -1516,6 +1516,61 @@ async def get_admin_messages(current_user: dict = Depends(get_current_user)):
 
 # ============== WAITLIST ==============
 
+
+ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "webisula@gmail.com")
+
+@api_router.post("/waitlist-email")
+async def waitlist_email(request: Request):
+    """Collect email from coming soon page and notify admin"""
+    data = await request.json()
+    email = data.get('email')
+    if not email:
+        raise HTTPException(status_code=400, detail="Email requis")
+
+    existing = await db.waitlist_emails.find_one({"email": email})
+    if not existing:
+        await db.waitlist_emails.insert_one({
+            "email": email,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+
+    # Notify admin
+    try:
+        from email_service import send_email
+        count = await db.waitlist_emails.count_documents({})
+        subject = f"SportLyo - Nouvel inscrit waitlist ({count} au total)"
+        html = f'''<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:20px 0">
+<tr><td align="center">
+<table width="500" cellpadding="0" cellspacing="0" style="background:#fff;max-width:500px">
+<tr><td style="background:#0f172a;padding:24px 32px;text-align:center">
+<span style="color:#ff4500;font-size:22px;font-weight:900;letter-spacing:2px">SPORTLYO</span>
+</td></tr>
+<tr><td style="background:#ff4500;padding:20px 32px;text-align:center">
+<h2 style="margin:0;color:#fff;font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:1px">Nouvel inscrit waitlist</h2>
+</td></tr>
+<tr><td style="padding:32px">
+<p style="font-size:15px;color:#0f172a;margin:0 0 16px"><strong>{email}</strong> souhaite être notifié du lancement.</p>
+<table width="100%" style="border:1px solid #e2e8f0;margin:16px 0">
+<tr><td style="background:#f8fafc;padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Email</td>
+<td style="padding:10px 16px;font-size:14px;color:#0f172a;font-weight:500;border-bottom:1px solid #e2e8f0">{email}</td></tr>
+<tr><td style="background:#f8fafc;padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase">Total waitlist</td>
+<td style="padding:10px 16px;font-size:14px;color:#0f172a;font-weight:700">{count}</td></tr>
+</table>
+</td></tr>
+<tr><td style="background:#0f172a;padding:16px 32px;text-align:center">
+<p style="color:#94a3b8;font-size:11px;margin:0">Conception <a href="https://www.webisula.com/" style="color:#ff4500;text-decoration:none;font-weight:700">WEBISULA</a></p>
+</td></tr>
+</table></td></tr></table></body></html>'''
+        asyncio.create_task(send_email(ADMIN_NOTIFICATION_EMAIL, subject, html))
+    except Exception as e:
+        logger.error(f"Waitlist notification error: {e}")
+
+    return {"success": True}
+
+
 @api_router.post("/waitlist")
 async def join_waitlist(request: Request, current_user: dict = Depends(get_current_user)):
     data = await request.json()
