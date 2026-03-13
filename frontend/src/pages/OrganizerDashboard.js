@@ -1441,15 +1441,15 @@ const OrganizerDashboard = () => {
                       </Link>
 
                       {/* Fill gauge */}
-                      <div className="mb-4">
+                      <div className="mb-4 bg-asphalt p-3 -mx-5 px-5">
                         <div className="flex items-center justify-between text-xs mb-1.5">
-                          <span className="text-slate-500 font-medium flex items-center">
+                          <span className="text-slate-300 font-medium flex items-center">
                             <Users className="w-3.5 h-3.5 mr-1" />
                             {event.current_participants}/{event.max_participants}
                           </span>
-                          <span className="font-heading font-bold text-asphalt">{fillRate}%</span>
+                          <span className="font-heading font-bold text-white">{fillRate}%</span>
                         </div>
-                        <div className="w-full h-2 bg-slate-100 overflow-hidden">
+                        <div className="w-full h-2.5 bg-white/10 overflow-hidden rounded-sm">
                           <motion.div
                             className={`h-full ${fillColor}`}
                             initial={{ width: 0 }}
