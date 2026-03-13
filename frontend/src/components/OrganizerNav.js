@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, Settings, Scan, BarChart3, Plus, Euro } from 'lucide-react';
+import { LayoutDashboard, Settings, Scan, BarChart3, Plus, Euro, MessageSquare } from 'lucide-react';
 
 const OrganizerNav = ({ eventId, onCreateEvent }) => {
   const location = useLocation();
@@ -9,6 +9,7 @@ const OrganizerNav = ({ eventId, onCreateEvent }) => {
   const baseItems = [
     { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, href: '/organizer' },
     { id: 'finances', label: 'Finances', icon: Euro, href: '/organizer', hash: '#export' },
+    { id: 'messages', label: 'Messages', icon: MessageSquare, href: '/messages' },
   ];
 
   const eventItems = eventId ? [

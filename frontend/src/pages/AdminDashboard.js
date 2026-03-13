@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   Users, Calendar, Euro, TrendingUp, BarChart3,
-  Settings, Search, ChevronLeft, ChevronRight, Download, FileText
+  Settings, Search, ChevronLeft, ChevronRight, Download, FileText, MessageSquare
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -14,6 +14,7 @@ import { adminApi } from '../services/api';
 import api from '../services/api';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import MessagingPage from './MessagingPage';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -163,7 +164,7 @@ const AdminDashboard = () => {
               <p className="text-slate-400">Gérez la plateforme SportLyo</p>
             </div>
             <div className="flex gap-2">
-              {['overview', 'users', 'payments'].map(tab => (
+              {['overview', 'users', 'payments', 'messages'].map(tab => (
                 <Button
                   key={tab}
                   variant={activeTab === tab ? 'default' : 'outline'}
@@ -171,7 +172,7 @@ const AdminDashboard = () => {
                   onClick={() => setActiveTab(tab)}
                   data-testid={`tab-${tab}`}
                 >
-                  {tab === 'overview' ? 'Vue d\'ensemble' : tab === 'users' ? 'Utilisateurs' : 'Paiements'}
+                  {tab === 'overview' ? 'Vue d\'ensemble' : tab === 'users' ? 'Utilisateurs' : tab === 'payments' ? 'Paiements' : 'Messages'}
                 </Button>
               ))}
             </div>
@@ -182,24 +183,27 @@ const AdminDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'overview' && stats && (
           <>
-            {/* Stats Cards */}
+            {/* Stats Cards - Clickable */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
               {[
-                { icon: Users, label: 'Utilisateurs', value: stats.total_users },
-                { icon: Calendar, label: 'Événements', value: stats.total_events },
-                { icon: TrendingUp, label: 'Inscriptions', value: stats.total_registrations },
-                { icon: Euro, label: 'Net Plateforme', value: `${(paymentTotals?.total_platform_net || 0).toFixed(2)}€` }
+                { icon: Users, label: 'Utilisateurs', value: stats.total_users, tab: 'users' },
+                { icon: Calendar, label: 'Événements', value: stats.total_events, tab: 'overview' },
+                { icon: TrendingUp, label: 'Inscriptions', value: stats.total_registrations, tab: 'payments' },
+                { icon: Euro, label: 'Net Plateforme', value: `${(paymentTotals?.total_platform_net || 0).toFixed(2)}€`, tab: 'payments' }
               ].map((stat, idx) => (
                 <motion.div
                   key={idx}
-                  className="stats-card"
+                  className="stats-card cursor-pointer hover:border-brand/50 hover:shadow-lg transition-all group"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: idx * 0.1 }}
+                  onClick={() => setActiveTab(stat.tab)}
+                  data-testid={`admin-stat-card-${stat.tab}-${idx}`}
                 >
-                  <stat.icon className="w-8 h-8 text-brand mb-2" />
+                  <stat.icon className="w-8 h-8 text-brand mb-2 group-hover:scale-110 transition-transform" />
                   <p className="text-2xl font-heading font-bold">{stat.value}</p>
                   <p className="text-sm text-slate-500">{stat.label}</p>
+                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-brand absolute top-4 right-4 transition-colors" />
                 </motion.div>
               ))}
             </div>
@@ -594,6 +598,10 @@ const AdminDashboard = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {activeTab === 'messages' && (
+          <MessagingPage />
         )}
       </div>
     </div>

@@ -1248,24 +1248,33 @@ const OrganizerDashboard = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats */}
+        {/* Stats - Clickable */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
-            { icon: Calendar, label: 'Événements', value: events.length },
-            { icon: Users, label: 'Participants', value: totalParticipants },
-            { icon: Euro, label: 'Revenus', value: `${organizerRevenue.toFixed(0)}€` },
-            { icon: TrendingUp, label: 'Votre revenu', value: `${organizerRevenue.toFixed(0)}€` }
+            { icon: Calendar, label: 'Événements', value: events.length, action: 'events' },
+            { icon: Users, label: 'Participants', value: totalParticipants, action: 'events' },
+            { icon: Euro, label: 'Revenus', value: `${organizerRevenue.toFixed(0)}€`, action: 'export' },
+            { icon: TrendingUp, label: 'Votre revenu', value: `${organizerRevenue.toFixed(0)}€`, action: 'export' }
           ].map((stat, idx) => (
             <motion.div
               key={idx}
-              className="stats-card"
+              className="stats-card cursor-pointer hover:border-brand/50 hover:shadow-lg transition-all group relative"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: idx * 0.1 }}
+              onClick={() => {
+                if (stat.action === 'events') {
+                  document.getElementById('organizer-events-section')?.scrollIntoView({ behavior: 'smooth' });
+                } else if (stat.action === 'export') {
+                  document.getElementById('organizer-export-section')?.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+              data-testid={`organizer-stat-card-${idx}`}
             >
-              <stat.icon className="w-8 h-8 text-brand mb-2" />
+              <stat.icon className="w-8 h-8 text-brand mb-2 group-hover:scale-110 transition-transform" />
               <p className="text-2xl font-heading font-bold">{stat.value}</p>
               <p className="text-sm text-slate-500">{stat.label}</p>
+              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-brand absolute top-4 right-4 transition-colors" />
             </motion.div>
           ))}
         </div>
@@ -1274,7 +1283,7 @@ const OrganizerDashboard = () => {
         <OrganizerNav onCreateEvent={() => setShowCreateDialog(true)} />
 
         {/* Export Section */}
-        <div className="bg-white border border-slate-200 p-4 mb-6" data-testid="organizer-export">
+        <div className="bg-white border border-slate-200 p-4 mb-6" id="organizer-export-section" data-testid="organizer-export">
           <div className="flex flex-wrap items-end gap-4">
             <div>
               <label className="block text-xs font-heading uppercase text-slate-500 mb-1">Événement</label>
@@ -1353,7 +1362,7 @@ const OrganizerDashboard = () => {
 
         {/* Events Grid */}
         <section>
-          <div className="flex items-end justify-between mb-8">
+          <div className="flex items-end justify-between mb-8" id="organizer-events-section">
             <div>
               <span className="text-brand font-heading font-bold uppercase tracking-widest text-sm">
                 Gestion

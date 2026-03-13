@@ -26,6 +26,7 @@ import CheckInPage from "./pages/CheckInPage";
 import OrganizerEventPage from "./pages/OrganizerEventPage";
 import OrgaLandingPage from "./pages/OrgaLandingPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
+import MessagingPage from "./pages/MessagingPage";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 // Protected Route Component
@@ -150,6 +151,14 @@ const AppRouter = () => {
           element={
             <ProtectedRoute requiredRole="admin">
               <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/messages"
+          element={
+            <ProtectedRoute>
+              <MessagingPage />
             </ProtectedRoute>
           }
         />
