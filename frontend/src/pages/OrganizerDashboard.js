@@ -1845,10 +1845,12 @@ ${JSON.stringify({
                       <div key={o.order_id} className="p-4 hover:bg-slate-50" data-testid={`order-row-${o.order_id}`}>
                         <div className="flex items-start justify-between mb-2">
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-mono text-xs text-brand font-bold">{o.order_id}</span>
                               <span className={`px-2 py-0.5 text-[10px] font-bold uppercase ${o.status === 'confirmée' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{o.status}</span>
-                              <span className="px-2 py-0.5 text-[10px] font-bold uppercase bg-blue-50 text-blue-600">{o.payment_status}</span>
+                              <span className={`px-2 py-0.5 text-[10px] font-bold uppercase ${o.delivery_method === 'Livraison à domicile' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
+                                {o.delivery_method || 'Retrait sur place'}
+                              </span>
                             </div>
                             <p className="font-heading font-bold text-sm mt-1">{o.user_name}</p>
                             <p className="text-xs text-slate-500">{o.user_email} {o.phone && `— ${o.phone}`}</p>
@@ -1856,6 +1858,7 @@ ${JSON.stringify({
                           </div>
                           <div className="text-right">
                             <p className="font-heading font-bold text-lg">{o.total?.toFixed(2)}€</p>
+                            {o.delivery_fee > 0 && <p className="text-[10px] text-slate-400">dont {o.delivery_fee?.toFixed(2)}€ livraison</p>}
                             <p className="text-xs text-green-600 font-bold">+{o.organizer_commission_total?.toFixed(2)}€ commission</p>
                             <p className="text-[10px] text-slate-400 mt-1">{o.created_at && format(new Date(o.created_at), 'd MMM yyyy HH:mm', { locale: fr })}</p>
                           </div>
@@ -1863,7 +1866,12 @@ ${JSON.stringify({
                         <div className="mt-2 bg-slate-50 p-2">
                           {o.items?.map((item, i) => (
                             <div key={i} className="flex items-center justify-between text-xs py-1">
-                              <span className="font-medium">{item.product_name} {item.size && `(${item.size})`} x{item.quantity}</span>
+                              <span className="font-medium">
+                                {item.product_name}
+                                {item.size && <span className="ml-1 text-slate-400">Taille: {item.size}</span>}
+                                {item.color && <span className="ml-1 text-slate-400">Couleur: {item.color}</span>}
+                                {' '}x{item.quantity}
+                              </span>
                               <span className="font-heading font-bold">{item.line_total?.toFixed(2)}€</span>
                             </div>
                           ))}

@@ -2110,6 +2110,7 @@ async def create_shop_order(request: Request, current_user: dict = Depends(get_c
             "commission": commission
         })
         await db.products.update_one({"product_id": product["product_id"]}, {"$inc": {"sold": qty, "stock": -qty}})
+    delivery_fee = float(data.get("delivery_fee", 0))
     order = {
         "order_id": f"ord_{uuid.uuid4().hex[:12]}",
         "user_id": current_user["user_id"],
@@ -2118,10 +2119,13 @@ async def create_shop_order(request: Request, current_user: dict = Depends(get_c
         "organizer_id": organizer_id,
         "event_id": data.get("event_id", ""),
         "items": order_items,
-        "total": total,
+        "total": total + delivery_fee,
+        "subtotal": total,
+        "delivery_fee": delivery_fee,
         "organizer_commission_total": total_commission,
         "payment_status": "simulated",
         "payment_method": "SumUp (à intégrer)",
+        "delivery_method": data.get("delivery_method", "Retrait sur place"),
         "shipping_address": data.get("shipping_address", ""),
         "phone": data.get("phone", ""),
         "notes": data.get("notes", ""),

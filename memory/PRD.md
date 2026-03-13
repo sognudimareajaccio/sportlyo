@@ -38,6 +38,7 @@ Créer une plateforme de vente de tickets en ligne pour des événements sportif
 - Partenaires CRM (CRUD complet)
 - Sponsors & Donateurs CRM (CRUD complet)
 - Boutique Produits Dérivés (CRUD, commissions, stock, images)
+- Affichage commandes avec mode livraison, taille, couleur, adresse
 
 ### Messagerie
 - Système messagerie directe organisateur/admin
@@ -45,10 +46,17 @@ Créer une plateforme de vente de tickets en ligne pour des événements sportif
 ### Admin Dashboard
 - Cartes cliquables, onglet messagerie, gestion financière
 
-### Boutique Participant (NOUVEAU - Mars 2026)
+### Boutique Participant (Mars 2026)
 - Section discrète "Boutique officielle" sur la page événement
 - Page dédiée `/events/{eventId}/shop` inspirée RunningHeroes
 - Filtres par catégorie, grille responsive, breadcrumb navigation
+- **Bouton "Commander"** sur chaque produit
+- **Modal de commande complète** : choix taille, couleur, quantité
+- **Mode de livraison** : Retrait sur place (gratuit) / Livraison à domicile (+5.90€)
+- **Champs adresse** pour livraison domicile
+- **Récapitulatif** avec frais de livraison et total
+- **Commande confirmée** visible instantanément dans le dashboard organisateur
+- Paiement SIMULÉ (SumUp à intégrer)
 
 ## Backlog Priorisé
 
@@ -58,7 +66,7 @@ Créer une plateforme de vente de tickets en ligne pour des événements sportif
 
 ### P1 - Important
 - Facturation automatique participants
-- Intégration SumUp pour la boutique
+- Intégration SumUp pour la boutique (remplacer paiement simulé)
 
 ### P2 - Futur
 - Gestion communautaire organisateurs/participants
