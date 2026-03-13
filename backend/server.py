@@ -1928,6 +1928,84 @@ async def get_partner_categories(current_user: dict = Depends(get_current_user))
     categories = await db.partners.distinct("category", {"organizer_id": current_user['user_id']})
     return {"categories": categories}
 
+@api_router.get("/organizer/sponsors")
+async def get_sponsors(current_user: dict = Depends(get_current_user), sponsor_type: Optional[str] = None):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    query = {"organizer_id": current_user['user_id']}
+    if sponsor_type and sponsor_type != 'all':
+        query["sponsor_type"] = sponsor_type
+    sponsors = await db.sponsors.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return {"sponsors": sponsors}
+
+@api_router.post("/organizer/sponsors")
+async def create_sponsor(request: Request, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    data = await request.json()
+    if not data.get("name"):
+        raise HTTPException(status_code=400, detail="Nom requis")
+    sponsor = {
+        "sponsor_id": f"spon_{uuid.uuid4().hex[:12]}",
+        "organizer_id": current_user['user_id'],
+        "name": data.get("name", ""),
+        "sponsor_type": data.get("sponsor_type", "Sponsor"),
+        "tier": data.get("tier", "Bronze"),
+        "contact_name": data.get("contact_name", ""),
+        "phone": data.get("phone", ""),
+        "email": data.get("email", ""),
+        "address": data.get("address", ""),
+        "website": data.get("website", ""),
+        "logo_url": data.get("logo_url", ""),
+        "amount": data.get("amount", 0),
+        "currency": data.get("currency", "EUR"),
+        "contribution_type": data.get("contribution_type", "Financier"),
+        "contribution_details": data.get("contribution_details", ""),
+        "counterparts": data.get("counterparts", ""),
+        "contract_start": data.get("contract_start", ""),
+        "contract_end": data.get("contract_end", ""),
+        "event_id": data.get("event_id", ""),
+        "notes": data.get("notes", ""),
+        "status": data.get("status", "Actif"),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.sponsors.insert_one(sponsor)
+    del sponsor["_id"]
+    return {"sponsor": sponsor}
+
+@api_router.put("/organizer/sponsors/{sponsor_id}")
+async def update_sponsor(sponsor_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    data = await request.json()
+    update_fields = {k: v for k, v in data.items() if k in [
+        "name", "sponsor_type", "tier", "contact_name", "phone", "email", "address",
+        "website", "logo_url", "amount", "currency", "contribution_type",
+        "contribution_details", "counterparts", "contract_start", "contract_end",
+        "event_id", "notes", "status"
+    ]}
+    update_fields["updated_at"] = datetime.now(timezone.utc).isoformat()
+    result = await db.sponsors.update_one(
+        {"sponsor_id": sponsor_id, "organizer_id": current_user['user_id']},
+        {"$set": update_fields}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Sponsor non trouvé")
+    updated = await db.sponsors.find_one({"sponsor_id": sponsor_id}, {"_id": 0})
+    return {"sponsor": updated}
+
+@api_router.delete("/organizer/sponsors/{sponsor_id}")
+async def delete_sponsor(sponsor_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    result = await db.sponsors.delete_one(
+        {"sponsor_id": sponsor_id, "organizer_id": current_user['user_id']}
+    )
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Sponsor non trouvé")
+    return {"message": "Sponsor supprimé"}
+
 # ============== WAITLIST ==============
 
 
