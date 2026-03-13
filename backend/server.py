@@ -2006,6 +2006,161 @@ async def delete_sponsor(sponsor_id: str, current_user: dict = Depends(get_curre
         raise HTTPException(status_code=404, detail="Sponsor non trouvé")
     return {"message": "Sponsor supprimé"}
 
+# ============== SHOP / PRODUCTS ==============
+
+@api_router.get("/organizer/products")
+async def get_organizer_products(current_user: dict = Depends(get_current_user), event_id: Optional[str] = None):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    query = {"organizer_id": current_user['user_id']}
+    if event_id:
+        query["event_id"] = event_id
+    products = await db.products.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return {"products": products}
+
+@api_router.post("/organizer/products")
+async def create_product(request: Request, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    data = await request.json()
+    if not data.get("name") or not data.get("price"):
+        raise HTTPException(status_code=400, detail="Nom et prix requis")
+    product = {
+        "product_id": f"prod_{uuid.uuid4().hex[:12]}",
+        "organizer_id": current_user['user_id'],
+        "event_id": data.get("event_id", ""),
+        "name": data.get("name"),
+        "description": data.get("description", ""),
+        "category": data.get("category", "Textile"),
+        "price": float(data.get("price", 0)),
+        "organizer_commission": float(data.get("organizer_commission", 5)),
+        "image_url": data.get("image_url", ""),
+        "sizes": data.get("sizes", []),
+        "colors": data.get("colors", []),
+        "stock": int(data.get("stock", 100)),
+        "sold": 0,
+        "active": True,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.products.insert_one(product)
+    del product["_id"]
+    return {"product": product}
+
+@api_router.put("/organizer/products/{product_id}")
+async def update_product(product_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    data = await request.json()
+    fields = {}
+    for f in ["name","description","category","price","organizer_commission","image_url","sizes","colors","stock","active","event_id"]:
+        if f in data:
+            fields[f] = data[f]
+    fields["updated_at"] = datetime.now(timezone.utc).isoformat()
+    result = await db.products.update_one({"product_id": product_id, "organizer_id": current_user['user_id']}, {"$set": fields})
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Produit non trouvé")
+    updated = await db.products.find_one({"product_id": product_id}, {"_id": 0})
+    return {"product": updated}
+
+@api_router.delete("/organizer/products/{product_id}")
+async def delete_product(product_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    result = await db.products.delete_one({"product_id": product_id, "organizer_id": current_user['user_id']})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Produit non trouvé")
+    return {"message": "Produit supprimé"}
+
+@api_router.get("/events/{event_id}/shop")
+async def get_event_shop(event_id: str):
+    """Public: get products for an event"""
+    products = await db.products.find({"event_id": event_id, "active": True}, {"_id": 0}).to_list(100)
+    return {"products": products}
+
+@api_router.post("/shop/order")
+async def create_shop_order(request: Request, current_user: dict = Depends(get_current_user)):
+    """Create a product order (simulated payment - ready for SumUp)"""
+    data = await request.json()
+    items = data.get("items", [])
+    if not items:
+        raise HTTPException(status_code=400, detail="Panier vide")
+    order_items = []
+    total = 0
+    total_commission = 0
+    organizer_id = None
+    for item in items:
+        product = await db.products.find_one({"product_id": item["product_id"]}, {"_id": 0})
+        if not product:
+            continue
+        qty = int(item.get("quantity", 1))
+        line_total = product["price"] * qty
+        commission = product.get("organizer_commission", 5) * qty
+        total += line_total
+        total_commission += commission
+        organizer_id = product.get("organizer_id")
+        order_items.append({
+            "product_id": product["product_id"],
+            "product_name": product["name"],
+            "price": product["price"],
+            "quantity": qty,
+            "size": item.get("size", ""),
+            "color": item.get("color", ""),
+            "line_total": line_total,
+            "commission": commission
+        })
+        await db.products.update_one({"product_id": product["product_id"]}, {"$inc": {"sold": qty, "stock": -qty}})
+    order = {
+        "order_id": f"ord_{uuid.uuid4().hex[:12]}",
+        "user_id": current_user["user_id"],
+        "user_name": current_user["name"],
+        "user_email": current_user.get("email", ""),
+        "organizer_id": organizer_id,
+        "event_id": data.get("event_id", ""),
+        "items": order_items,
+        "total": total,
+        "organizer_commission_total": total_commission,
+        "payment_status": "simulated",
+        "payment_method": "SumUp (à intégrer)",
+        "shipping_address": data.get("shipping_address", ""),
+        "phone": data.get("phone", ""),
+        "notes": data.get("notes", ""),
+        "status": "confirmée",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.orders.insert_one(order)
+    del order["_id"]
+    return {"order": order, "message": f"Commande {order['order_id']} confirmée — {total:.2f}€"}
+
+@api_router.get("/organizer/orders")
+async def get_organizer_orders(current_user: dict = Depends(get_current_user), event_id: Optional[str] = None):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    query = {"organizer_id": current_user['user_id']}
+    if event_id:
+        query["event_id"] = event_id
+    orders = await db.orders.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return {"orders": orders}
+
+@api_router.get("/organizer/shop-stats")
+async def get_shop_stats(current_user: dict = Depends(get_current_user)):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    products = await db.products.find({"organizer_id": current_user['user_id']}, {"_id": 0}).to_list(500)
+    orders = await db.orders.find({"organizer_id": current_user['user_id']}, {"_id": 0}).to_list(5000)
+    total_sales = sum(o.get("total", 0) for o in orders)
+    total_commission = sum(o.get("organizer_commission_total", 0) for o in orders)
+    total_products = len(products)
+    total_orders = len(orders)
+    total_items_sold = sum(p.get("sold", 0) for p in products)
+    return {
+        "total_sales": total_sales,
+        "total_commission": total_commission,
+        "total_products": total_products,
+        "total_orders": total_orders,
+        "total_items_sold": total_items_sold
+    }
+
 # ============== WAITLIST ==============
 
 
