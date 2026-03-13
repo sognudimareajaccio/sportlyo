@@ -251,7 +251,7 @@ const OrderDialog = ({ product, eventId, eventTitle, onClose, onSuccess }) => {
         delivery_fee: deliveryFee
       };
       const res = await api.post('/shop/order', payload);
-      setOrderDone(res.data.order);
+      setOrderDone({ ...res.data.order, invoice_id: res.data.invoice_id });
       onSuccess({ product_id: product.product_id, qty: quantity });
       toast.success('Commande confirmée !');
     } catch (e) {

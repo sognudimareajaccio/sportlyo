@@ -28,16 +28,19 @@ const ParticipantDashboard = () => {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploadingPps, setUploadingPps] = useState(null);
+  const [invoices, setInvoices] = useState([]);
   const ppsInputRef = useRef(null);
 
   const fetchData = async () => {
     try {
-      const [regsRes, recsRes] = await Promise.all([
+      const [regsRes, recsRes, invRes] = await Promise.all([
         registrationsApi.getAll(),
-        recommendationsApi.get()
+        recommendationsApi.get(),
+        api.get('/invoices')
       ]);
       setRegistrations(regsRes.data.registrations);
       setRecommendations(recsRes.data.recommendations);
+      setInvoices(invRes.data.invoices || []);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -279,6 +282,35 @@ const ParticipantDashboard = () => {
                 >
                   <EventCard event={event} />
                 </motion.div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Invoices */}
+        {invoices.length > 0 && (
+          <section data-testid="invoices-section">
+            <div className="mb-6">
+              <h2 className="font-heading text-2xl font-bold uppercase">Mes factures</h2>
+              <p className="text-slate-500 text-sm">Retrouvez toutes vos factures d'achats</p>
+            </div>
+            <div className="space-y-2">
+              {invoices.map(inv => (
+                <div key={inv.invoice_id} className="bg-white border border-slate-200 p-4 flex items-center justify-between" data-testid={`invoice-${inv.invoice_id}`}>
+                  <div className="flex items-center gap-4">
+                    <FileText className="w-5 h-5 text-brand" />
+                    <div>
+                      <p className="font-heading font-bold text-sm">{inv.invoice_number}</p>
+                      <p className="text-xs text-slate-500">
+                        {inv.source_type === 'order' ? 'Commande boutique' : 'Inscription'} — {inv.created_at && format(new Date(inv.created_at), 'd MMM yyyy', { locale: fr })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="font-heading font-bold text-lg">{inv.total?.toFixed(2)}€</span>
+                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase bg-green-100 text-green-700">Payée</span>
+                  </div>
+                </div>
               ))}
             </div>
           </section>

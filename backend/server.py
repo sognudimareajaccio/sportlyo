@@ -54,6 +54,10 @@ STRIPE_FIXED_FEE = 0.25     # 0.25€
 app = FastAPI(title="SportLyo API")
 api_router = APIRouter(prefix="/api")
 
+# Include modular routers
+from routers.provider import router as provider_router
+app.include_router(provider_router)
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -2101,11 +2105,13 @@ async def get_event_shop(event_id: str):
 
 @api_router.post("/shop/order")
 async def create_shop_order(request: Request, current_user: dict = Depends(get_current_user)):
-    """Create a product order (simulated payment - ready for SumUp)"""
+    """Create a product order with SumUp checkout integration"""
     data = await request.json()
     items = data.get("items", [])
     if not items:
         raise HTTPException(status_code=400, detail="Panier vide")
+    
+    # Build order items
     order_items = []
     total = 0
     total_commission = 0
@@ -2133,9 +2139,43 @@ async def create_shop_order(request: Request, current_user: dict = Depends(get_c
             "commission": commission
         })
         await db.products.update_one({"product_id": product["product_id"]}, {"$inc": {"sold": qty, "stock": -qty}})
+    
     delivery_fee = float(data.get("delivery_fee", 0))
+    grand_total = total + delivery_fee
+    order_id = f"ord_{uuid.uuid4().hex[:12]}"
+    
+    # SumUp checkout
+    sumup_key = os.environ.get("SUMUP_API_KEY", "")
+    sumup_merchant = os.environ.get("SUMUP_MERCHANT_CODE", "")
+    checkout_url = None
+    payment_status = "simulated"
+    
+    if sumup_key and sumup_merchant:
+        try:
+            async with httpx.AsyncClient() as client_http:
+                checkout_res = await client_http.post(
+                    "https://api.sumup.com/v0.1/checkouts",
+                    headers={"Authorization": f"Bearer {sumup_key}", "Content-Type": "application/json"},
+                    json={
+                        "checkout_reference": order_id,
+                        "amount": grand_total,
+                        "currency": "EUR",
+                        "merchant_code": sumup_merchant,
+                        "description": f"Commande {order_id}",
+                        "return_url": f"{os.environ.get('FRONTEND_URL', '')}/events/{data.get('event_id', '')}/shop?order={order_id}&status=success"
+                    }
+                )
+                if checkout_res.status_code == 201:
+                    checkout_data = checkout_res.json()
+                    checkout_url = f"https://api.sumup.com/v0.1/checkouts/{checkout_data.get('id')}"
+                    payment_status = "pending"
+                else:
+                    logger.warning(f"SumUp checkout failed: {checkout_res.status_code} {checkout_res.text}")
+        except Exception as e:
+            logger.warning(f"SumUp error: {e}")
+    
     order = {
-        "order_id": f"ord_{uuid.uuid4().hex[:12]}",
+        "order_id": order_id,
         "user_id": current_user["user_id"],
         "user_name": current_user["name"],
         "user_email": current_user.get("email", ""),
@@ -2143,12 +2183,13 @@ async def create_shop_order(request: Request, current_user: dict = Depends(get_c
         "provider_id": provider_id,
         "event_id": data.get("event_id", ""),
         "items": order_items,
-        "total": total + delivery_fee,
+        "total": grand_total,
         "subtotal": total,
         "delivery_fee": delivery_fee,
         "organizer_commission_total": total_commission,
-        "payment_status": "simulated",
-        "payment_method": "SumUp (à intégrer)",
+        "payment_status": payment_status,
+        "payment_method": "SumUp" if sumup_key else "Simulation",
+        "checkout_url": checkout_url,
         "delivery_method": data.get("delivery_method", "Retrait sur place"),
         "shipping_address": data.get("shipping_address", ""),
         "phone": data.get("phone", ""),
@@ -2158,7 +2199,40 @@ async def create_shop_order(request: Request, current_user: dict = Depends(get_c
     }
     await db.orders.insert_one(order)
     del order["_id"]
-    return {"order": order, "message": f"Commande {order['order_id']} confirmée — {total:.2f}€"}
+    
+    # Auto-generate invoice
+    invoice_number = f"INV-{datetime.now(timezone.utc).strftime('%Y%m')}-{uuid.uuid4().hex[:6].upper()}"
+    inv_items = []
+    for item in order_items:
+        inv_items.append({
+            "description": f"{item.get('product_name', '')} {('Taille: ' + item.get('size', '')) if item.get('size') else ''} x{item.get('quantity', 1)}",
+            "quantity": item.get("quantity", 1),
+            "unit_price": item.get("unit_price", 0),
+            "total": item.get("line_total", 0)
+        })
+    if delivery_fee > 0:
+        inv_items.append({"description": "Frais de livraison", "quantity": 1, "unit_price": delivery_fee, "total": delivery_fee})
+    invoice = {
+        "invoice_id": f"inv_{uuid.uuid4().hex[:12]}",
+        "invoice_number": invoice_number,
+        "source_type": "order",
+        "source_id": order["order_id"],
+        "user_id": current_user['user_id'],
+        "user_name": current_user['name'],
+        "user_email": current_user.get('email', ''),
+        "organizer_id": organizer_id,
+        "items": inv_items,
+        "subtotal": total,
+        "delivery_fee": delivery_fee,
+        "total": grand_total,
+        "delivery_method": data.get("delivery_method", ""),
+        "status": "paid",
+        "payment_date": order["created_at"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.invoices.insert_one(invoice)
+    
+    return {"order": order, "invoice_id": invoice.get("invoice_id"), "checkout_url": checkout_url, "message": f"Commande {order['order_id']} confirmée — {grand_total:.2f}€"}
 
 @api_router.get("/organizer/orders")
 async def get_organizer_orders(current_user: dict = Depends(get_current_user), event_id: Optional[str] = None):
@@ -2189,230 +2263,126 @@ async def get_shop_stats(current_user: dict = Depends(get_current_user)):
         "total_items_sold": total_items_sold
     }
 
-# ============== PROVIDER ROUTES ==============
+# ============== INVOICING / FACTURATION ==============
 
-@api_router.get("/provider/catalog")
-async def get_provider_catalog(current_user: dict = Depends(get_current_user)):
-    """Provider: get their own product catalog"""
-    if current_user['role'] != 'provider':
-        raise HTTPException(status_code=403, detail="Prestataire requis")
-    products = await db.provider_products.find({"provider_id": current_user['user_id']}, {"_id": 0}).sort("created_at", -1).to_list(500)
-    return {"products": products}
+@api_router.get("/invoices")
+async def get_invoices(current_user: dict = Depends(get_current_user)):
+    """Get invoices for current user (participant sees their own, organizer sees their event invoices)"""
+    if current_user['role'] == 'participant':
+        invoices = await db.invoices.find({"user_id": current_user['user_id']}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    elif current_user['role'] in ['organizer', 'admin']:
+        invoices = await db.invoices.find({"organizer_id": current_user['user_id']}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    else:
+        invoices = []
+    return {"invoices": invoices}
 
-@api_router.post("/provider/catalog")
-async def create_provider_product(request: Request, current_user: dict = Depends(get_current_user)):
-    """Provider: add a product to their catalog"""
-    if current_user['role'] != 'provider':
-        raise HTTPException(status_code=403, detail="Prestataire requis")
+@api_router.get("/invoices/{invoice_id}")
+async def get_invoice_detail(invoice_id: str, current_user: dict = Depends(get_current_user)):
+    invoice = await db.invoices.find_one({"invoice_id": invoice_id}, {"_id": 0})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Facture non trouvée")
+    if current_user['role'] == 'participant' and invoice.get('user_id') != current_user['user_id']:
+        raise HTTPException(status_code=403, detail="Accès non autorisé")
+    return {"invoice": invoice}
+
+@api_router.post("/invoices/generate")
+async def generate_invoice(request: Request, current_user: dict = Depends(get_current_user)):
+    """Generate invoice for a registration or order"""
     data = await request.json()
-    if not data.get("name") or not data.get("price"):
-        raise HTTPException(status_code=400, detail="Nom et prix requis")
-    product = {
-        "product_id": f"pprod_{uuid.uuid4().hex[:12]}",
-        "provider_id": current_user['user_id'],
-        "provider_name": current_user.get('company_name') or current_user['name'],
-        "name": data.get("name"),
-        "description": data.get("description", ""),
-        "category": data.get("category", "Textile"),
-        "price": float(data.get("price", 0)),
-        "suggested_commission": float(data.get("suggested_commission", 5)),
-        "image_url": data.get("image_url", ""),
-        "sizes": data.get("sizes", []),
-        "colors": data.get("colors", []),
-        "stock": int(data.get("stock", 100)),
-        "active": True,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.provider_products.insert_one(product)
-    del product["_id"]
-    return {"product": product}
-
-@api_router.put("/provider/catalog/{product_id}")
-async def update_provider_product(product_id: str, request: Request, current_user: dict = Depends(get_current_user)):
-    if current_user['role'] != 'provider':
-        raise HTTPException(status_code=403, detail="Prestataire requis")
-    data = await request.json()
-    fields = {}
-    for f in ["name","description","category","price","suggested_commission","image_url","sizes","colors","stock","active"]:
-        if f in data:
-            fields[f] = data[f]
-    fields["updated_at"] = datetime.now(timezone.utc).isoformat()
-    await db.provider_products.update_one({"product_id": product_id, "provider_id": current_user['user_id']}, {"$set": fields})
-    updated = await db.provider_products.find_one({"product_id": product_id}, {"_id": 0})
-    return {"product": updated}
-
-@api_router.delete("/provider/catalog/{product_id}")
-async def delete_provider_product(product_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user['role'] != 'provider':
-        raise HTTPException(status_code=403, detail="Prestataire requis")
-    await db.provider_products.delete_one({"product_id": product_id, "provider_id": current_user['user_id']})
-    return {"message": "Produit supprimé"}
-
-@api_router.get("/provider/orders")
-async def get_provider_orders(current_user: dict = Depends(get_current_user)):
-    """Provider: see orders containing their products"""
-    if current_user['role'] != 'provider':
-        raise HTTPException(status_code=403, detail="Prestataire requis")
-    orders = await db.orders.find({"provider_id": current_user['user_id']}, {"_id": 0}).sort("created_at", -1).to_list(1000)
-    return {"orders": orders}
-
-@api_router.get("/provider/stats")
-async def get_provider_stats(current_user: dict = Depends(get_current_user)):
-    if current_user['role'] != 'provider':
-        raise HTTPException(status_code=403, detail="Prestataire requis")
-    products = await db.provider_products.find({"provider_id": current_user['user_id']}, {"_id": 0}).to_list(500)
-    orders = await db.orders.find({"provider_id": current_user['user_id']}, {"_id": 0}).to_list(5000)
-    total_sales = sum(o.get("total", 0) for o in orders)
-    total_commission_given = sum(o.get("organizer_commission_total", 0) for o in orders)
-    return {
-        "total_products": len(products),
-        "total_orders": len(orders),
-        "total_sales": total_sales,
-        "total_commission_given": total_commission_given,
-        "net_revenue": total_sales - total_commission_given
-    }
-
-@api_router.get("/providers/catalog")
-async def browse_provider_catalogs(current_user: dict = Depends(get_current_user)):
-    """Organizer: browse all provider products to add to events"""
-    if current_user['role'] not in ['organizer', 'admin']:
-        raise HTTPException(status_code=403, detail="Organisateur requis")
-    products = await db.provider_products.find({"active": True}, {"_id": 0}).sort("created_at", -1).to_list(500)
-    return {"products": products}
-
-@api_router.get("/providers/list")
-async def list_providers(current_user: dict = Depends(get_current_user)):
-    """List active providers"""
-    if current_user['role'] not in ['organizer', 'admin']:
-        raise HTTPException(status_code=403, detail="Accès requis")
-    providers = await db.users.find({"role": "provider", "status": "active"}, {"_id": 0, "password": 0}).to_list(100)
-    return {"providers": providers}
-
-@api_router.post("/organizer/add-provider-product")
-async def add_provider_product_to_event(request: Request, current_user: dict = Depends(get_current_user)):
-    """Organizer: add a provider product to their event"""
-    if current_user['role'] not in ['organizer', 'admin']:
-        raise HTTPException(status_code=403, detail="Organisateur requis")
-    data = await request.json()
-    provider_product_id = data.get("provider_product_id")
-    event_id = data.get("event_id")
-    commission = float(data.get("organizer_commission", 5))
-    if not provider_product_id or not event_id:
-        raise HTTPException(status_code=400, detail="product_id et event_id requis")
-    pp = await db.provider_products.find_one({"product_id": provider_product_id}, {"_id": 0})
-    if not pp:
-        raise HTTPException(status_code=404, detail="Produit prestataire non trouvé")
-    product = {
-        "product_id": f"prod_{uuid.uuid4().hex[:12]}",
-        "source": "provider",
-        "provider_product_id": provider_product_id,
-        "provider_id": pp["provider_id"],
-        "provider_name": pp.get("provider_name", ""),
-        "organizer_id": current_user['user_id'],
-        "event_id": event_id,
-        "name": pp["name"],
-        "description": pp.get("description", ""),
-        "category": pp.get("category", "Textile"),
-        "price": pp["price"],
-        "organizer_commission": commission,
-        "image_url": pp.get("image_url", ""),
-        "sizes": pp.get("sizes", []),
-        "colors": pp.get("colors", []),
-        "stock": pp.get("stock", 100),
-        "sold": 0,
-        "active": True,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.products.insert_one(product)
-    del product["_id"]
-    return {"product": product}
-
-@api_router.post("/provider/messages")
-async def send_provider_message(request: Request, current_user: dict = Depends(get_current_user)):
-    """Send message between provider and organizer"""
-    data = await request.json()
-    recipient_id = data.get("recipient_id")
-    content = data.get("content")
-    if not recipient_id or not content:
-        raise HTTPException(status_code=400, detail="recipient_id et content requis")
-    msg = {
-        "message_id": f"msg_{uuid.uuid4().hex[:12]}",
-        "sender_id": current_user['user_id'],
-        "sender_name": current_user.get('company_name') or current_user['name'],
-        "sender_role": current_user['role'],
-        "recipient_id": recipient_id,
-        "content": content,
-        "read": False,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.provider_messages.insert_one(msg)
-    del msg["_id"]
-    return {"message": msg}
-
-@api_router.get("/provider/messages/{other_id}")
-async def get_provider_messages(other_id: str, current_user: dict = Depends(get_current_user)):
-    """Get messages between current user and another user"""
-    query = {"$or": [
-        {"sender_id": current_user['user_id'], "recipient_id": other_id},
-        {"sender_id": other_id, "recipient_id": current_user['user_id']}
-    ]}
-    messages = await db.provider_messages.find(query, {"_id": 0}).sort("created_at", 1).to_list(500)
-    await db.provider_messages.update_many(
-        {"sender_id": other_id, "recipient_id": current_user['user_id'], "read": False},
-        {"$set": {"read": True}}
-    )
-    return {"messages": messages}
-
-@api_router.get("/provider/conversations")
-async def get_provider_conversations(current_user: dict = Depends(get_current_user)):
-    """Get list of conversations for provider or organizer"""
-    pipeline = [
-        {"$match": {"$or": [{"sender_id": current_user['user_id']}, {"recipient_id": current_user['user_id']}]}},
-        {"$sort": {"created_at": -1}},
-        {"$group": {
-            "_id": {"$cond": [{"$eq": ["$sender_id", current_user['user_id']]}, "$recipient_id", "$sender_id"]},
-            "last_message": {"$first": "$content"},
-            "last_date": {"$first": "$created_at"},
-            "last_sender": {"$first": "$sender_name"},
-            "unread": {"$sum": {"$cond": [{"$and": [{"$ne": ["$sender_id", current_user['user_id']]}, {"$eq": ["$read", False]}]}, 1, 0]}}
-        }}
-    ]
-    convos = await db.provider_messages.aggregate(pipeline).to_list(100)
-    result = []
-    for c in convos:
-        other_user = await db.users.find_one({"user_id": c["_id"]}, {"_id": 0, "password": 0})
-        if other_user:
-            result.append({
-                "user_id": c["_id"],
-                "name": other_user.get("company_name") or other_user.get("name"),
-                "role": other_user.get("role"),
-                "last_message": c["last_message"],
-                "last_date": c["last_date"],
-                "unread": c["unread"]
+    source_type = data.get("type", "registration")
+    source_id = data.get("source_id")
+    if not source_id:
+        raise HTTPException(status_code=400, detail="source_id requis")
+    
+    existing = await db.invoices.find_one({"source_id": source_id, "source_type": source_type}, {"_id": 0})
+    if existing:
+        return {"invoice": existing, "message": "Facture déjà existante"}
+    
+    invoice_number = f"INV-{datetime.now(timezone.utc).strftime('%Y%m')}-{uuid.uuid4().hex[:6].upper()}"
+    
+    if source_type == "registration":
+        reg = await db.registrations.find_one({"registration_id": source_id}, {"_id": 0})
+        if not reg:
+            raise HTTPException(status_code=404, detail="Inscription non trouvée")
+        event = await db.events.find_one({"event_id": reg.get("event_id")}, {"_id": 0})
+        
+        items = [{
+            "description": f"Inscription - {event.get('title', '')} - {reg.get('race_name', '')}",
+            "quantity": 1,
+            "unit_price": reg.get("amount_paid", 0),
+            "total": reg.get("amount_paid", 0)
+        }]
+        subtotal = reg.get("amount_paid", 0)
+        
+        invoice = {
+            "invoice_id": f"inv_{uuid.uuid4().hex[:12]}",
+            "invoice_number": invoice_number,
+            "source_type": "registration",
+            "source_id": source_id,
+            "user_id": reg.get("user_id"),
+            "user_name": reg.get("full_name", ""),
+            "user_email": reg.get("email", ""),
+            "organizer_id": event.get("organizer_id", ""),
+            "event_title": event.get("title", ""),
+            "items": items,
+            "subtotal": subtotal,
+            "tax_rate": 0,
+            "tax_amount": 0,
+            "total": subtotal,
+            "status": "paid",
+            "payment_date": reg.get("created_at", ""),
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+    elif source_type == "order":
+        order = await db.orders.find_one({"order_id": source_id}, {"_id": 0})
+        if not order:
+            raise HTTPException(status_code=404, detail="Commande non trouvée")
+        
+        items = []
+        for item in order.get("items", []):
+            items.append({
+                "description": f"{item.get('product_name', '')} {('Taille: ' + item.get('size', '')) if item.get('size') else ''} x{item.get('quantity', 1)}",
+                "quantity": item.get("quantity", 1),
+                "unit_price": item.get("unit_price", 0),
+                "total": item.get("line_total", 0)
             })
-    return {"conversations": result}
+        if order.get("delivery_fee", 0) > 0:
+            items.append({
+                "description": "Frais de livraison",
+                "quantity": 1,
+                "unit_price": order["delivery_fee"],
+                "total": order["delivery_fee"]
+            })
+        
+        invoice = {
+            "invoice_id": f"inv_{uuid.uuid4().hex[:12]}",
+            "invoice_number": invoice_number,
+            "source_type": "order",
+            "source_id": source_id,
+            "user_id": order.get("user_id"),
+            "user_name": order.get("user_name", ""),
+            "user_email": order.get("user_email", ""),
+            "organizer_id": order.get("organizer_id", ""),
+            "items": items,
+            "subtotal": order.get("subtotal", order.get("total", 0)),
+            "delivery_fee": order.get("delivery_fee", 0),
+            "tax_rate": 0,
+            "tax_amount": 0,
+            "total": order.get("total", 0),
+            "delivery_method": order.get("delivery_method", ""),
+            "shipping_address": order.get("shipping_address", ""),
+            "status": "paid",
+            "payment_date": order.get("created_at", ""),
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+    else:
+        raise HTTPException(status_code=400, detail="Type de facture invalide")
+    
+    await db.invoices.insert_one(invoice)
+    del invoice["_id"]
+    return {"invoice": invoice}
 
-@api_router.put("/admin/providers/{user_id}/status")
-async def update_provider_status(user_id: str, request: Request, current_user: dict = Depends(get_current_user)):
-    """Admin: approve or reject provider"""
-    if current_user['role'] != 'admin':
-        raise HTTPException(status_code=403, detail="Admin only")
-    data = await request.json()
-    new_status = data.get("status")
-    if new_status not in ["active", "rejected"]:
-        raise HTTPException(status_code=400, detail="Statut invalide")
-    await db.users.update_one({"user_id": user_id, "role": "provider"}, {"$set": {"status": new_status}})
-    return {"message": f"Prestataire {'validé' if new_status == 'active' else 'refusé'}"}
-
-@api_router.get("/admin/providers")
-async def get_providers(current_user: dict = Depends(get_current_user)):
-    """Admin: list all providers"""
-    if current_user['role'] != 'admin':
-        raise HTTPException(status_code=403, detail="Admin only")
-    providers = await db.users.find({"role": "provider"}, {"_id": 0, "password": 0}).to_list(100)
-    return {"providers": providers}
+# ============== PROVIDER ROUTES (moved to routers/provider.py) ==============
 
 # ============== WAITLIST ==============
 

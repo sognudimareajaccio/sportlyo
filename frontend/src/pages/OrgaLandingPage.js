@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import {
   Zap, Clock, CreditCard, BarChart3, QrCode, Users, Shield, Headphones,
   Bike, Footprints, Medal, Car, Mountain, Target, Wind, Flag, CircleDot,
-  Dumbbell, Swords, ChevronRight, Check, ArrowRight, Globe, Timer
+  Dumbbell, Swords, ChevronRight, Check, ArrowRight, Globe, Timer, ShoppingBag
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
@@ -38,6 +38,11 @@ const features = [
     icon: Shield,
     title: 'Gestion PPS & Licences',
     desc: 'Verification automatique des PPS et licences FFA. Validation des documents integree.'
+  },
+  {
+    icon: ShoppingBag,
+    title: 'Boutique personnalisee',
+    desc: 'Vendez des produits derives a vos couleurs grace a nos prestataires partenaires. Commission sur chaque vente, zero stock a gerer.'
   }
 ];
 
@@ -56,8 +61,8 @@ const advantages = [
   'Guide chronometrage avec snippets',
   'Partage sur reseaux sociaux',
   'Gestion des equipes',
-  'Ajout manuel de participants',
-  'Communication avec l admin'
+  'Boutique produits derives integree',
+  'Messagerie prestataires & admin'
 ];
 
 const sports = [
@@ -277,7 +282,7 @@ const OrgaLandingPage = () => {
               Connecte a votre ecosysteme habituel
             </h2>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               {
                 num: '01',
@@ -291,6 +296,11 @@ const OrgaLandingPage = () => {
               },
               {
                 num: '03',
+                title: 'Boutique integree, zero stock',
+                desc: 'Proposez T-shirts, gourdes et accessoires personnalises a vos participants. Nos prestataires gerent le stock et la logistique, vous touchez une commission sur chaque vente.'
+              },
+              {
+                num: '04',
                 title: 'Parcours & Altimetrie',
                 desc: 'Integration OpenRunner native. Affichez le profil altimetrique et le trace du parcours directement sur votre page evenement.'
               }
