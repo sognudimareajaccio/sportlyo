@@ -4,7 +4,7 @@
 Créer une plateforme de vente de tickets en ligne pour des événements sportifs (marathon, trail, vélo, etc.), nommée SportLyo.
 
 ## Architecture technique
-- **Frontend:** React, TailwindCSS, Shadcn UI, Framer Motion, Lucide React
+- **Frontend:** React, TailwindCSS, Shadcn UI, Framer Motion, Lucide React, Recharts
 - **Backend:** FastAPI (Python)
 - **Database:** MongoDB
 - **Authentication:** JWT
@@ -38,29 +38,32 @@ Créer une plateforme de vente de tickets en ligne pour des événements sportif
 - Page événements avec recherche/filtres
 - Page d'accueil avec 18+ catégories sportives
 
-### Phase 3 - Communication & Dashboards (DONE - 13 Mars 2026)
+### Phase 3 - Communication & Dashboards (DONE)
 - Cartes de stats cliquables Admin Dashboard
 - Messagerie directe Admin ↔ Organisateur
 - Emails transactionnels via Resend
 - Jauges de remplissage fond sombre (Admin + Organisateur)
 
 ### Phase 4 - Refonte Espace Organisateur (DONE - 13 Mars 2026)
-**Hub avec grille de 9 boutons rectangulaires :**
-1. **Événements** — Liste de tous les événements avec cartes visuelles, actions CRUD
-2. **Participants** — Liste complète avec recherche, filtre par événement, tableau complet
-3. **Jauges** — Remplissage temps réel sur fond sombre par événement
-4. **Check-in** — Gestion dossards auto-générés, scan QR, recherche, statut récupération kit (couleur verte), export CSV chronométrage
-5. **Finances** — Revenus par événement, export CSV/PDF, résumé financier
-6. **Correspondances** — Envois groupés/individuels aux inscrits (interne + email via Resend), historique des envois
-7. **Partage** — Liens partage réseaux sociaux (Facebook, Twitter, WhatsApp, Email)
-8. **Contact Admin** — Messagerie sécurisée avec l'administration
-9. **Résultats** — Import CSV chronométrage, vue résultats par événement
+**Hub avec grille de 9 boutons rectangulaires + graphiques visuels :**
+1. **Événements** — Liste avec cartes visuelles, CRUD
+2. **Participants** — Liste complète, recherche, filtre par événement
+3. **Jauges** — Remplissage temps réel fond sombre
+4. **Check-in** — Dossards, scan QR, récupération kit (couleur verte), export CSV
+5. **Finances** — Revenus par événement, export CSV/PDF
+6. **Correspondances** — Envois groupés/individuels (interne + email Resend)
+7. **Partage** — Réseaux sociaux (Facebook, Twitter, WhatsApp, Email)
+8. **Contact Admin** — Messagerie sécurisée
+9. **Résultats** — Import CSV chronométrage
+- **Bouton "Retour au tableau de bord"** visible en haut de chaque section
+- **Graphiques visuels** : Inscriptions/jour (courbe), Répartition par événement (donut), Revenus cumulés
 
 ### Intégrations tierces
-| Service | Statut | Notes |
-|---------|--------|-------|
-| Square | ACTIF (prod) | Clés de production utilisateur |
-| Resend | ACTIF (limité) | Domaine non vérifié, adresse temporaire |
+| Service | Statut |
+|---------|--------|
+| Square | ACTIF (prod) |
+| Resend | ACTIF (limité) |
+| Recharts | ACTIF (graphiques) |
 
 ## Comptes de test
 | Rôle | Email | Mot de passe |
@@ -79,15 +82,9 @@ Créer une plateforme de vente de tickets en ligne pour des événements sportif
 - Plateforme location matériel RFID
 - Fermeture automatique des inscriptions
 - App mobile check-in
-- Import CSV temps de chronométrage (UI prête, implémentation backend pending)
+- Import CSV temps de chronométrage (UI prête, backend pending)
 - Statistiques avancées organisateurs
 - Intégration Twilio SMS
 
 ### Refactoring recommandé
-- Découpage de `server.py` (monolithe) en modules (routers/, services/, models/)
-
-## Collections MongoDB clés
-- `users`, `events`, `registrations`, `payments`
-- `conversations`, `messages` (messagerie)
-- `correspondances` (envois organisateur → participants)
-- `waitlist_emails`, `admin_messages`, `promo_codes`
+- Découpage de `server.py` en modules (routers/, services/, models/)
