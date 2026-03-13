@@ -1,90 +1,77 @@
 # SportLyo - PRD (Product Requirements Document)
 
-## Problème original
-Créer une plateforme de vente de tickets en ligne pour des événements sportifs (marathon, trail, vélo, etc.), nommée SportLyo.
+## Problème Original
+Créer une plateforme de vente de tickets en ligne pour des événements sportifs (marathon, trail, vélo, MMA, etc.), nommée SportLyo.
 
-## Architecture technique
-- **Frontend:** React, TailwindCSS, Shadcn UI, Framer Motion, Lucide React, Recharts
+## Architecture
+- **Frontend:** React + TailwindCSS + Shadcn UI + framer-motion + recharts
 - **Backend:** FastAPI (Python)
 - **Database:** MongoDB
-- **Authentication:** JWT
-- **Payment:** Square (production keys)
-- **Email:** Resend (domaine non vérifié, adresse temporaire utilisée)
+- **Auth:** JWT
+- **Paiement:** Square (intégré), SumUp (planifié)
+- **Email:** Resend
 
-## Rôles utilisateurs
-| Rôle | Description |
-|------|-------------|
-| Admin | Supervise la plateforme, utilisateurs, finances, messagerie |
-| Organisateur | Crée/gère événements, participants, promotions, check-in, correspondances |
-| Participant | S'inscrit aux courses, gère documents PPS, billets |
+## Rôles
+- **Organisateurs:** Créent/gèrent événements, participants, promotions, suivi performances
+- **Participants:** Inscription courses, gestion documents PPS, accès billets, boutique produits
+- **Admin:** Supervision plateforme, utilisateurs, finances
 
-## Fonctionnalités implémentées
+## Ce qui est implémenté
 
-### Phase 1 - Core (DONE)
-- Authentification JWT (login/register)
-- CRUD événements sportifs (18+ types de sports)
-- Inscription participants avec formulaire multi-étapes
-- Upload et gestion de documents PPS
-- Paiement via Square
-- Dashboard Participant, Organisateur, Admin
-- Système de codes promo
-- Export CSV/PDF des paiements
-- Jauges de remplissage en temps réel
+### Authentification & Pages
+- Login/Register avec fond animé glassmorphism
+- JWT auth, rôles (admin, organizer, participant)
+- Page Coming Soon avec accès preview
 
-### Phase 2 - UX/UI (DONE)
-- Page Coming Soon premium avec code d'accès (SPORTLYO2026)
-- Refonte Login/Register avec fond animé glassmorphism
-- Header/Navbar modernisé
-- Page événements avec recherche/filtres
-- Page d'accueil avec 18+ catégories sportives
+### Événements
+- CRUD événements, courses multiples, jauges
+- Page détail événement complète
+- Inscription avancée multi-étapes
+- Paiement Square intégré
 
-### Phase 3 - Communication & Dashboards (DONE)
-- Cartes de stats cliquables Admin Dashboard
-- Messagerie directe Admin ↔ Organisateur
-- Emails transactionnels via Resend
-- Jauges de remplissage fond sombre (Admin + Organisateur)
+### Hub Organisateur (complet)
+- Dashboard centralisé avec grille navigation icônes
+- Graphiques recharts (inscriptions, revenus)
+- Sections : Événements, Participants, Jauges, Check-in (QR), Finances
+- Correspondances (emails groupés/individuels)
+- Chronométrage (import/export CSV)
+- Partenaires CRM (CRUD complet)
+- Sponsors & Donateurs CRM (CRUD complet)
+- Boutique Produits Dérivés (CRUD, commissions, stock, images)
 
-### Phase 4 - Refonte Espace Organisateur (DONE - 13 Mars 2026)
-**Hub avec grille de 9 boutons rectangulaires + graphiques visuels :**
-1. **Événements** — Liste avec cartes visuelles, CRUD
-2. **Participants** — Liste complète, recherche, filtre par événement
-3. **Jauges** — Remplissage temps réel fond sombre
-4. **Check-in** — Dossards, scan QR, récupération kit (couleur verte), export CSV
-5. **Finances** — Revenus par événement, export CSV/PDF
-6. **Correspondances** — Envois groupés/individuels (interne + email Resend)
-7. **Partage** — Réseaux sociaux (Facebook, Twitter, WhatsApp, Email)
-8. **Contact Admin** — Messagerie sécurisée
-9. **Résultats** — Import CSV chronométrage
-- **Bouton "Retour au tableau de bord"** visible en haut de chaque section
-- **Graphiques visuels** : Inscriptions/jour (courbe), Répartition par événement (donut), Revenus cumulés
+### Messagerie
+- Système messagerie directe organisateur/admin
 
-### Intégrations tierces
-| Service | Statut |
-|---------|--------|
-| Square | ACTIF (prod) |
-| Resend | ACTIF (limité) |
-| Recharts | ACTIF (graphiques) |
+### Admin Dashboard
+- Cartes cliquables, onglet messagerie, gestion financière
 
-## Comptes de test
-| Rôle | Email | Mot de passe |
-|------|-------|-------------|
-| Admin | admin@sportsconnect.fr | admin123 |
-| Organisateur | club@paris-sport.fr | club123 |
-| Participant | pierre@test.com | test1234 |
+### Boutique Participant (NOUVEAU - Mars 2026)
+- Section discrète "Boutique officielle" sur la page événement
+- Page dédiée `/events/{eventId}/shop` inspirée RunningHeroes
+- Filtres par catégorie, grille responsive, breadcrumb navigation
 
-## Tâches à venir
+## Backlog Priorisé
 
-### P1 - Upcoming
-- Facturation automatique pour les participants
-- Gestion communautaire (interaction organisateur/participants par événement)
+### P0 - Critique
+- Refactorisation `OrganizerDashboard.js` (3000+ lignes → composants)
+- Refactorisation `server.py` (monolithe → APIRouter modulaires)
 
-### P2 - Future
+### P1 - Important
+- Facturation automatique participants
+- Intégration SumUp pour la boutique
+
+### P2 - Futur
+- Gestion communautaire organisateurs/participants
+- Contact direct remboursement
 - Plateforme location matériel RFID
-- Fermeture automatique des inscriptions
+- Fermeture automatique inscriptions
 - App mobile check-in
-- Import CSV temps de chronométrage (UI prête, backend pending)
 - Statistiques avancées organisateurs
 - Intégration Twilio SMS
 
-### Refactoring recommandé
-- Découpage de `server.py` en modules (routers/, services/, models/)
+## Credentials Test
+| Rôle | Email | Mot de passe |
+|---|---|---|
+| Admin | admin@sportsconnect.fr | admin123 |
+| Organisateur | club@paris-sport.fr | club123 |
+| Participant | pierre@test.com | test1234 |

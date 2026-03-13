@@ -8,7 +8,7 @@ import {
   Heart, CheckCircle, AlertCircle, Loader2, QrCode, Clock, Timer,
   Route, FileText, Navigation, ExternalLink, ChevronDown, ChevronUp,
   ArrowRight, Check, Phone, Mail, User, Globe, Shirt, Facebook, Instagram, Youtube, Twitter,
-  CreditCard, Lock
+  CreditCard, Lock, ShoppingBag, Package, ChevronRight
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -72,6 +72,7 @@ const EventDetailPage = () => {
   const [promoDiscount, setPromoDiscount] = useState(null);
   const [checkingPromo, setCheckingPromo] = useState(false);
   const [showRegulations, setShowRegulations] = useState(false);
+  const [shopProducts, setShopProducts] = useState([]);
 
   // Square payment state
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
@@ -106,6 +107,13 @@ const EventDetailPage = () => {
     };
     fetchEvent();
   }, [eventId, navigate]);
+
+  // Fetch shop products
+  useEffect(() => {
+    if (eventId) {
+      api.get(`/events/${eventId}/shop`).then(res => setShopProducts(res.data.products || [])).catch(() => {});
+    }
+  }, [eventId]);
 
   // Pre-fill from user account
   useEffect(() => {
@@ -573,6 +581,51 @@ const EventDetailPage = () => {
                 <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">
                   {event.description}
                 </p>
+              </motion.div>
+            )}
+
+            {/* Boutique Preview - Discrete */}
+            {shopProducts.length > 0 && (
+              <motion.div
+                className="bg-white border border-slate-200 p-6"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.32 }}
+                data-testid="shop-preview-section"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <ShoppingBag className="w-4 h-4 text-brand" />
+                    <h2 className="font-heading text-base font-bold uppercase">Boutique officielle</h2>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/events/${eventId}/shop`)}
+                    className="text-xs font-heading font-bold uppercase tracking-wider text-brand hover:text-brand/80 transition-colors flex items-center gap-1"
+                    data-testid="shop-see-all-btn"
+                  >
+                    Voir tout <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+                  {shopProducts.slice(0, 4).map(product => (
+                    <div
+                      key={product.product_id}
+                      className="flex-shrink-0 w-36 group cursor-pointer"
+                      onClick={() => navigate(`/events/${eventId}/shop`)}
+                      data-testid={`shop-preview-${product.product_id}`}
+                    >
+                      <div className="aspect-square bg-slate-100 rounded-lg overflow-hidden mb-2">
+                        {product.image_url ? (
+                          <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center"><Package className="w-8 h-8 text-slate-200" /></div>
+                        )}
+                      </div>
+                      <p className="text-xs font-medium text-slate-700 truncate group-hover:text-brand transition-colors">{product.name}</p>
+                      <p className="text-xs font-heading font-bold text-slate-900">{product.price}€</p>
+                    </div>
+                  ))}
+                </div>
               </motion.div>
             )}
 

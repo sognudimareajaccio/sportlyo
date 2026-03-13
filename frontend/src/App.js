@@ -27,6 +27,7 @@ import OrganizerEventPage from "./pages/OrganizerEventPage";
 import OrgaLandingPage from "./pages/OrgaLandingPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
 import MessagingPage from "./pages/MessagingPage";
+import EventShopPage from "./pages/EventShopPage";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 // Protected Route Component
@@ -83,6 +84,7 @@ const AppRouter = () => {
         <Route path="/" element={<HomePage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/events/:eventId" element={<EventDetailPage />} />
+        <Route path="/events/:eventId/shop" element={<EventShopPage />} />
         <Route path="/results/:eventId" element={<ResultsPage />} />
       </Route>
 
