@@ -1517,7 +1517,7 @@ async def get_admin_messages(current_user: dict = Depends(get_current_user)):
 # ============== WAITLIST ==============
 
 
-ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "webisula@gmail.com")
+ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "contact.sognudimare@gmail.com")
 
 @api_router.post("/waitlist-email")
 async def waitlist_email(request: Request):
