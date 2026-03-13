@@ -1480,6 +1480,157 @@ async def delete_promo_code(promo_id: str, current_user: dict = Depends(get_curr
     
     return {"message": "Code promo supprimé"}
 
+@api_router.get("/organizer/all-participants")
+async def get_all_organizer_participants(
+    current_user: dict = Depends(get_current_user),
+    event_id: Optional[str] = None
+):
+    """Get all participants across all organizer's events"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    
+    # Get organizer's events
+    query = {"organizer_id": current_user['user_id']}
+    if current_user['role'] == 'admin':
+        query = {}
+    events = await db.events.find(query, {"_id": 0, "event_id": 1, "title": 1}).to_list(200)
+    event_ids = [e["event_id"] for e in events]
+    event_map = {e["event_id"]: e["title"] for e in events}
+    
+    if not event_ids:
+        return {"participants": [], "total": 0}
+    
+    reg_query = {"event_id": {"$in": event_ids}}
+    if event_id:
+        reg_query = {"event_id": event_id}
+    
+    registrations = await db.registrations.find(reg_query, {"_id": 0}).sort("created_at", -1).to_list(5000)
+    
+    for reg in registrations:
+        reg["event_title"] = event_map.get(reg.get("event_id"), "")
+    
+    return {"participants": registrations, "total": len(registrations)}
+
+@api_router.post("/organizer/correspondances/send")
+async def send_correspondance(request: Request, current_user: dict = Depends(get_current_user)):
+    """Send message to participants (internal + optional email)"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    
+    data = await request.json()
+    subject = data.get("subject", "")
+    message_content = data.get("message", "")
+    recipient_ids = data.get("recipient_ids", [])  # list of registration_ids or "all"
+    event_id = data.get("event_id")
+    send_email_flag = data.get("send_email", False)
+    
+    if not message_content:
+        raise HTTPException(status_code=400, detail="Message requis")
+    
+    # Get recipients
+    if recipient_ids == "all" and event_id:
+        regs = await db.registrations.find({"event_id": event_id}, {"_id": 0}).to_list(5000)
+    elif isinstance(recipient_ids, list) and len(recipient_ids) > 0:
+        regs = await db.registrations.find(
+            {"registration_id": {"$in": recipient_ids}},
+            {"_id": 0}
+        ).to_list(5000)
+    else:
+        raise HTTPException(status_code=400, detail="Destinataires requis")
+    
+    if not regs:
+        raise HTTPException(status_code=404, detail="Aucun destinataire trouvé")
+    
+    # Save correspondance
+    corr_id = f"corr_{uuid.uuid4().hex[:12]}"
+    correspondance = {
+        "correspondance_id": corr_id,
+        "organizer_id": current_user["user_id"],
+        "organizer_name": current_user["name"],
+        "event_id": event_id,
+        "subject": subject,
+        "message": message_content,
+        "recipient_count": len(regs),
+        "recipients": [{"registration_id": r["registration_id"], "user_name": r.get("user_name", ""), "email": r.get("email", "")} for r in regs],
+        "send_email": send_email_flag,
+        "email_sent_count": 0,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.correspondances.insert_one(correspondance)
+    
+    # Send emails if requested
+    email_sent = 0
+    if send_email_flag:
+        for reg in regs:
+            email = reg.get("email")
+            if email:
+                try:
+                    await send_email(
+                        to_email=email,
+                        subject=f"[SportLyo] {subject}",
+                        html_content=f"""
+                        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+                            <div style="background:#1a1a2e;padding:20px;text-align:center;">
+                                <h2 style="color:#ff4500;margin:0;">SportLyo</h2>
+                            </div>
+                            <div style="padding:24px;background:#fff;">
+                                <p>Bonjour {reg.get('user_name', '')},</p>
+                                <div style="white-space:pre-wrap;">{message_content}</div>
+                                <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
+                                <p style="color:#888;font-size:12px;">Message envoyé par {current_user['name']} via SportLyo</p>
+                            </div>
+                        </div>
+                        """
+                    )
+                    email_sent += 1
+                except Exception as e:
+                    logging.error(f"Email send error: {e}")
+    
+    await db.correspondances.update_one(
+        {"correspondance_id": corr_id},
+        {"$set": {"email_sent_count": email_sent}}
+    )
+    
+    del correspondance["_id"]
+    correspondance["email_sent_count"] = email_sent
+    return {"correspondance": correspondance, "message": f"Message envoyé à {len(regs)} destinataire(s), {email_sent} email(s) envoyé(s)"}
+
+@api_router.get("/organizer/correspondances")
+async def get_correspondances(current_user: dict = Depends(get_current_user)):
+    """Get all correspondances sent by organizer"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    
+    query = {"organizer_id": current_user["user_id"]}
+    if current_user['role'] == 'admin':
+        query = {}
+    
+    corrs = await db.correspondances.find(query, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return {"correspondances": corrs}
+
+@api_router.post("/organizer/checkin/mark-collected")
+async def mark_collected(request: Request, current_user: dict = Depends(get_current_user)):
+    """Mark a participant as having collected their kit (jersey, bib, etc.)"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    
+    data = await request.json()
+    registration_id = data.get("registration_id")
+    
+    if not registration_id:
+        raise HTTPException(status_code=400, detail="registration_id requis")
+    
+    result = await db.registrations.update_one(
+        {"registration_id": registration_id},
+        {"$set": {"kit_collected": True, "kit_collected_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Inscription non trouvée")
+    
+    return {"message": "Kit récupéré marqué", "registration_id": registration_id}
+
 @api_router.post("/organizer/contact-admin")
 async def contact_admin(request: Request, current_user: dict = Depends(get_current_user)):
     """Organizer contacts admin (e.g., for refund request)"""
