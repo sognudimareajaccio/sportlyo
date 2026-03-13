@@ -1850,6 +1850,84 @@ async def get_admins_list(current_user: dict = Depends(get_current_user)):
     ).to_list(20)
     return {"admins": admins}
 
+# ============== PARTNERS ==============
+
+@api_router.get("/organizer/partners")
+async def get_partners(current_user: dict = Depends(get_current_user), category: Optional[str] = None):
+    """Get all partners for the organizer"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    query = {"organizer_id": current_user['user_id']}
+    if category:
+        query["category"] = category
+    partners = await db.partners.find(query, {"_id": 0}).sort("company_name", 1).to_list(500)
+    return {"partners": partners}
+
+@api_router.post("/organizer/partners")
+async def create_partner(request: Request, current_user: dict = Depends(get_current_user)):
+    """Create a new partner"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    data = await request.json()
+    if not data.get("company_name"):
+        raise HTTPException(status_code=400, detail="Nom de l'entreprise requis")
+    partner = {
+        "partner_id": f"part_{uuid.uuid4().hex[:12]}",
+        "organizer_id": current_user['user_id'],
+        "company_name": data.get("company_name", ""),
+        "contact_name": data.get("contact_name", ""),
+        "phone": data.get("phone", ""),
+        "email": data.get("email", ""),
+        "address": data.get("address", ""),
+        "category": data.get("category", "Autre"),
+        "notes": data.get("notes", ""),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.partners.insert_one(partner)
+    del partner["_id"]
+    return {"partner": partner}
+
+@api_router.put("/organizer/partners/{partner_id}")
+async def update_partner(partner_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    """Update a partner"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    data = await request.json()
+    update_fields = {}
+    for field in ["company_name", "contact_name", "phone", "email", "address", "category", "notes"]:
+        if field in data:
+            update_fields[field] = data[field]
+    update_fields["updated_at"] = datetime.now(timezone.utc).isoformat()
+    result = await db.partners.update_one(
+        {"partner_id": partner_id, "organizer_id": current_user['user_id']},
+        {"$set": update_fields}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Partenaire non trouvé")
+    updated = await db.partners.find_one({"partner_id": partner_id}, {"_id": 0})
+    return {"partner": updated}
+
+@api_router.delete("/organizer/partners/{partner_id}")
+async def delete_partner(partner_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete a partner"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    result = await db.partners.delete_one(
+        {"partner_id": partner_id, "organizer_id": current_user['user_id']}
+    )
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Partenaire non trouvé")
+    return {"message": "Partenaire supprimé"}
+
+@api_router.get("/organizer/partners/categories")
+async def get_partner_categories(current_user: dict = Depends(get_current_user)):
+    """Get distinct partner categories for the organizer"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    categories = await db.partners.distinct("category", {"organizer_id": current_user['user_id']})
+    return {"categories": categories}
+
 # ============== WAITLIST ==============
 
 
