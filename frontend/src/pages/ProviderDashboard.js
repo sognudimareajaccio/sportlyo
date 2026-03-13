@@ -30,23 +30,26 @@ const ProviderDashboard = () => {
   const [messages, setMessages] = useState([]);
   const [newMsg, setNewMsg] = useState('');
   const [organizerLogos, setOrganizerLogos] = useState([]);
+  const [organizersList, setOrganizersList] = useState([]);
 
   const categories = ['Textile', 'Accessoire', 'Gourde', 'Sac', 'Nutrition', 'Équipement'];
 
   const fetchData = useCallback(async () => {
     try {
-      const [catRes, ordRes, statsRes, convRes, logosRes] = await Promise.all([
+      const [catRes, ordRes, statsRes, convRes, logosRes, orgRes] = await Promise.all([
         api.get('/provider/catalog'),
         api.get('/provider/orders'),
         api.get('/provider/stats'),
         api.get('/provider/conversations'),
-        api.get('/provider/organizer-logos')
+        api.get('/provider/organizer-logos'),
+        api.get('/provider/organizers')
       ]);
       setProducts(catRes.data.products || []);
       setOrders(ordRes.data.orders || []);
       setStats(statsRes.data || {});
       setConversations(convRes.data.conversations || []);
       setOrganizerLogos(logosRes.data.organizers || []);
+      setOrganizersList(orgRes.data.organizers || []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, []);
@@ -256,39 +259,55 @@ const ProviderDashboard = () => {
         {/* Messages */}
         {activeSection === 'messages' && (
           <div className="bg-white border border-slate-200 grid grid-cols-3 min-h-[500px]">
-            {/* Conversation list */}
-            <div className="border-r border-slate-200">
-              <div className="p-4 border-b"><h3 className="font-heading font-bold uppercase text-sm">Conversations</h3></div>
-              {conversations.length > 0 ? conversations.map(c => (
-                <button key={c.user_id} onClick={() => openChat(c.user_id)} className={`w-full text-left p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors ${activeChat === c.user_id ? 'bg-brand/5 border-l-2 border-l-brand' : ''}`} data-testid={`chat-${c.user_id}`}>
-                  <div className="flex items-center justify-between">
-                    <p className="font-heading font-bold text-sm truncate">{c.name}</p>
-                    {c.unread > 0 && <span className="bg-brand text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">{c.unread}</span>}
-                  </div>
-                  <p className="text-[10px] text-slate-400 uppercase">{c.role === 'organizer' ? 'Organisateur' : c.role}</p>
-                  <p className="text-xs text-slate-500 truncate mt-0.5">{c.last_message}</p>
-                </button>
-              )) : (
-                <div className="p-8 text-center text-slate-400 text-sm">Aucune conversation</div>
-              )}
+            {/* Conversation list — merged organizers + existing convos */}
+            <div className="border-r border-slate-200 overflow-y-auto">
+              <div className="p-4 border-b"><h3 className="font-heading font-bold uppercase text-sm">Organisateurs</h3></div>
+              {(() => {
+                const convoMap = {};
+                conversations.filter(c => c.role === 'organizer').forEach(c => { convoMap[c.user_id] = c; });
+                const allOrgs = organizersList.map(o => ({
+                  user_id: o.user_id,
+                  name: o.company_name || o.name,
+                  email: o.email,
+                  last_message: convoMap[o.user_id]?.last_message || '',
+                  unread: convoMap[o.user_id]?.unread || 0,
+                }));
+                conversations.filter(c => c.role === 'organizer' && !allOrgs.find(o => o.user_id === c.user_id)).forEach(c => {
+                  allOrgs.push({ user_id: c.user_id, name: c.name, email: '', last_message: c.last_message, unread: c.unread });
+                });
+                return allOrgs.length > 0 ? allOrgs.map(o => (
+                  <button key={o.user_id} onClick={() => openChat(o.user_id)} className={`w-full text-left p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors ${activeChat === o.user_id ? 'bg-brand/5 border-l-2 border-l-brand' : ''}`} data-testid={`chat-org-${o.user_id}`}>
+                    <div className="flex items-center justify-between">
+                      <p className="font-heading font-bold text-sm truncate">{o.name}</p>
+                      {o.unread > 0 && <span className="bg-brand text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">{o.unread}</span>}
+                    </div>
+                    <p className="text-[10px] text-slate-400 uppercase">Organisateur</p>
+                    <p className="text-xs text-slate-500 truncate mt-0.5">{o.last_message || 'Aucun message — Démarrer la conversation'}</p>
+                  </button>
+                )) : (
+                  <div className="p-8 text-center text-slate-400 text-sm">Aucun organisateur inscrit sur la plateforme</div>
+                );
+              })()}
             </div>
             {/* Chat */}
             <div className="col-span-2 flex flex-col">
               {activeChat ? (
                 <>
                   <div className="p-4 border-b bg-slate-50">
-                    <p className="font-heading font-bold text-sm">{chatPartner?.name || 'Conversation'}</p>
-                    <p className="text-[10px] text-slate-400 uppercase">{chatPartner?.role === 'organizer' ? 'Organisateur' : chatPartner?.role}</p>
+                    <p className="font-heading font-bold text-sm">{organizersList.find(o => o.user_id === activeChat)?.name || conversations.find(c => c.user_id === activeChat)?.name || 'Conversation'}</p>
+                    <p className="text-[10px] text-slate-400 uppercase">Organisateur</p>
                   </div>
                   <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-[380px]">
-                    {messages.map(m => (
+                    {messages.length > 0 ? messages.map(m => (
                       <div key={m.message_id} className={`flex ${m.sender_id === user?.user_id ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[70%] px-3 py-2 text-sm ${m.sender_id === user?.user_id ? 'bg-brand text-white' : 'bg-slate-100 text-slate-700'}`}>
                           <p>{m.content}</p>
                           <p className={`text-[10px] mt-1 ${m.sender_id === user?.user_id ? 'text-white/60' : 'text-slate-400'}`}>{m.created_at && format(new Date(m.created_at), 'HH:mm', { locale: fr })}</p>
                         </div>
                       </div>
-                    ))}
+                    )) : (
+                      <div className="text-center text-slate-400 text-xs py-8">Aucun message. Envoyez le premier message pour entamer la discussion.</div>
+                    )}
                   </div>
                   <div className="p-4 border-t flex gap-2">
                     <Input value={newMsg} onChange={(e) => setNewMsg(e.target.value)} placeholder="Votre message..." onKeyDown={(e) => e.key === 'Enter' && sendMessage()} className="flex-1" data-testid="provider-msg-input" />
@@ -296,7 +315,7 @@ const ProviderDashboard = () => {
                   </div>
                 </>
               ) : (
-                <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">Sélectionnez une conversation</div>
+                <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">Sélectionnez un organisateur pour démarrer une conversation</div>
               )}
             </div>
           </div>

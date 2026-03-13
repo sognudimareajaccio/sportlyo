@@ -5,6 +5,18 @@ from datetime import datetime, timezone
 
 router = APIRouter(prefix="/api")
 
+@router.get("/provider/organizers")
+async def get_organizers_for_provider(current_user: dict = Depends(get_current_user)):
+    """Provider: list all active organizers to start conversations"""
+    if current_user['role'] != 'provider':
+        raise HTTPException(status_code=403, detail="Prestataire requis")
+    organizers = await db.users.find(
+        {"role": "organizer"},
+        {"_id": 0, "user_id": 1, "name": 1, "email": 1, "company_name": 1}
+    ).to_list(100)
+    return {"organizers": organizers}
+
+
 @router.get("/provider/catalog")
 async def get_provider_catalog(current_user: dict = Depends(get_current_user)):
     if current_user['role'] != 'provider':
