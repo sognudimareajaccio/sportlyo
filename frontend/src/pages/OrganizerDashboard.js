@@ -347,7 +347,8 @@ const OrganizerDashboard = () => {
     { id: 'correspondances', label: 'Correspondances', icon: Mail, desc: 'Messages aux inscrits', color: 'bg-pink-500' },
     { id: 'share', label: 'Partage', icon: Share2, desc: 'Réseaux sociaux', color: 'bg-sky-500' },
     { id: 'contact-admin', label: 'Contact Admin', icon: Shield, desc: 'Support & finances', color: 'bg-red-500' },
-    { id: 'results', label: 'Résultats', icon: Trophy, desc: 'Chronométrage & classements', color: 'bg-amber-500' },
+    { id: 'chronometrage', label: 'Chronométrage', icon: Timer, desc: 'Import temps & export dossards', color: 'bg-teal-600' },
+    { id: 'results', label: 'Résultats', icon: Trophy, desc: 'Classements & performances', color: 'bg-amber-500' },
   ];
 
   // Filtered participants for search
@@ -1019,29 +1020,75 @@ const OrganizerDashboard = () => {
           </motion.div>
         )}
 
-        {/* =============== RESULTS SECTION =============== */}
-        {activeSection === 'results' && (
+        {/* =============== CHRONOMETRAGE SECTION =============== */}
+        {activeSection === 'chronometrage' && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-            <SectionHeader title="Résultats & Chronométrage" onBack={() => setActiveSection('hub')} />
-            <div className="bg-white border border-slate-200 p-6 mb-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-amber-100 flex items-center justify-center"><Timer className="w-6 h-6 text-amber-600" /></div>
+            <SectionHeader title="Chronométrage" onBack={() => setActiveSection('hub')} />
+
+            {/* Explanation */}
+            <div className="bg-asphalt text-white p-6 mb-6 border-l-4 border-teal-500">
+              <div className="flex items-center gap-4 mb-3">
+                <div className="w-12 h-12 bg-teal-500 flex items-center justify-center flex-shrink-0"><Timer className="w-6 h-6 text-white" /></div>
                 <div>
-                  <h3 className="font-heading font-bold">Import CSV Chronométrage</h3>
-                  <p className="text-xs text-slate-500">Importez les temps depuis votre logiciel de chronométrage</p>
+                  <h3 className="font-heading font-bold text-lg">Chronométrage automatique</h3>
+                  <p className="text-sm text-slate-300">SportLyo se connecte aux logiciels de chronométrage professionnels (RaceResult, MyLaps, ChronoTrack). Les temps apparaissent en direct sur la page résultats.</p>
                 </div>
-              </div>
-              <div className="flex gap-3">
-                <Select defaultValue="">
-                  <SelectTrigger className="w-64" data-testid="results-event-select"><SelectValue placeholder="Sélectionner un événement" /></SelectTrigger>
-                  <SelectContent>
-                    {events.map(e => <SelectItem key={e.event_id} value={e.event_id}>{e.title}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Button variant="outline" className="gap-2"><Upload className="w-4 h-4" /> Importer CSV</Button>
               </div>
             </div>
 
+            {/* Import CSV */}
+            <div className="bg-white border border-slate-200 p-6 mb-6">
+              <h3 className="font-heading font-bold uppercase text-sm mb-4">Import des temps (CSV)</h3>
+              <p className="text-sm text-slate-500 mb-4">Importez un fichier CSV contenant les temps de vos coureurs depuis votre logiciel de chronométrage. Format attendu : <code className="bg-slate-100 px-1.5 py-0.5 text-xs">dossard, nom, temps, catégorie</code></p>
+              <div className="flex gap-3 items-end">
+                <div className="flex-1">
+                  <Label className="text-xs font-heading uppercase text-slate-500 mb-1 block">Événement</Label>
+                  <Select defaultValue="">
+                    <SelectTrigger className="w-full" data-testid="chrono-event-select"><SelectValue placeholder="Sélectionner un événement" /></SelectTrigger>
+                    <SelectContent>
+                      {events.map(e => <SelectItem key={e.event_id} value={e.event_id}>{e.title}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button variant="outline" className="gap-2 h-10"><Upload className="w-4 h-4" /> Importer CSV</Button>
+              </div>
+            </div>
+
+            {/* Export for timing software */}
+            <div className="bg-white border border-slate-200 p-6 mb-6">
+              <h3 className="font-heading font-bold uppercase text-sm mb-4">Export dossards pour chronométreur</h3>
+              <p className="text-sm text-slate-500 mb-4">Générez un fichier CSV contenant la liste des inscrits avec leurs numéros de dossard, compatible avec les logiciels de chronométrage professionnels.</p>
+              <div className="space-y-3">
+                {events.map(evt => (
+                  <div key={evt.event_id} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100">
+                    <div>
+                      <h4 className="font-heading font-bold text-sm">{evt.title}</h4>
+                      <p className="text-xs text-slate-500">{evt.current_participants} inscrit(s) — {evt.date && format(new Date(evt.date), 'd MMM yyyy', { locale: fr })}</p>
+                    </div>
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={async () => {
+                      try {
+                        const res = await api.get(`/organizer/events/${evt.event_id}/export-timing`, { responseType: 'blob' });
+                        const blob = new Blob([res.data], { type: 'text/csv' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a'); a.href = url; a.download = `dossards_${evt.title.replace(/\s/g, '_')}.csv`;
+                        document.body.appendChild(a); a.click(); a.remove();
+                        toast.success('CSV dossards exporté');
+                      } catch { toast.error('Erreur export'); }
+                    }} data-testid={`export-timing-${evt.event_id}`}>
+                      <Download className="w-3.5 h-3.5" /> Exporter dossards
+                    </Button>
+                  </div>
+                ))}
+                {events.length === 0 && <div className="p-8 text-center text-slate-400">Aucun événement</div>}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* =============== RESULTS SECTION =============== */}
+        {activeSection === 'results' && (
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+            <SectionHeader title="Résultats & Classements" onBack={() => setActiveSection('hub')} />
             <div className="space-y-4">
               {events.map(evt => (
                 <div key={evt.event_id} className="bg-white border border-slate-200 p-5 flex items-center justify-between">
