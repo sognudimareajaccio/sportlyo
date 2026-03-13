@@ -6,12 +6,12 @@ import { fr } from 'date-fns/locale';
 import {
   Calendar, Users, Euro, TrendingUp, Settings, Plus,
   Eye, Edit, Trash2, ChevronRight, Building2, QrCode, Scan,
-  Upload, Image, X, Loader2, Download, FileText, MapPin,
+  Upload, Image, X, Loader2, Download, FileText, MapPin, Link2, Copy,
   Bike, Footprints, Medal, Car, ArrowRight, ArrowLeft, Mountain, Clock, Check,
   Route, Navigation, Globe, Facebook, Instagram, Youtube, Twitter, Tag, Timer,
   Target, Wind, Flag, CircleDot, Dumbbell, Swords, BarChart3,
   Search, Share2, MessageSquare, Mail, Shield, Send, Filter,
-  CheckCircle, Package, Shirt, ArrowUp, Home, Trophy, Copy, ExternalLink,
+  CheckCircle, Package, Shirt, ArrowUp, Home, Trophy, ExternalLink,
   Handshake, Phone, MapPinned, Heart, Star, Award, Globe2,
   ShoppingBag, Palette, Tag as TagIcon
 } from 'lucide-react';
@@ -138,6 +138,15 @@ const OrganizerDashboard = () => {
   const [addingProviderProduct, setAddingProviderProduct] = useState(null);
   const [providerCommission, setProviderCommission] = useState(5);
   const [providerEventId, setProviderEventId] = useState('');
+  const [orgLogo, setOrgLogo] = useState('');
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [bookings, setBookings] = useState([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [showBookingDialog, setShowBookingDialog] = useState(false);
+  const [editingBooking, setEditingBooking] = useState(null);
+  const [bookingForm, setBookingForm] = useState({ company_name: '', contact_name: '', email: '', phone: '', team_count: 1, members_per_team: 5, event_id: '', price_per_team: '', notes: '' });
+  const [bookingSearch, setBookingSearch] = useState('');
+  const [providersList, setProvidersList] = useState([]);
 
   const [newEvent, setNewEvent] = useState({
     title: '', description: '', sport_type: 'running', location: '',
@@ -209,7 +218,69 @@ const OrganizerDashboard = () => {
     if (section === 'correspondances') fetchCorrespondances();
     if (section === 'partners') fetchPartners();
     if (section === 'sponsors') fetchSponsors();
-    if (section === 'boutique') { fetchShopData(); fetchProviderCatalog(); fetchProviderConvos(); }
+    if (section === 'boutique') { fetchShopData(); fetchProviderCatalog(); fetchProviderConvos(); fetchOrgLogo(); fetchProvidersList(); }
+    if (section === 'bookings') fetchBookings();
+  };
+
+  const fetchOrgLogo = async () => {
+    try { const res = await api.get('/organizer/logo'); setOrgLogo(res.data.logo_url || ''); } catch {}
+  };
+
+  const fetchProvidersList = async () => {
+    try { const res = await api.get('/providers/list'); setProvidersList(res.data.providers || []); } catch {}
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setLogoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadRes = await api.post('/upload/image', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const logoUrl = uploadRes.data.url;
+      await api.post('/organizer/logo', { logo_url: logoUrl });
+      setOrgLogo(logoUrl);
+      toast.success('Logo enregistré ! Le prestataire pourra le voir.');
+    } catch { toast.error('Erreur lors de l\'upload'); }
+    finally { setLogoUploading(false); }
+  };
+
+  const fetchBookings = async () => {
+    setBookingsLoading(true);
+    try { const res = await api.get('/organizer/bookings'); setBookings(res.data.bookings || []); }
+    catch { toast.error('Erreur'); }
+    finally { setBookingsLoading(false); }
+  };
+
+  const handleSaveBooking = async () => {
+    if (!bookingForm.company_name) { toast.error('Nom entreprise requis'); return; }
+    try {
+      if (editingBooking) {
+        await api.put(`/organizer/bookings/${editingBooking.booking_id}`, bookingForm);
+        toast.success('Réservation modifiée');
+      } else {
+        await api.post('/organizer/bookings', bookingForm);
+        toast.success('Réservation ajoutée');
+      }
+      setShowBookingDialog(false); setEditingBooking(null); fetchBookings();
+    } catch { toast.error('Erreur'); }
+  };
+
+  const handleDeleteBooking = async (id) => {
+    if (!window.confirm('Supprimer cette réservation ?')) return;
+    await api.delete(`/organizer/bookings/${id}`);
+    toast.success('Supprimée'); fetchBookings();
+  };
+
+  const generatePaymentLink = async (type, sourceId, amount, description) => {
+    try {
+      const res = await api.post('/payments/create-link', { type, source_id: sourceId, amount, description });
+      toast.success('Lien de paiement généré !');
+      if (type === 'sponsor') fetchSponsors(sponsorFilter !== 'all' ? sponsorFilter : undefined);
+      if (type === 'booking') fetchBookings();
+      return res.data.payment_url;
+    } catch { toast.error('Erreur génération du lien'); return null; }
   };
 
   const fetchProviderCatalog = async () => {
@@ -617,6 +688,7 @@ const OrganizerDashboard = () => {
     { id: 'chronometrage', label: 'Chronométrage', icon: Timer, desc: 'Import temps & export dossards', color: 'bg-teal-600' },
     { id: 'results', label: 'Résultats', icon: Trophy, desc: 'Classements & performances', color: 'bg-amber-500' },
     { id: 'partners', label: 'Partenaires', icon: Handshake, desc: 'Annuaire & contacts', color: 'bg-indigo-500' },
+    { id: 'bookings', label: 'Réservation Entreprises', icon: Building2, desc: 'Équipes & tarifs groupe', color: 'bg-cyan-600' },
     { id: 'sponsors', label: 'Sponsors & Donateurs', icon: Heart, desc: 'Sponsoring & mécénat', color: 'bg-rose-500' },
     { id: 'boutique', label: 'Boutique Produits', icon: ShoppingBag, desc: 'Catalogue & ventes', color: 'bg-violet-500' },
   ];
@@ -1770,6 +1842,12 @@ ${JSON.stringify({
                           </div>
                         </div>
                         <div className="flex gap-1 flex-shrink-0 ml-3">
+                          {s.amount && !s.payment_link && (
+                            <Button variant="outline" size="sm" className="h-8 text-green-600 border-green-200 hover:bg-green-50 gap-1 text-[10px]" onClick={() => generatePaymentLink('sponsor', s.sponsor_id, parseFloat(s.amount), `Sponsoring ${s.name}`)} data-testid={`pay-link-sponsor-${s.sponsor_id}`}><Link2 className="w-3 h-3" /> Lien paiement</Button>
+                          )}
+                          {s.payment_link && (
+                            <Button variant="outline" size="sm" className="h-8 text-green-600 border-green-200 gap-1 text-[10px]" onClick={() => { navigator.clipboard.writeText(s.payment_link); toast.success('Lien copié !'); }} data-testid={`copy-link-sponsor-${s.sponsor_id}`}><Copy className="w-3 h-3" /> Copier lien</Button>
+                          )}
                           <Button variant="outline" size="sm" className="h-8" onClick={() => openEditSponsor(s)} data-testid={`edit-sponsor-${s.sponsor_id}`}><Edit className="w-3.5 h-3.5" /></Button>
                           <Button variant="outline" size="sm" className="h-8 text-red-500 hover:text-red-600" onClick={() => handleDeleteSponsor(s.sponsor_id)} data-testid={`delete-sponsor-${s.sponsor_id}`}><Trash2 className="w-3.5 h-3.5" /></Button>
                         </div>
@@ -1790,9 +1868,151 @@ ${JSON.stringify({
         )}
 
         {/* =============== BOUTIQUE SECTION =============== */}
+        {/* ===== CORPORATE BOOKINGS SECTION ===== */}
+        {activeSection === 'bookings' && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6" data-testid="bookings-section">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-heading text-2xl font-bold uppercase">Réservation Entreprises</h2>
+                <p className="text-sm text-slate-500">Gérez les réservations d'équipes et tarifs entreprise</p>
+              </div>
+              <Button className="btn-primary gap-2" onClick={() => { setEditingBooking(null); setBookingForm({ company_name: '', contact_name: '', email: '', phone: '', team_count: 1, members_per_team: 5, event_id: '', price_per_team: '', notes: '' }); setShowBookingDialog(true); }} data-testid="add-booking-btn"><Plus className="w-4 h-4" /> Nouvelle réservation</Button>
+            </div>
+            
+            <div className="flex gap-3 items-center">
+              <Input placeholder="Rechercher une entreprise..." value={bookingSearch} onChange={(e) => setBookingSearch(e.target.value)} className="max-w-xs" data-testid="booking-search" />
+            </div>
+
+            {bookingsLoading ? (
+              <div className="p-12 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-brand" /></div>
+            ) : bookings.filter(b => !bookingSearch || b.company_name?.toLowerCase().includes(bookingSearch.toLowerCase())).length > 0 ? (
+              <div className="space-y-3">
+                {bookings.filter(b => !bookingSearch || b.company_name?.toLowerCase().includes(bookingSearch.toLowerCase())).map(b => (
+                  <motion.div key={b.booking_id} className="bg-white border border-slate-200 p-4 hover:border-brand transition-colors" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} data-testid={`booking-${b.booking_id}`}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <h4 className="font-heading font-bold text-base">{b.company_name}</h4>
+                          <span className={`px-2 py-0.5 text-[10px] font-bold uppercase ${b.payment_status === 'paid' ? 'bg-green-100 text-green-700' : b.payment_status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{b.payment_status === 'paid' ? 'Payé' : b.payment_status === 'pending' ? 'En attente' : 'Non facturé'}</span>
+                          <span className="px-2 py-0.5 text-[10px] font-bold uppercase bg-cyan-100 text-cyan-700">{b.team_count} équipe{b.team_count > 1 ? 's' : ''}</span>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
+                          <div>
+                            <p className="text-[10px] text-slate-400 uppercase font-heading">Contact</p>
+                            <p className="text-xs font-medium">{b.contact_name || '—'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-400 uppercase font-heading">Email</p>
+                            <p className="text-xs font-medium">{b.email || '—'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-400 uppercase font-heading">Membres/équipe</p>
+                            <p className="text-xs font-medium">{b.members_per_team || '—'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-400 uppercase font-heading">Prix/équipe</p>
+                            <p className="text-xs font-heading font-bold">{b.price_per_team}€</p>
+                          </div>
+                        </div>
+                        {b.notes && <p className="text-xs text-slate-400 mt-2 italic">{b.notes}</p>}
+                      </div>
+                      <div className="flex flex-col items-end gap-2 ml-3">
+                        <p className="font-heading font-black text-xl text-brand">{b.total_amount?.toFixed(0)}€</p>
+                        <div className="flex gap-1">
+                          {!b.payment_link && b.total_amount > 0 && (
+                            <Button variant="outline" size="sm" className="h-8 text-green-600 border-green-200 hover:bg-green-50 gap-1 text-[10px]" onClick={() => generatePaymentLink('booking', b.booking_id, b.total_amount, `Réservation entreprise ${b.company_name}`)} data-testid={`pay-link-booking-${b.booking_id}`}><Link2 className="w-3 h-3" /> Lien paiement</Button>
+                          )}
+                          {b.payment_link && (
+                            <Button variant="outline" size="sm" className="h-8 text-green-600 border-green-200 gap-1 text-[10px]" onClick={() => { navigator.clipboard.writeText(b.payment_link); toast.success('Lien copié !'); }} data-testid={`copy-link-booking-${b.booking_id}`}><Copy className="w-3 h-3" /> Copier lien</Button>
+                          )}
+                          <Button variant="outline" size="sm" className="h-8" onClick={() => { setEditingBooking(b); setBookingForm({ company_name: b.company_name, contact_name: b.contact_name, email: b.email, phone: b.phone, team_count: b.team_count, members_per_team: b.members_per_team, event_id: b.event_id, price_per_team: b.price_per_team, notes: b.notes }); setShowBookingDialog(true); }}><Edit className="w-3.5 h-3.5" /></Button>
+                          <Button variant="outline" size="sm" className="h-8 text-red-500" onClick={() => handleDeleteBooking(b.booking_id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white border border-slate-200 p-12 text-center">
+                <Building2 className="w-16 h-16 mx-auto mb-4 text-slate-200" />
+                <h3 className="font-heading font-bold text-lg uppercase mb-2">Aucune réservation entreprise</h3>
+                <p className="text-slate-500 mb-4">Proposez des tarifs préférentiels aux équipes et entreprises</p>
+                <Button className="btn-primary gap-2" onClick={() => { setEditingBooking(null); setBookingForm({ company_name: '', contact_name: '', email: '', phone: '', team_count: 1, members_per_team: 5, event_id: '', price_per_team: '', notes: '' }); setShowBookingDialog(true); }}><Plus className="w-4 h-4" /> Ajouter</Button>
+              </div>
+            )}
+
+            {/* Booking Dialog */}
+            <Dialog open={showBookingDialog} onOpenChange={(open) => { setShowBookingDialog(open); if (!open) setEditingBooking(null); }}>
+              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                <DialogHeader><DialogTitle className="font-heading text-xl uppercase">{editingBooking ? 'Modifier la réservation' : 'Nouvelle réservation entreprise'}</DialogTitle><DialogDescription className="sr-only">Formulaire réservation entreprise</DialogDescription></DialogHeader>
+                <div className="space-y-4 pt-4">
+                  <div><Label className="text-xs font-heading uppercase text-slate-500">Nom de l'entreprise *</Label><Input value={bookingForm.company_name} onChange={(e) => setBookingForm(p => ({ ...p, company_name: e.target.value }))} data-testid="booking-company" /></div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><Label className="text-xs font-heading uppercase text-slate-500">Contact</Label><Input value={bookingForm.contact_name} onChange={(e) => setBookingForm(p => ({ ...p, contact_name: e.target.value }))} /></div>
+                    <div><Label className="text-xs font-heading uppercase text-slate-500">Téléphone</Label><Input value={bookingForm.phone} onChange={(e) => setBookingForm(p => ({ ...p, phone: e.target.value }))} /></div>
+                  </div>
+                  <div><Label className="text-xs font-heading uppercase text-slate-500">Email</Label><Input value={bookingForm.email} onChange={(e) => setBookingForm(p => ({ ...p, email: e.target.value }))} /></div>
+                  <div>
+                    <Label className="text-xs font-heading uppercase text-slate-500">Événement</Label>
+                    <Select value={bookingForm.event_id} onValueChange={(v) => setBookingForm(p => ({ ...p, event_id: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                      <SelectContent>{events.map(e => <SelectItem key={e.event_id} value={e.event_id}>{e.title}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div><Label className="text-xs font-heading uppercase text-slate-500">Nombre d'équipes</Label><Input type="number" value={bookingForm.team_count} onChange={(e) => setBookingForm(p => ({ ...p, team_count: parseInt(e.target.value) || 1 }))} /></div>
+                    <div><Label className="text-xs font-heading uppercase text-slate-500">Membres/équipe</Label><Input type="number" value={bookingForm.members_per_team} onChange={(e) => setBookingForm(p => ({ ...p, members_per_team: parseInt(e.target.value) || 5 }))} /></div>
+                    <div><Label className="text-xs font-heading uppercase text-slate-500">Prix/équipe (€)</Label><Input type="number" step="0.01" value={bookingForm.price_per_team} onChange={(e) => setBookingForm(p => ({ ...p, price_per_team: e.target.value }))} /></div>
+                  </div>
+                  {bookingForm.price_per_team && bookingForm.team_count && (
+                    <div className="bg-brand/5 border border-brand/20 p-3 text-center">
+                      <p className="text-xs text-slate-500 uppercase font-heading">Total estimé</p>
+                      <p className="font-heading font-black text-2xl text-brand">{(parseFloat(bookingForm.price_per_team || 0) * parseInt(bookingForm.team_count || 1)).toFixed(0)}€</p>
+                    </div>
+                  )}
+                  <div><Label className="text-xs font-heading uppercase text-slate-500">Notes</Label><Input value={bookingForm.notes} onChange={(e) => setBookingForm(p => ({ ...p, notes: e.target.value }))} /></div>
+                  <Button className="w-full bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase" onClick={handleSaveBooking} data-testid="save-booking">{editingBooking ? 'Enregistrer' : 'Ajouter'}</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </motion.div>
+        )}
+
         {activeSection === 'boutique' && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
             <SectionHeader title="Boutique Produits Dérivés" onBack={() => setActiveSection('hub')} />
+
+            {/* Logo Upload Step */}
+            <div className={`border p-5 mb-6 ${orgLogo ? 'bg-white border-slate-200' : 'bg-amber-50 border-amber-200'}`} data-testid="logo-upload-section">
+              <div className="flex items-start gap-4">
+                {orgLogo ? (
+                  <div className="w-20 h-20 border border-slate-200 bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
+                    <img src={orgLogo} alt="Logo" className="max-w-full max-h-full object-contain" />
+                  </div>
+                ) : (
+                  <div className="w-20 h-20 border-2 border-dashed border-amber-300 flex items-center justify-center flex-shrink-0">
+                    <Upload className="w-8 h-8 text-amber-400" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <h3 className="font-heading font-bold text-sm uppercase mb-1">{orgLogo ? 'Logo de personnalisation' : 'Étape 1 : Importez votre logo'}</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    {orgLogo
+                      ? 'Votre logo a été transmis au prestataire. Il sera appliqué sur les produits que vous sélectionnerez.'
+                      : 'Pour personnaliser vos produits aux couleurs de votre événement, commencez par importer votre logo en HD (PNG, SVG ou PDF vectorisé). Le prestataire l\'utilisera pour préparer vos articles.'}
+                  </p>
+                  <div className="mt-2">
+                    <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-heading font-bold uppercase text-brand hover:text-brand/80 transition-colors">
+                      <Upload className="w-3.5 h-3.5" />
+                      {orgLogo ? 'Changer le logo' : 'Importer mon logo HD'}
+                      <input type="file" accept="image/*,.svg,.pdf" className="hidden" onChange={handleLogoUpload} disabled={logoUploading} data-testid="logo-upload-input" />
+                    </label>
+                    {logoUploading && <Loader2 className="w-4 h-4 animate-spin inline ml-2 text-brand" />}
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
@@ -1998,43 +2218,57 @@ ${JSON.stringify({
             ) : shopTab === 'messagerie' ? (
               /* Provider messaging tab */
               <div className="bg-white border border-slate-200 grid grid-cols-3 min-h-[400px]" data-testid="provider-messaging-tab">
-                <div className="border-r border-slate-200">
+                <div className="border-r border-slate-200 overflow-y-auto">
                   <div className="p-4 border-b"><h3 className="font-heading font-bold uppercase text-xs">Prestataires</h3></div>
-                  {providerConvos.filter(c => c.role === 'provider').length > 0 ? (
-                    providerConvos.filter(c => c.role === 'provider').map(c => (
-                      <button key={c.user_id} onClick={() => openProviderChat(c.user_id)} className={`w-full text-left p-3 border-b border-slate-100 hover:bg-slate-50 ${providerChat === c.user_id ? 'bg-brand/5 border-l-2 border-l-brand' : ''}`}>
+                  {(() => {
+                    const convoMap = {};
+                    providerConvos.filter(c => c.role === 'provider').forEach(c => { convoMap[c.user_id] = c; });
+                    const allProviders = [...providersList.map(p => ({
+                      user_id: p.user_id,
+                      name: p.company_name || p.name,
+                      last_message: convoMap[p.user_id]?.last_message || '',
+                      unread: convoMap[p.user_id]?.unread || 0,
+                      hasConvo: !!convoMap[p.user_id]
+                    }))];
+                    providerConvos.filter(c => c.role === 'provider' && !allProviders.find(p => p.user_id === c.user_id)).forEach(c => {
+                      allProviders.push({ user_id: c.user_id, name: c.name, last_message: c.last_message, unread: c.unread, hasConvo: true });
+                    });
+                    return allProviders.length > 0 ? allProviders.map(p => (
+                      <button key={p.user_id} onClick={() => openProviderChat(p.user_id)} className={`w-full text-left p-3 border-b border-slate-100 hover:bg-slate-50 ${providerChat === p.user_id ? 'bg-brand/5 border-l-2 border-l-brand' : ''}`} data-testid={`msg-provider-${p.user_id}`}>
                         <div className="flex items-center justify-between">
-                          <p className="font-heading font-bold text-xs truncate">{c.name}</p>
-                          {c.unread > 0 && <span className="bg-brand text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{c.unread}</span>}
+                          <p className="font-heading font-bold text-xs truncate">{p.name}</p>
+                          {p.unread > 0 && <span className="bg-brand text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{p.unread}</span>}
                         </div>
-                        <p className="text-[10px] text-slate-400 truncate mt-0.5">{c.last_message}</p>
+                        <p className="text-[10px] text-slate-400 truncate mt-0.5">{p.last_message || 'Aucun message — Démarrer la conversation'}</p>
                       </button>
-                    ))
-                  ) : (
-                    <div className="p-6 text-center text-slate-400 text-xs">Aucune conversation. Ajoutez un produit prestataire pour initier un échange.</div>
-                  )}
+                    )) : (
+                      <div className="p-6 text-center text-slate-400 text-xs">Aucun prestataire disponible sur la plateforme.</div>
+                    );
+                  })()}
                 </div>
                 <div className="col-span-2 flex flex-col">
                   {providerChat ? (
                     <>
-                      <div className="p-3 border-b bg-slate-50"><p className="font-heading font-bold text-sm">{providerConvos.find(c => c.user_id === providerChat)?.name || ''}</p></div>
+                      <div className="p-3 border-b bg-slate-50"><p className="font-heading font-bold text-sm">{providersList.find(p => p.user_id === providerChat)?.company_name || providerConvos.find(c => c.user_id === providerChat)?.name || ''}</p></div>
                       <div className="flex-1 overflow-y-auto p-4 space-y-2 max-h-[300px]">
-                        {providerMessages.map(m => (
+                        {providerMessages.length > 0 ? providerMessages.map(m => (
                           <div key={m.message_id} className={`flex ${m.sender_role === 'organizer' ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[70%] px-3 py-2 text-sm ${m.sender_role === 'organizer' ? 'bg-brand text-white' : 'bg-slate-100 text-slate-700'}`}>
                               <p>{m.content}</p>
                               <p className={`text-[10px] mt-1 ${m.sender_role === 'organizer' ? 'text-white/60' : 'text-slate-400'}`}>{m.created_at && format(new Date(m.created_at), 'HH:mm', { locale: fr })}</p>
                             </div>
                           </div>
-                        ))}
+                        )) : (
+                          <div className="text-center text-slate-400 text-xs py-8">Aucun message. Envoyez le premier message pour entamer la discussion.</div>
+                        )}
                       </div>
                       <div className="p-3 border-t flex gap-2">
-                        <Input value={providerNewMsg} onChange={(e) => setProviderNewMsg(e.target.value)} placeholder="Message..." onKeyDown={(e) => e.key === 'Enter' && sendProviderMsg()} className="flex-1 h-9 text-xs" />
-                        <Button className="bg-brand hover:bg-brand/90 text-white h-9" onClick={sendProviderMsg}><Send className="w-4 h-4" /></Button>
+                        <Input value={providerNewMsg} onChange={(e) => setProviderNewMsg(e.target.value)} placeholder="Message..." onKeyDown={(e) => e.key === 'Enter' && sendProviderMsg()} className="flex-1 h-9 text-xs" data-testid="org-provider-msg-input" />
+                        <Button className="bg-brand hover:bg-brand/90 text-white h-9" onClick={sendProviderMsg} data-testid="org-provider-msg-send"><Send className="w-4 h-4" /></Button>
                       </div>
                     </>
                   ) : (
-                    <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">Sélectionnez un prestataire</div>
+                    <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">Sélectionnez un prestataire pour démarrer une conversation</div>
                   )}
                 </div>
               </div>

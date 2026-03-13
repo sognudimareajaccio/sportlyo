@@ -2940,6 +2940,184 @@ async def export_timing_csv(event_id: str, current_user: dict = Depends(get_curr
         headers={"Content-Disposition": f'attachment; filename="timing_export_{event_id}.csv"'}
     )
 
+# ============== ORGANIZER LOGO UPLOAD ==============
+
+@api_router.post("/organizer/logo")
+async def upload_organizer_logo(request: Request, current_user: dict = Depends(get_current_user)):
+    """Organizer uploads their logo for product personalization"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    data = await request.json()
+    logo_url = data.get("logo_url", "")
+    if not logo_url:
+        raise HTTPException(status_code=400, detail="URL du logo requis")
+    await db.users.update_one({"user_id": current_user['user_id']}, {"$set": {"logo_url": logo_url, "logo_uploaded_at": datetime.now(timezone.utc).isoformat()}})
+    return {"message": "Logo enregistré", "logo_url": logo_url}
+
+@api_router.get("/organizer/logo")
+async def get_organizer_logo(current_user: dict = Depends(get_current_user)):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    user = await db.users.find_one({"user_id": current_user['user_id']}, {"_id": 0, "logo_url": 1, "logo_uploaded_at": 1})
+    return {"logo_url": user.get("logo_url", ""), "logo_uploaded_at": user.get("logo_uploaded_at", "")}
+
+@api_router.get("/provider/organizer-logos")
+async def get_organizer_logos_for_provider(current_user: dict = Depends(get_current_user)):
+    """Provider: see organizer logos for personalization"""
+    if current_user['role'] != 'provider':
+        raise HTTPException(status_code=403, detail="Prestataire requis")
+    organizers = await db.users.find(
+        {"role": "organizer", "logo_url": {"$exists": True, "$ne": ""}},
+        {"_id": 0, "user_id": 1, "name": 1, "email": 1, "logo_url": 1, "logo_uploaded_at": 1}
+    ).to_list(100)
+    return {"organizers": organizers}
+
+# ============== CORPORATE BOOKINGS ==============
+
+@api_router.get("/organizer/bookings")
+async def get_corporate_bookings(current_user: dict = Depends(get_current_user)):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    bookings = await db.corporate_bookings.find({"organizer_id": current_user['user_id']}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return {"bookings": bookings}
+
+@api_router.post("/organizer/bookings")
+async def create_corporate_booking(request: Request, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    data = await request.json()
+    booking = {
+        "booking_id": f"bk_{uuid.uuid4().hex[:12]}",
+        "organizer_id": current_user['user_id'],
+        "company_name": data.get("company_name", ""),
+        "contact_name": data.get("contact_name", ""),
+        "email": data.get("email", ""),
+        "phone": data.get("phone", ""),
+        "team_count": int(data.get("team_count", 1)),
+        "members_per_team": int(data.get("members_per_team", 5)),
+        "event_id": data.get("event_id", ""),
+        "price_per_team": float(data.get("price_per_team", 0)),
+        "total_amount": float(data.get("price_per_team", 0)) * int(data.get("team_count", 1)),
+        "payment_status": "pending",
+        "payment_link": "",
+        "square_payment_id": "",
+        "notes": data.get("notes", ""),
+        "status": "En attente",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.corporate_bookings.insert_one(booking)
+    del booking["_id"]
+    return {"booking": booking}
+
+@api_router.put("/organizer/bookings/{booking_id}")
+async def update_corporate_booking(booking_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    data = await request.json()
+    fields = {}
+    for f in ["company_name","contact_name","email","phone","team_count","members_per_team","event_id","price_per_team","notes","status"]:
+        if f in data:
+            fields[f] = data[f]
+    if "team_count" in fields and "price_per_team" in fields:
+        fields["total_amount"] = float(fields["price_per_team"]) * int(fields["team_count"])
+    fields["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.corporate_bookings.update_one({"booking_id": booking_id, "organizer_id": current_user['user_id']}, {"$set": fields})
+    updated = await db.corporate_bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    return {"booking": updated}
+
+@api_router.delete("/organizer/bookings/{booking_id}")
+async def delete_corporate_booking(booking_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    await db.corporate_bookings.delete_one({"booking_id": booking_id, "organizer_id": current_user['user_id']})
+    return {"message": "Réservation supprimée"}
+
+# ============== SQUARE PAYMENT LINKS ==============
+
+@api_router.post("/payments/create-link")
+async def create_payment_link(request: Request, current_user: dict = Depends(get_current_user)):
+    """Generate a Square payment link for sponsors or corporate bookings"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    data = await request.json()
+    link_type = data.get("type")  # 'sponsor' or 'booking'
+    source_id = data.get("source_id")
+    amount = float(data.get("amount", 0))
+    description = data.get("description", "Paiement SportLyo")
+    
+    if not source_id or amount <= 0:
+        raise HTTPException(status_code=400, detail="source_id et amount requis")
+    
+    amount_cents = int(amount * 100)
+    link_id = f"link_{uuid.uuid4().hex[:12]}"
+    
+    payment_url = ""
+    if SQUARE_ACCESS_TOKEN:
+        try:
+            from square import Square as SquareClient
+            from square.environment import SquareEnvironment
+            env = SquareEnvironment.PRODUCTION if SQUARE_ENVIRONMENT == 'production' else SquareEnvironment.SANDBOX
+            client = SquareClient(token=SQUARE_ACCESS_TOKEN, environment=env)
+            
+            result = client.checkout.create_payment_link(body={
+                "idempotency_key": str(uuid.uuid4()),
+                "order": {
+                    "location_id": SQUARE_LOCATION_ID,
+                    "line_items": [{
+                        "name": description,
+                        "quantity": "1",
+                        "base_price_money": {"amount": amount_cents, "currency": "EUR"}
+                    }]
+                },
+                "checkout_options": {
+                    "allow_tipping": False,
+                    "redirect_url": f"{os.environ.get('FRONTEND_URL', '')}/organizer?payment=success&ref={source_id}"
+                }
+            })
+            
+            if hasattr(result, 'payment_link') and result.payment_link:
+                payment_url = result.payment_link.url if hasattr(result.payment_link, 'url') else str(result.payment_link.long_url if hasattr(result.payment_link, 'long_url') else '')
+        except Exception as e:
+            logger.warning(f"Square payment link error: {e}")
+    
+    if not payment_url:
+        payment_url = f"https://checkout.square.site/simulated/{link_id}?amount={amount}&desc={description}"
+    
+    # Save link and update source
+    link_record = {
+        "link_id": link_id,
+        "type": link_type,
+        "source_id": source_id,
+        "organizer_id": current_user['user_id'],
+        "amount": amount,
+        "description": description,
+        "payment_url": payment_url,
+        "payment_status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.payment_links.insert_one(link_record)
+    
+    if link_type == "sponsor":
+        await db.sponsors.update_one({"sponsor_id": source_id}, {"$set": {"payment_link": payment_url, "payment_status": "pending"}})
+    elif link_type == "booking":
+        await db.corporate_bookings.update_one({"booking_id": source_id}, {"$set": {"payment_link": payment_url, "payment_status": "pending"}})
+    
+    # Track for finances
+    await db.payment_transactions.insert_one({
+        "transaction_id": f"txn_{uuid.uuid4().hex[:12]}",
+        "type": link_type,
+        "source_id": source_id,
+        "organizer_id": current_user['user_id'],
+        "amount": amount,
+        "description": description,
+        "payment_url": payment_url,
+        "payment_status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"payment_url": payment_url, "link_id": link_id}
+
 # ============== PAYMENT ROUTES (SQUARE) ==============
 
 SQUARE_ACCESS_TOKEN = os.environ.get('SQUARE_ACCESS_TOKEN', '')

@@ -29,21 +29,24 @@ const ProviderDashboard = () => {
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMsg, setNewMsg] = useState('');
+  const [organizerLogos, setOrganizerLogos] = useState([]);
 
   const categories = ['Textile', 'Accessoire', 'Gourde', 'Sac', 'Nutrition', 'Équipement'];
 
   const fetchData = useCallback(async () => {
     try {
-      const [catRes, ordRes, statsRes, convRes] = await Promise.all([
+      const [catRes, ordRes, statsRes, convRes, logosRes] = await Promise.all([
         api.get('/provider/catalog'),
         api.get('/provider/orders'),
         api.get('/provider/stats'),
-        api.get('/provider/conversations')
+        api.get('/provider/conversations'),
+        api.get('/provider/organizer-logos')
       ]);
       setProducts(catRes.data.products || []);
       setOrders(ordRes.data.orders || []);
       setStats(statsRes.data || {});
       setConversations(convRes.data.conversations || []);
+      setOrganizerLogos(logosRes.data.organizers || []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, []);
@@ -98,6 +101,7 @@ const ProviderDashboard = () => {
 
   const navItems = [
     { id: 'catalogue', label: 'Catalogue', icon: ShoppingBag },
+    { id: 'logos', label: 'Logos organisateurs', icon: FileText, badge: organizerLogos.length },
     { id: 'commandes', label: 'Commandes', icon: FileText },
     { id: 'messages', label: 'Messages', icon: MessageSquare, badge: conversations.reduce((a, c) => a + (c.unread || 0), 0) },
   ];
@@ -171,6 +175,38 @@ const ProviderDashboard = () => {
                 <Package className="w-16 h-16 mx-auto mb-4 text-slate-200" />
                 <h3 className="font-heading font-bold text-lg uppercase mb-2">Aucun produit</h3>
                 <p className="text-slate-500 mb-4">Créez votre catalogue pour que les organisateurs puissent sélectionner vos produits</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Logos organisateurs */}
+        {activeSection === 'logos' && (
+          <div data-testid="logos-section">
+            <div className="mb-4">
+              <h3 className="font-heading font-bold text-base uppercase">Logos des organisateurs</h3>
+              <p className="text-xs text-slate-500">Logos HD transmis par les organisateurs pour la personnalisation de leurs produits</p>
+            </div>
+            {organizerLogos.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {organizerLogos.map(org => (
+                  <div key={org.user_id} className="bg-white border border-slate-200 p-4" data-testid={`logo-${org.user_id}`}>
+                    <div className="h-32 border border-slate-100 bg-slate-50 flex items-center justify-center mb-3 overflow-hidden">
+                      <img src={org.logo_url} alt={org.name} className="max-w-full max-h-full object-contain" />
+                    </div>
+                    <h4 className="font-heading font-bold text-sm">{org.name}</h4>
+                    <p className="text-xs text-slate-400">{org.email}</p>
+                    <p className="text-[10px] text-slate-400 mt-1">Reçu le {org.logo_uploaded_at && format(new Date(org.logo_uploaded_at), 'd MMM yyyy', { locale: fr })}</p>
+                    <a href={org.logo_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-brand font-bold mt-2 hover:underline">
+                      Télécharger HD <ChevronRight className="w-3 h-3" />
+                    </a>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white border border-slate-200 p-12 text-center">
+                <FileText className="w-16 h-16 mx-auto mb-4 text-slate-200" />
+                <p className="text-slate-400">Aucun logo reçu pour le moment. Les organisateurs doivent importer leur logo depuis leur espace Boutique.</p>
               </div>
             )}
           </div>
