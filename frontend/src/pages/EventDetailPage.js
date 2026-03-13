@@ -625,6 +625,16 @@ const EventDetailPage = () => {
                       <p className="text-xs font-heading font-bold text-slate-900">{product.price}€</p>
                     </div>
                   ))}
+                  {shopProducts.length > 4 && (
+                    <div
+                      className="flex-shrink-0 w-36 group cursor-pointer flex flex-col items-center justify-center aspect-square bg-brand/5 rounded-lg border-2 border-dashed border-brand/20 hover:border-brand/40 transition-colors"
+                      onClick={() => navigate(`/events/${eventId}/shop`)}
+                      data-testid="shop-more-btn"
+                    >
+                      <span className="font-heading font-bold text-2xl text-brand mb-1">+{shopProducts.length - 4}</span>
+                      <span className="text-xs font-heading font-bold uppercase text-brand/70">Plus d'articles</span>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}

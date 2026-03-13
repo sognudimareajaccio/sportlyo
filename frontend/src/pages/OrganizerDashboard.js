@@ -130,6 +130,14 @@ const OrganizerDashboard = () => {
   });
   const [productSaving, setProductSaving] = useState(false);
   const [shopEventFilter, setShopEventFilter] = useState('all');
+  const [providerCatalog, setProviderCatalog] = useState([]);
+  const [providerConvos, setProviderConvos] = useState([]);
+  const [providerChat, setProviderChat] = useState(null);
+  const [providerMessages, setProviderMessages] = useState([]);
+  const [providerNewMsg, setProviderNewMsg] = useState('');
+  const [addingProviderProduct, setAddingProviderProduct] = useState(null);
+  const [providerCommission, setProviderCommission] = useState(5);
+  const [providerEventId, setProviderEventId] = useState('');
 
   const [newEvent, setNewEvent] = useState({
     title: '', description: '', sport_type: 'running', location: '',
@@ -201,7 +209,49 @@ const OrganizerDashboard = () => {
     if (section === 'correspondances') fetchCorrespondances();
     if (section === 'partners') fetchPartners();
     if (section === 'sponsors') fetchSponsors();
-    if (section === 'boutique') fetchShopData();
+    if (section === 'boutique') { fetchShopData(); fetchProviderCatalog(); fetchProviderConvos(); }
+  };
+
+  const fetchProviderCatalog = async () => {
+    try {
+      const res = await api.get('/providers/catalog');
+      setProviderCatalog(res.data.products || []);
+    } catch (e) { console.error(e); }
+  };
+  
+  const fetchProviderConvos = async () => {
+    try {
+      const res = await api.get('/provider/conversations');
+      setProviderConvos(res.data.conversations || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const openProviderChat = async (userId) => {
+    setProviderChat(userId);
+    const res = await api.get(`/provider/messages/${userId}`);
+    setProviderMessages(res.data.messages || []);
+  };
+
+  const sendProviderMsg = async () => {
+    if (!providerNewMsg.trim() || !providerChat) return;
+    await api.post('/provider/messages', { recipient_id: providerChat, content: providerNewMsg });
+    setProviderNewMsg('');
+    const res = await api.get(`/provider/messages/${providerChat}`);
+    setProviderMessages(res.data.messages || []);
+  };
+
+  const handleAddProviderProduct = async (pp) => {
+    if (!providerEventId) { toast.error('Sélectionnez un événement'); return; }
+    try {
+      await api.post('/organizer/add-provider-product', {
+        provider_product_id: pp.product_id,
+        event_id: providerEventId,
+        organizer_commission: providerCommission
+      });
+      toast.success(`"${pp.name}" ajouté à l'événement`);
+      setAddingProviderProduct(null);
+      fetchShopData();
+    } catch (e) { toast.error(e.response?.data?.detail || 'Erreur'); }
   };
 
   const fetchPartners = async (cat) => {
@@ -1751,7 +1801,7 @@ ${JSON.stringify({
                 { label: 'Commandes', value: shopStats.total_orders || 0, icon: FileText, color: 'text-blue-500' },
                 { label: 'Articles vendus', value: shopStats.total_items_sold || 0, icon: Package, color: 'text-emerald-500' },
                 { label: 'Ventes totales', value: `${(shopStats.total_sales || 0).toFixed(0)}€`, icon: Euro, color: 'text-green-600' },
-                { label: 'Commission perçue', value: `${(shopStats.total_commission || 0).toFixed(0)}€`, icon: TrendingUp, color: 'text-brand' },
+                { label: 'Commission pour l\'organisateur', value: `${(shopStats.total_commission || 0).toFixed(0)}€`, icon: TrendingUp, color: 'text-brand' },
               ].map((s, i) => (
                 <div key={i} className="bg-white border border-slate-200 p-4">
                   <s.icon className={`w-5 h-5 ${s.color} mb-2`} />
@@ -1761,11 +1811,11 @@ ${JSON.stringify({
               ))}
             </div>
 
-            {/* Tabs: Catalogue / Commandes */}
-            <div className="flex gap-2 mb-6">
-              {['catalogue', 'commandes'].map(t => (
+            {/* Tabs: Catalogue / Commandes / Catalogue Prestataire / Messagerie */}
+            <div className="flex gap-2 mb-6 flex-wrap">
+              {['catalogue', 'prestataire', 'commandes', 'messagerie'].map(t => (
                 <Button key={t} variant={shopTab === t ? 'default' : 'outline'} className={shopTab === t ? 'bg-brand' : ''} onClick={() => setShopTab(t)} data-testid={`shop-tab-${t}`}>
-                  {t === 'catalogue' ? 'Catalogue' : 'Commandes & Acheteurs'}
+                  {t === 'catalogue' ? 'Mes produits' : t === 'commandes' ? 'Commandes & Acheteurs' : t === 'prestataire' ? 'Catalogue prestataire' : 'Messagerie prestataire'}
                 </Button>
               ))}
             </div>
@@ -1835,7 +1885,7 @@ ${JSON.stringify({
                   </div>
                 )}
               </>
-            ) : (
+            ) : shopTab === 'commandes' ? (
               /* Orders tab */
               <div className="bg-white border border-slate-200">
                 <div className="p-4 border-b"><h3 className="font-heading font-bold uppercase text-sm">Commandes ({shopOrders.length})</h3></div>
@@ -1883,7 +1933,112 @@ ${JSON.stringify({
                   <div className="p-8 text-center text-slate-400">Aucune commande pour le moment</div>
                 )}
               </div>
-            )}
+            ) : shopTab === 'prestataire' ? (
+              /* Provider catalog tab */
+              <div data-testid="provider-catalog-tab">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-heading font-bold text-base uppercase">Catalogue des prestataires</h3>
+                  <p className="text-xs text-slate-500">Sélectionnez des produits pour les ajouter à vos événements</p>
+                </div>
+                {providerCatalog.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {providerCatalog.map(pp => (
+                      <div key={pp.product_id} className="bg-white border border-slate-200 overflow-hidden group hover:border-brand transition-colors" data-testid={`provider-catalog-${pp.product_id}`}>
+                        <div className="relative h-44 bg-slate-50 flex items-center justify-center overflow-hidden">
+                          {pp.image_url ? <img src={pp.image_url} alt={pp.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" /> : <Package className="w-12 h-12 text-slate-200" />}
+                          <div className="absolute top-3 left-3"><span className="bg-violet-600 text-white px-2 py-0.5 text-[10px] font-bold uppercase">{pp.category}</span></div>
+                          <div className="absolute top-3 right-3"><span className="bg-slate-900 text-white px-2.5 py-1 font-heading font-bold text-sm">{pp.price}€</span></div>
+                        </div>
+                        <div className="p-4">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-heading font-bold text-sm">{pp.name}</h4>
+                          </div>
+                          <p className="text-[10px] text-violet-500 font-bold uppercase mb-1">Par {pp.provider_name}</p>
+                          {pp.description && <p className="text-xs text-slate-500 line-clamp-2 mb-2">{pp.description}</p>}
+                          {pp.sizes?.length > 0 && <div className="flex flex-wrap gap-1 mb-2">{pp.sizes.map(s => <span key={s} className="bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold">{s}</span>)}</div>}
+                          <div className="text-xs text-slate-500 mb-3">
+                            <span>Stock: <strong>{pp.stock}</strong></span>
+                            <span className="ml-3">Commission suggérée: <strong className="text-green-600">{pp.suggested_commission}€</strong>/unité</span>
+                          </div>
+                          {addingProviderProduct?.product_id === pp.product_id ? (
+                            <div className="space-y-2 p-3 bg-slate-50 border border-slate-200">
+                              <div>
+                                <Label className="text-[10px] font-heading uppercase text-slate-400">Événement *</Label>
+                                <Select value={providerEventId} onValueChange={setProviderEventId}>
+                                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                                  <SelectContent>{events.map(e => <SelectItem key={e.event_id} value={e.event_id}>{e.title}</SelectItem>)}</SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label className="text-[10px] font-heading uppercase text-slate-400">Votre commission (€)</Label>
+                                <Input type="number" className="h-8 text-xs" value={providerCommission} onChange={(e) => setProviderCommission(parseFloat(e.target.value) || 0)} />
+                              </div>
+                              <div className="flex gap-1">
+                                <Button size="sm" className="flex-1 h-8 text-xs bg-brand hover:bg-brand/90 text-white" onClick={() => handleAddProviderProduct(pp)} data-testid={`confirm-add-${pp.product_id}`}>Confirmer</Button>
+                                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setAddingProviderProduct(null)}>Annuler</Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <Button size="sm" className="w-full h-8 text-xs bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase gap-1" onClick={() => { setAddingProviderProduct(pp); setProviderCommission(pp.suggested_commission || 5); setProviderEventId(''); }} data-testid={`add-provider-${pp.product_id}`}>
+                              <Plus className="w-3 h-3" /> Ajouter à un événement
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-white border border-slate-200 p-12 text-center">
+                    <Package className="w-16 h-16 mx-auto mb-4 text-slate-200" />
+                    <h3 className="font-heading font-bold text-lg uppercase mb-2">Aucun produit prestataire</h3>
+                    <p className="text-slate-500">Aucun prestataire n'a encore ajouté de produits à la plateforme.</p>
+                  </div>
+                )}
+              </div>
+            ) : shopTab === 'messagerie' ? (
+              /* Provider messaging tab */
+              <div className="bg-white border border-slate-200 grid grid-cols-3 min-h-[400px]" data-testid="provider-messaging-tab">
+                <div className="border-r border-slate-200">
+                  <div className="p-4 border-b"><h3 className="font-heading font-bold uppercase text-xs">Prestataires</h3></div>
+                  {providerConvos.filter(c => c.role === 'provider').length > 0 ? (
+                    providerConvos.filter(c => c.role === 'provider').map(c => (
+                      <button key={c.user_id} onClick={() => openProviderChat(c.user_id)} className={`w-full text-left p-3 border-b border-slate-100 hover:bg-slate-50 ${providerChat === c.user_id ? 'bg-brand/5 border-l-2 border-l-brand' : ''}`}>
+                        <div className="flex items-center justify-between">
+                          <p className="font-heading font-bold text-xs truncate">{c.name}</p>
+                          {c.unread > 0 && <span className="bg-brand text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{c.unread}</span>}
+                        </div>
+                        <p className="text-[10px] text-slate-400 truncate mt-0.5">{c.last_message}</p>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="p-6 text-center text-slate-400 text-xs">Aucune conversation. Ajoutez un produit prestataire pour initier un échange.</div>
+                  )}
+                </div>
+                <div className="col-span-2 flex flex-col">
+                  {providerChat ? (
+                    <>
+                      <div className="p-3 border-b bg-slate-50"><p className="font-heading font-bold text-sm">{providerConvos.find(c => c.user_id === providerChat)?.name || ''}</p></div>
+                      <div className="flex-1 overflow-y-auto p-4 space-y-2 max-h-[300px]">
+                        {providerMessages.map(m => (
+                          <div key={m.message_id} className={`flex ${m.sender_role === 'organizer' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[70%] px-3 py-2 text-sm ${m.sender_role === 'organizer' ? 'bg-brand text-white' : 'bg-slate-100 text-slate-700'}`}>
+                              <p>{m.content}</p>
+                              <p className={`text-[10px] mt-1 ${m.sender_role === 'organizer' ? 'text-white/60' : 'text-slate-400'}`}>{m.created_at && format(new Date(m.created_at), 'HH:mm', { locale: fr })}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="p-3 border-t flex gap-2">
+                        <Input value={providerNewMsg} onChange={(e) => setProviderNewMsg(e.target.value)} placeholder="Message..." onKeyDown={(e) => e.key === 'Enter' && sendProviderMsg()} className="flex-1 h-9 text-xs" />
+                        <Button className="bg-brand hover:bg-brand/90 text-white h-9" onClick={sendProviderMsg}><Send className="w-4 h-4" /></Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">Sélectionnez un prestataire</div>
+                  )}
+                </div>
+              </div>
+            ) : null}
           </motion.div>
         )}
 

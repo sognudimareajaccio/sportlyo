@@ -389,11 +389,17 @@ def calculate_age(birth_date: str) -> int:
 # ============== AUTH ROUTES ==============
 
 @api_router.post("/auth/register")
-async def register(user_data: UserCreate):
+async def register(request: Request):
+    data = await request.json()
+    user_data = UserCreate(**data)
     existing = await db.users.find_one({"email": user_data.email})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
+    requested_role = data.get("role", "participant")
+    if requested_role not in ["participant", "organizer", "provider"]:
+        requested_role = "participant"
+
     user_id = f"user_{uuid.uuid4().hex[:12]}"
     hashed_password = hash_password(user_data.password)
     
@@ -403,7 +409,9 @@ async def register(user_data: UserCreate):
         "name": user_data.name,
         "phone": user_data.phone,
         "password": hashed_password,
-        "role": "participant",
+        "role": requested_role,
+        "status": "pending" if requested_role == "provider" else "active",
+        "company_name": data.get("company_name", ""),
         "created_at": datetime.now(timezone.utc).isoformat(),
         "picture": None,
         "iban": None,
@@ -414,7 +422,15 @@ async def register(user_data: UserCreate):
     }
     
     await db.users.insert_one(user_doc)
-    token = create_token(user_id, "participant")
+    
+    if requested_role == "provider":
+        return {
+            "message": "Inscription enregistrée. Votre compte prestataire est en attente de validation par l'administrateur.",
+            "pending": True,
+            "user": {"user_id": user_id, "email": user_data.email, "name": user_data.name, "role": "provider", "status": "pending"}
+        }
+    
+    token = create_token(user_id, requested_role)
 
     # Send welcome email (fire and forget)
     try:
@@ -429,7 +445,7 @@ async def register(user_data: UserCreate):
             "user_id": user_id,
             "email": user_data.email,
             "name": user_data.name,
-            "role": "participant"
+            "role": requested_role
         }
     }
 
@@ -441,6 +457,11 @@ async def login(credentials: UserLogin):
     
     if not verify_password(credentials.password, user.get('password', '')):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    if user.get('status') == 'pending':
+        raise HTTPException(status_code=403, detail="Votre compte est en attente de validation par l'administrateur.")
+    if user.get('status') == 'rejected':
+        raise HTTPException(status_code=403, detail="Votre inscription a été refusée par l'administrateur.")
     
     token = create_token(user['user_id'], user['role'])
     
@@ -2089,6 +2110,7 @@ async def create_shop_order(request: Request, current_user: dict = Depends(get_c
     total = 0
     total_commission = 0
     organizer_id = None
+    provider_id = None
     for item in items:
         product = await db.products.find_one({"product_id": item["product_id"]}, {"_id": 0})
         if not product:
@@ -2099,6 +2121,7 @@ async def create_shop_order(request: Request, current_user: dict = Depends(get_c
         total += line_total
         total_commission += commission
         organizer_id = product.get("organizer_id")
+        provider_id = product.get("provider_id")
         order_items.append({
             "product_id": product["product_id"],
             "product_name": product["name"],
@@ -2117,6 +2140,7 @@ async def create_shop_order(request: Request, current_user: dict = Depends(get_c
         "user_name": current_user["name"],
         "user_email": current_user.get("email", ""),
         "organizer_id": organizer_id,
+        "provider_id": provider_id,
         "event_id": data.get("event_id", ""),
         "items": order_items,
         "total": total + delivery_fee,
@@ -2164,6 +2188,231 @@ async def get_shop_stats(current_user: dict = Depends(get_current_user)):
         "total_orders": total_orders,
         "total_items_sold": total_items_sold
     }
+
+# ============== PROVIDER ROUTES ==============
+
+@api_router.get("/provider/catalog")
+async def get_provider_catalog(current_user: dict = Depends(get_current_user)):
+    """Provider: get their own product catalog"""
+    if current_user['role'] != 'provider':
+        raise HTTPException(status_code=403, detail="Prestataire requis")
+    products = await db.provider_products.find({"provider_id": current_user['user_id']}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return {"products": products}
+
+@api_router.post("/provider/catalog")
+async def create_provider_product(request: Request, current_user: dict = Depends(get_current_user)):
+    """Provider: add a product to their catalog"""
+    if current_user['role'] != 'provider':
+        raise HTTPException(status_code=403, detail="Prestataire requis")
+    data = await request.json()
+    if not data.get("name") or not data.get("price"):
+        raise HTTPException(status_code=400, detail="Nom et prix requis")
+    product = {
+        "product_id": f"pprod_{uuid.uuid4().hex[:12]}",
+        "provider_id": current_user['user_id'],
+        "provider_name": current_user.get('company_name') or current_user['name'],
+        "name": data.get("name"),
+        "description": data.get("description", ""),
+        "category": data.get("category", "Textile"),
+        "price": float(data.get("price", 0)),
+        "suggested_commission": float(data.get("suggested_commission", 5)),
+        "image_url": data.get("image_url", ""),
+        "sizes": data.get("sizes", []),
+        "colors": data.get("colors", []),
+        "stock": int(data.get("stock", 100)),
+        "active": True,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.provider_products.insert_one(product)
+    del product["_id"]
+    return {"product": product}
+
+@api_router.put("/provider/catalog/{product_id}")
+async def update_provider_product(product_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] != 'provider':
+        raise HTTPException(status_code=403, detail="Prestataire requis")
+    data = await request.json()
+    fields = {}
+    for f in ["name","description","category","price","suggested_commission","image_url","sizes","colors","stock","active"]:
+        if f in data:
+            fields[f] = data[f]
+    fields["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.provider_products.update_one({"product_id": product_id, "provider_id": current_user['user_id']}, {"$set": fields})
+    updated = await db.provider_products.find_one({"product_id": product_id}, {"_id": 0})
+    return {"product": updated}
+
+@api_router.delete("/provider/catalog/{product_id}")
+async def delete_provider_product(product_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] != 'provider':
+        raise HTTPException(status_code=403, detail="Prestataire requis")
+    await db.provider_products.delete_one({"product_id": product_id, "provider_id": current_user['user_id']})
+    return {"message": "Produit supprimé"}
+
+@api_router.get("/provider/orders")
+async def get_provider_orders(current_user: dict = Depends(get_current_user)):
+    """Provider: see orders containing their products"""
+    if current_user['role'] != 'provider':
+        raise HTTPException(status_code=403, detail="Prestataire requis")
+    orders = await db.orders.find({"provider_id": current_user['user_id']}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return {"orders": orders}
+
+@api_router.get("/provider/stats")
+async def get_provider_stats(current_user: dict = Depends(get_current_user)):
+    if current_user['role'] != 'provider':
+        raise HTTPException(status_code=403, detail="Prestataire requis")
+    products = await db.provider_products.find({"provider_id": current_user['user_id']}, {"_id": 0}).to_list(500)
+    orders = await db.orders.find({"provider_id": current_user['user_id']}, {"_id": 0}).to_list(5000)
+    total_sales = sum(o.get("total", 0) for o in orders)
+    total_commission_given = sum(o.get("organizer_commission_total", 0) for o in orders)
+    return {
+        "total_products": len(products),
+        "total_orders": len(orders),
+        "total_sales": total_sales,
+        "total_commission_given": total_commission_given,
+        "net_revenue": total_sales - total_commission_given
+    }
+
+@api_router.get("/providers/catalog")
+async def browse_provider_catalogs(current_user: dict = Depends(get_current_user)):
+    """Organizer: browse all provider products to add to events"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    products = await db.provider_products.find({"active": True}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return {"products": products}
+
+@api_router.get("/providers/list")
+async def list_providers(current_user: dict = Depends(get_current_user)):
+    """List active providers"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Accès requis")
+    providers = await db.users.find({"role": "provider", "status": "active"}, {"_id": 0, "password": 0}).to_list(100)
+    return {"providers": providers}
+
+@api_router.post("/organizer/add-provider-product")
+async def add_provider_product_to_event(request: Request, current_user: dict = Depends(get_current_user)):
+    """Organizer: add a provider product to their event"""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    data = await request.json()
+    provider_product_id = data.get("provider_product_id")
+    event_id = data.get("event_id")
+    commission = float(data.get("organizer_commission", 5))
+    if not provider_product_id or not event_id:
+        raise HTTPException(status_code=400, detail="product_id et event_id requis")
+    pp = await db.provider_products.find_one({"product_id": provider_product_id}, {"_id": 0})
+    if not pp:
+        raise HTTPException(status_code=404, detail="Produit prestataire non trouvé")
+    product = {
+        "product_id": f"prod_{uuid.uuid4().hex[:12]}",
+        "source": "provider",
+        "provider_product_id": provider_product_id,
+        "provider_id": pp["provider_id"],
+        "provider_name": pp.get("provider_name", ""),
+        "organizer_id": current_user['user_id'],
+        "event_id": event_id,
+        "name": pp["name"],
+        "description": pp.get("description", ""),
+        "category": pp.get("category", "Textile"),
+        "price": pp["price"],
+        "organizer_commission": commission,
+        "image_url": pp.get("image_url", ""),
+        "sizes": pp.get("sizes", []),
+        "colors": pp.get("colors", []),
+        "stock": pp.get("stock", 100),
+        "sold": 0,
+        "active": True,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.products.insert_one(product)
+    del product["_id"]
+    return {"product": product}
+
+@api_router.post("/provider/messages")
+async def send_provider_message(request: Request, current_user: dict = Depends(get_current_user)):
+    """Send message between provider and organizer"""
+    data = await request.json()
+    recipient_id = data.get("recipient_id")
+    content = data.get("content")
+    if not recipient_id or not content:
+        raise HTTPException(status_code=400, detail="recipient_id et content requis")
+    msg = {
+        "message_id": f"msg_{uuid.uuid4().hex[:12]}",
+        "sender_id": current_user['user_id'],
+        "sender_name": current_user.get('company_name') or current_user['name'],
+        "sender_role": current_user['role'],
+        "recipient_id": recipient_id,
+        "content": content,
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.provider_messages.insert_one(msg)
+    del msg["_id"]
+    return {"message": msg}
+
+@api_router.get("/provider/messages/{other_id}")
+async def get_provider_messages(other_id: str, current_user: dict = Depends(get_current_user)):
+    """Get messages between current user and another user"""
+    query = {"$or": [
+        {"sender_id": current_user['user_id'], "recipient_id": other_id},
+        {"sender_id": other_id, "recipient_id": current_user['user_id']}
+    ]}
+    messages = await db.provider_messages.find(query, {"_id": 0}).sort("created_at", 1).to_list(500)
+    await db.provider_messages.update_many(
+        {"sender_id": other_id, "recipient_id": current_user['user_id'], "read": False},
+        {"$set": {"read": True}}
+    )
+    return {"messages": messages}
+
+@api_router.get("/provider/conversations")
+async def get_provider_conversations(current_user: dict = Depends(get_current_user)):
+    """Get list of conversations for provider or organizer"""
+    pipeline = [
+        {"$match": {"$or": [{"sender_id": current_user['user_id']}, {"recipient_id": current_user['user_id']}]}},
+        {"$sort": {"created_at": -1}},
+        {"$group": {
+            "_id": {"$cond": [{"$eq": ["$sender_id", current_user['user_id']]}, "$recipient_id", "$sender_id"]},
+            "last_message": {"$first": "$content"},
+            "last_date": {"$first": "$created_at"},
+            "last_sender": {"$first": "$sender_name"},
+            "unread": {"$sum": {"$cond": [{"$and": [{"$ne": ["$sender_id", current_user['user_id']]}, {"$eq": ["$read", False]}]}, 1, 0]}}
+        }}
+    ]
+    convos = await db.provider_messages.aggregate(pipeline).to_list(100)
+    result = []
+    for c in convos:
+        other_user = await db.users.find_one({"user_id": c["_id"]}, {"_id": 0, "password": 0})
+        if other_user:
+            result.append({
+                "user_id": c["_id"],
+                "name": other_user.get("company_name") or other_user.get("name"),
+                "role": other_user.get("role"),
+                "last_message": c["last_message"],
+                "last_date": c["last_date"],
+                "unread": c["unread"]
+            })
+    return {"conversations": result}
+
+@api_router.put("/admin/providers/{user_id}/status")
+async def update_provider_status(user_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    """Admin: approve or reject provider"""
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin only")
+    data = await request.json()
+    new_status = data.get("status")
+    if new_status not in ["active", "rejected"]:
+        raise HTTPException(status_code=400, detail="Statut invalide")
+    await db.users.update_one({"user_id": user_id, "role": "provider"}, {"$set": {"status": new_status}})
+    return {"message": f"Prestataire {'validé' if new_status == 'active' else 'refusé'}"}
+
+@api_router.get("/admin/providers")
+async def get_providers(current_user: dict = Depends(get_current_user)):
+    """Admin: list all providers"""
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin only")
+    providers = await db.users.find({"role": "provider"}, {"_id": 0, "password": 0}).to_list(100)
+    return {"providers": providers}
 
 # ============== WAITLIST ==============
 
@@ -3095,7 +3344,7 @@ async def update_user_role(user_id: str, request: Request, current_user: dict = 
     data = await request.json()
     new_role = data.get('role')
     
-    if new_role not in ['participant', 'organizer', 'admin']:
+    if new_role not in ['participant', 'organizer', 'admin', 'provider']:
         raise HTTPException(status_code=400, detail="Invalid role")
     
     await db.users.update_one(

@@ -28,6 +28,7 @@ import OrgaLandingPage from "./pages/OrgaLandingPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
 import MessagingPage from "./pages/MessagingPage";
 import EventShopPage from "./pages/EventShopPage";
+import ProviderDashboard from "./pages/ProviderDashboard";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 // Protected Route Component
@@ -161,6 +162,14 @@ const AppRouter = () => {
           element={
             <ProtectedRoute>
               <MessagingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/provider"
+          element={
+            <ProtectedRoute>
+              <ProviderDashboard />
             </ProtectedRoute>
           }
         />

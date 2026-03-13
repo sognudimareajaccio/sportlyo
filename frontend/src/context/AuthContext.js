@@ -61,8 +61,11 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
-  const register = async (name, email, password, phone) => {
-    const response = await axios.post(`${API_URL}/api/auth/register`, { name, email, password, phone });
+  const register = async (name, email, password, phone, role, company_name) => {
+    const response = await axios.post(`${API_URL}/api/auth/register`, { name, email, password, phone, role, company_name });
+    if (response.data.pending) {
+      return response.data;
+    }
     const { token: newToken, user: userData } = response.data;
     localStorage.setItem('token', newToken);
     setToken(newToken);

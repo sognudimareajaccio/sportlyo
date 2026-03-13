@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   Users, Calendar, Euro, TrendingUp, BarChart3,
-  Settings, Search, ChevronLeft, ChevronRight, Download, FileText, MessageSquare
+  Settings, Search, ChevronLeft, ChevronRight, Download, FileText, MessageSquare, ShoppingBag, Check, X
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -32,6 +32,7 @@ const AdminDashboard = () => {
   const [exportEndDate, setExportEndDate] = useState('');
   const [events, setEvents] = useState([]);
   const [eventFilter, setEventFilter] = useState('all');
+  const [providers, setProviders] = useState([]);
 
   useEffect(() => {
     if (user?.role !== 'admin') {
@@ -44,11 +45,12 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [statsRes, usersRes, paymentsRes, eventsRes] = await Promise.all([
+      const [statsRes, usersRes, paymentsRes, eventsRes, providersRes] = await Promise.all([
         adminApi.getStats(),
         adminApi.getUsers({ page: 1, limit: 20 }),
         adminApi.getPayments({ page: 1, limit: 100 }),
-        api.get('/events')
+        api.get('/events'),
+        api.get('/admin/providers')
       ]);
       setStats(statsRes.data);
       setUsers(usersRes.data.users);
@@ -56,6 +58,7 @@ const AdminDashboard = () => {
       setPayments(paymentsRes.data.payments);
       setPaymentTotals(paymentsRes.data.totals);
       setEvents(eventsRes.data.events || eventsRes.data || []);
+      setProviders(providersRes.data.providers || []);
     } catch (error) {
       console.error('Error fetching admin data:', error);
       toast.error('Erreur lors du chargement des données');
@@ -93,6 +96,16 @@ const AdminDashboard = () => {
       fetchUsers(userPage);
     } catch (error) {
       toast.error('Erreur lors de la mise à jour');
+    }
+  };
+
+  const handleProviderStatus = async (userId, status) => {
+    try {
+      await api.put(`/admin/providers/${userId}/status`, { status });
+      toast.success(status === 'active' ? 'Prestataire validé' : 'Prestataire refusé');
+      fetchData();
+    } catch (error) {
+      toast.error('Erreur');
     }
   };
 
@@ -164,7 +177,7 @@ const AdminDashboard = () => {
               <p className="text-slate-400">Gérez la plateforme SportLyo</p>
             </div>
             <div className="flex gap-2">
-              {['overview', 'users', 'payments', 'messages'].map(tab => (
+              {['overview', 'users', 'payments', 'providers', 'messages'].map(tab => (
                 <Button
                   key={tab}
                   variant={activeTab === tab ? 'default' : 'outline'}
@@ -172,7 +185,7 @@ const AdminDashboard = () => {
                   onClick={() => setActiveTab(tab)}
                   data-testid={`tab-${tab}`}
                 >
-                  {tab === 'overview' ? 'Vue d\'ensemble' : tab === 'users' ? 'Utilisateurs' : tab === 'payments' ? 'Paiements' : 'Messages'}
+                  {tab === 'overview' ? 'Vue d\'ensemble' : tab === 'users' ? 'Utilisateurs' : tab === 'payments' ? 'Paiements' : tab === 'providers' ? `Prestataires${providers.filter(p => p.status === 'pending').length > 0 ? ` (${providers.filter(p => p.status === 'pending').length})` : ''}` : 'Messages'}
                 </Button>
               ))}
             </div>
@@ -597,6 +610,45 @@ const AdminDashboard = () => {
                 </table>
               </div>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'providers' && (
+          <div data-testid="providers-tab">
+            <h2 className="font-heading text-xl font-bold uppercase mb-4">Gestion des prestataires</h2>
+            {providers.length > 0 ? (
+              <div className="space-y-3">
+                {providers.map(p => (
+                  <div key={p.user_id} className="bg-white border border-slate-200 p-4 flex items-center justify-between" data-testid={`provider-${p.user_id}`}>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-heading font-bold text-base">{p.company_name || p.name}</h3>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase ${p.status === 'active' ? 'bg-green-100 text-green-700' : p.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{p.status === 'active' ? 'Validé' : p.status === 'pending' ? 'En attente' : 'Refusé'}</span>
+                      </div>
+                      <p className="text-sm text-slate-500">{p.email}</p>
+                      {p.phone && <p className="text-xs text-slate-400">{p.phone}</p>}
+                      <p className="text-[10px] text-slate-400 mt-1">Inscrit le {p.created_at && format(new Date(p.created_at), 'd MMM yyyy', { locale: fr })}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      {p.status === 'pending' && (
+                        <>
+                          <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white font-heading font-bold text-xs" onClick={() => handleProviderStatus(p.user_id, 'active')} data-testid={`approve-${p.user_id}`}>Valider</Button>
+                          <Button size="sm" variant="outline" className="text-red-600 border-red-200" onClick={() => handleProviderStatus(p.user_id, 'rejected')} data-testid={`reject-${p.user_id}`}>Refuser</Button>
+                        </>
+                      )}
+                      {p.status === 'active' && (
+                        <Button size="sm" variant="outline" className="text-red-600 border-red-200" onClick={() => handleProviderStatus(p.user_id, 'rejected')}>Suspendre</Button>
+                      )}
+                      {p.status === 'rejected' && (
+                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white text-xs" onClick={() => handleProviderStatus(p.user_id, 'active')}>Réactiver</Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white border border-slate-200 p-8 text-center text-slate-400">Aucun prestataire inscrit</div>
+            )}
           </div>
         )}
 

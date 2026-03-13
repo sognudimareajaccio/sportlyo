@@ -17,6 +17,13 @@ import { toast } from 'sonner';
 const ParticipantDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user?.role === 'provider') navigate('/provider', { replace: true });
+    else if (user?.role === 'organizer') navigate('/organizer', { replace: true });
+    else if (user?.role === 'admin') navigate('/admin', { replace: true });
+  }, [user, navigate]);
+
   const [registrations, setRegistrations] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
