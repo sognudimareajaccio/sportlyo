@@ -77,7 +77,10 @@ async def delete_provider_product(product_id: str, current_user: dict = Depends(
 async def get_provider_orders(current_user: dict = Depends(get_current_user)):
     if current_user['role'] != 'provider':
         raise HTTPException(status_code=403, detail="Prestataire requis")
-    orders = await db.orders.find({"provider_id": current_user['user_id']}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    orders = await db.orders.find(
+        {"$or": [{"provider_id": current_user['user_id']}, {"provider_ids": current_user['user_id']}]},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(1000)
     return {"orders": orders}
 
 @router.get("/provider/stats")
@@ -85,7 +88,10 @@ async def get_provider_stats(current_user: dict = Depends(get_current_user)):
     if current_user['role'] != 'provider':
         raise HTTPException(status_code=403, detail="Prestataire requis")
     products = await db.provider_products.find({"provider_id": current_user['user_id']}, {"_id": 0}).to_list(500)
-    orders = await db.orders.find({"provider_id": current_user['user_id']}, {"_id": 0}).to_list(5000)
+    orders = await db.orders.find(
+        {"$or": [{"provider_id": current_user['user_id']}, {"provider_ids": current_user['user_id']}]},
+        {"_id": 0}
+    ).to_list(5000)
     total_sales = sum(o.get("total", 0) for o in orders)
     total_commission_given = sum(o.get("organizer_commission_total", 0) for o in orders)
     return {

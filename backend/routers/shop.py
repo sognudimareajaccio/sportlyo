@@ -92,7 +92,7 @@ async def create_shop_order(request: Request, current_user: dict = Depends(get_c
     total = 0
     total_commission = 0
     organizer_id = None
-    provider_id = None
+    provider_ids = set()
     for item in items:
         product = await db.products.find_one({"product_id": item["product_id"]}, {"_id": 0})
         if not product:
@@ -103,14 +103,17 @@ async def create_shop_order(request: Request, current_user: dict = Depends(get_c
         total += line_total
         total_commission += commission
         organizer_id = product.get("organizer_id")
-        provider_id = product.get("provider_id")
+        if product.get("provider_id"):
+            provider_ids.add(product["provider_id"])
         order_items.append({
             "product_id": product["product_id"], "product_name": product["name"],
             "price": product["price"], "quantity": qty,
             "size": item.get("size", ""), "color": item.get("color", ""),
-            "line_total": line_total, "commission": commission
+            "line_total": line_total, "commission": commission,
+            "provider_id": product.get("provider_id")
         })
         await db.products.update_one({"product_id": product["product_id"]}, {"$inc": {"sold": qty, "stock": -qty}})
+    provider_id = list(provider_ids)[0] if len(provider_ids) == 1 else None
 
     delivery_fee = float(data.get("delivery_fee", 0))
     grand_total = total + delivery_fee
@@ -147,6 +150,7 @@ async def create_shop_order(request: Request, current_user: dict = Depends(get_c
         "order_id": order_id, "user_id": current_user["user_id"],
         "user_name": current_user["name"], "user_email": current_user.get("email", ""),
         "organizer_id": organizer_id, "provider_id": provider_id,
+        "provider_ids": list(provider_ids),
         "event_id": data.get("event_id", ""), "items": order_items,
         "total": grand_total, "subtotal": total, "delivery_fee": delivery_fee,
         "organizer_commission_total": total_commission,
