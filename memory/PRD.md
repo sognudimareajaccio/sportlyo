@@ -23,7 +23,7 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 
 ## Ce qui est implemente
 
-### Mars 2026 - Session 12 (P3 + Audit Pre-Production)
+### Mars 2026 - Session 12 (P3 + Audit Pre-Production + Slideshow)
 
 **7 fonctionnalites P3 finalisees et testees:**
 - Facturation avancee (PDF branding organisateur)
@@ -33,6 +33,13 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 - Statistiques avancees (filtres date + 3 graphiques recharts)
 - Gestion communautaire (pagination + UX)
 - Remboursements admin (filtres statut + notes admin)
+
+**Slideshow interactif homepage:**
+- 4 slides avec visuels generes (creation evenement, gestion inscriptions, check-in mobile, analytics)
+- Fond anime asphalt avec cercles rotatifs + couleur accent par slide
+- Navigation fleches + dots + auto-play 6s avec pause au survol
+- CTA "Commencer gratuitement" avec sous-texte "Aucune carte bancaire requise"
+- Composant: /app/frontend/src/components/PlatformSlideshow.js
 
 **Audit pre-production COMPLET:**
 - Securite: pas de secrets hardcodes, pas de fuite _id, auth protegee, CORS OK

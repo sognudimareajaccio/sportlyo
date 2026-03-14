@@ -5,6 +5,7 @@ import { Search, MapPin, Calendar, ArrowRight, ChevronRight, Bike, Footprints, M
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import EventCard from '../components/EventCard';
+import PlatformSlideshow from '../components/PlatformSlideshow';
 import { eventsApi, categoriesApi } from '../services/api';
 
 const sportIcons = {
@@ -253,6 +254,9 @@ const HomePage = () => {
           </div>
         </div>
       </section>
+
+      {/* Platform Slideshow */}
+      <PlatformSlideshow />
 
       {/* SportLyo est partout - Destinations Section */}
       <section className="relative overflow-hidden" data-testid="destinations-section">
