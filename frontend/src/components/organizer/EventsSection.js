@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar, Users, MapPin, Settings, Edit, Trash2 } from 'lucide-react';
+import { Calendar, Users, MapPin, Settings, Edit, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Button } from '../ui/button';
 
-export const EventsSection = ({ events, onEdit, onDelete, onCreateNew }) => (
+export const EventsSection = ({ events, onEdit, onDelete, onCreateNew, onTogglePublish }) => (
   <div>
     {events.length > 0 ? (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -19,9 +19,12 @@ export const EventsSection = ({ events, onEdit, onDelete, onCreateNew }) => (
               <div className="relative h-40 overflow-hidden">
                 <img src={event.image_url || 'https://images.unsplash.com/photo-1766970096430-204f27f6e247?w=800'} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                <div className="absolute top-3 left-3">
+                <div className="absolute top-3 left-3 flex gap-1">
                   <span className={`inline-flex items-center px-2.5 py-1 text-xs font-heading font-bold uppercase tracking-wider ${event.status === 'active' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
-                    {event.status === 'active' ? 'Actif' : 'Annulé'}
+                    {event.status === 'active' ? 'Actif' : 'Annule'}
+                  </span>
+                  <span className={`inline-flex items-center px-2.5 py-1 text-xs font-heading font-bold uppercase tracking-wider ${event.published ? 'bg-brand text-white' : 'bg-slate-500 text-white'}`}>
+                    {event.published ? 'Publie' : 'Brouillon'}
                   </span>
                 </div>
                 <div className="absolute bottom-3 left-3 flex items-center gap-2">
@@ -49,8 +52,11 @@ export const EventsSection = ({ events, onEdit, onDelete, onCreateNew }) => (
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 pt-3 border-t border-slate-100">
+                  <Button variant="outline" size="sm" className={`h-8 text-xs gap-1 ${event.published ? 'text-amber-600' : 'text-green-600'}`} onClick={() => onTogglePublish(event)} data-testid={`publish-toggle-${event.event_id}`}>
+                    {event.published ? <><ToggleRight className="w-3.5 h-3.5" />Depublier</> : <><ToggleLeft className="w-3.5 h-3.5" />Publier</>}
+                  </Button>
                   <Link to={`/organizer/event/${event.event_id}`} className="flex-1">
-                    <Button variant="outline" size="sm" className="w-full text-xs font-heading uppercase tracking-wider gap-1.5 h-8"><Settings className="w-3.5 h-3.5" />Gérer</Button>
+                    <Button variant="outline" size="sm" className="w-full text-xs font-heading uppercase tracking-wider gap-1.5 h-8"><Settings className="w-3.5 h-3.5" />Gerer</Button>
                   </Link>
                   <Button variant="outline" size="sm" className="h-8" onClick={() => onEdit(event)}><Edit className="w-3.5 h-3.5" /></Button>
                   <Button variant="outline" size="sm" className="h-8 text-red-500 hover:text-red-600" onClick={() => onDelete(event.event_id)}><Trash2 className="w-3.5 h-3.5" /></Button>
@@ -63,9 +69,9 @@ export const EventsSection = ({ events, onEdit, onDelete, onCreateNew }) => (
     ) : (
       <div className="text-center py-16 bg-white border border-slate-200">
         <Calendar className="w-16 h-16 text-slate-200 mx-auto mb-4" />
-        <h3 className="font-heading font-bold text-lg uppercase mb-2">Aucun événement</h3>
-        <p className="text-slate-500 mb-6">Créez votre premier événement sportif</p>
-        <Button className="btn-primary" onClick={onCreateNew}>Créer un événement</Button>
+        <h3 className="font-heading font-bold text-lg uppercase mb-2">Aucun evenement</h3>
+        <p className="text-slate-500 mb-6">Creez votre premier evenement sportif</p>
+        <Button className="btn-primary" onClick={onCreateNew}>Creer un evenement</Button>
       </div>
     )}
   </div>
