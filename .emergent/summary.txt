@@ -2,159 +2,169 @@
 L'utilisateur souhaite créer une plateforme de vente de tickets en ligne pour des événements sportifs (marathon, trail, vélo, etc.), nommée SportLyo.
 
 **PRODUCT REQUIREMENTS:**
-- **Rôles :**
-    - **Organisateurs :** Créent et gèrent des événements, les participants, les promotions, et suivent les performances. Ils peuvent désormais personnaliser une boutique de produits dérivés en important leur logo et en sélectionnant des produits depuis un catalogue de prestataire.
-    - **Participants :** S'inscrivent aux courses, gèrent leurs documents, accèdent à leurs billets et peuvent acheter des produits dérivés liés à un événement.
-    - **Admin :** Supervise la plateforme, valide les inscriptions des organisateurs et des nouveaux prestataires, et supervise les finances.
-    - **Prestataire (Nouveau) :** Un nouveau rôle pour un fournisseur de produits (ex: vêtements). Le prestataire gère son propre catalogue de produits, voit les commandes passées par les participants et les logos des organisateurs, et peut communiquer avec eux.
+- **Rôles :** Organisateurs, Participants, Admin, et Prestataires (fournisseurs de produits).
 - **Fonctionnalités Clés :**
-    - Inscriptions avancées et gestion des documents.
-    - Page Événement Détaillée avec une section boutique discrète.
-    - **Boutique de Produits Dérivés :**
-        - Les participants peuvent voir et acheter des produits depuis la page de l'événement.
-        - Le parcours d'achat inclut le choix de taille, la quantité et le mode de livraison (sur place ou à domicile).
-        - Les organisateurs gèrent leur boutique, suivent les commandes et les commissions.
-        - **Personnalisation :** L'organisateur doit importer un logo pour que le prestataire personnalise les articles.
-    - **Paiements :** Intégration de Square (pour les réservations entreprises/sponsors) et SumUp (prévu pour la boutique).
+    - Gestion d'événements et inscriptions.
+    - **Boutique de Produits Dérivés :** Les organisateurs sélectionnent des articles depuis le catalogue d'un prestataire, et les participants peuvent les acheter.
+    - **Paiements :** Intégration de SumUp pour les paiements réels de la boutique.
     - **Dashboards :**
-        - **Organisateur :** Hub centralisé avec sections pour Événements, Participants, Check-in, Finances, Messagerie, Partenaires, Sponsors, **Réservation Entreprises**, et Boutique.
-        - **Admin :** Dashboard financier et de supervision, avec une nouvelle section pour valider les prestataires.
-        - **Prestataire :** Dashboard pour gérer le catalogue produits, suivre les commandes et voir les logos des organisateurs.
-    - **Messagerie Interne :** Communication directe entre organisateurs et admin, et entre organisateurs et prestataires.
-    - **Facturation Automatique :** Génération de factures PDF pour les commandes de la boutique.
-    - **Réservations Entreprises :** Widget CRM pour gérer les inscriptions d'équipes, avec génération de liens de paiement Square.
+        - **Participant (Nouvelle demande) :** Refonte complète avec des widgets (Profil, Inscriptions, Courses, Résultats, Bilan, Commandes).
+        - **Prestataire (Nouvelle demande) :** Ajout de widgets financiers (commissions, revenus) et d'analyse des ventes.
+    - **Messagerie :** Communication interne, y compris entre participant et prestataire.
+    - **Notifications (Nouvelle demande) :** Notifications en temps réel pour les participants (nouveaux messages, statut de commande).
+    - **Import de catalogue (Nouvelle demande) :** Outil pour que les prestataires importent des produits depuis le fournisseur TopTex via un fichier PDF ou en recherchant par référence produit.
+    - **Données de production (Nouvelle demande) :** Création automatique de comptes, événements et produits par défaut lors du déploiement en production pour faciliter les tests.
 
 **User's preferred language**: fr
 
 **what currently exists?**
-La plateforme est une application full-stack (React/FastAPI/MongoDB). Le backend a été entièrement refactorisé, passant d'un fichier monolithique  à une architecture modulaire basée sur des routeurs. Cette refactorisation majeure a été validée par des tests  et le serveur fonctionne correctement. La refactorisation du frontend a commencé, en ciblant le fichier monolithique . Un répertoire  a été créé et les premiers composants de section ont été créés.
+L'application full-stack (React/FastAPI/MongoDB) a été considérablement étendue. La refactorisation du backend est terminée. Une refonte majeure du dashboard participant a été effectuée. Le dashboard prestataire a été enrichi de widgets d'analyse. L'intégration du système de paiement SumUp est complète et fonctionnelle. Un système de notifications en temps réel a été ajouté. Un outil d'import de produits depuis le catalogue TopTex (fournisseur externe) a été développé. Enfin, un script de seeding a été mis en place pour peupler automatiquement la base de données en production avec des données de test (comptes, événements, produits).
 
 **Last working item**:
-- Last item agent was working on: Refactorisation du composant monolithique . L'agent a créé un répertoire  et a commencé à créer les fichiers des composants pour chaque section du tableau de bord (Événements, Participants, Boutique, etc.).
-- Status: IN PROGRESS
+- Last item agent was working on: L'agent était en train de diagnostiquer deux bugs critiques signalés par l'utilisateur après le déploiement en production, liés à la nouvelle fonctionnalité d'import de catalogue TopTex.
+    1.  L'upload du catalogue PDF échoue.
+    2.  La recherche par référence produit ne récupère pas l'image.
+- Status: BLOCKED
 - Agent Testing Done: N
-- Which testing method agent to use? frontend testing agent
-- User Testing Done: N
+- Which testing method agent to use? backend testing agent
+- User Testing Done: Y (L'utilisateur a testé en production et a signalé les bugs)
 
 **All Pending/In progress Issue list**:
-Il n'y a pas de problème bloquant. La tâche en cours est la refactorisation du frontend, qui est une priorité haute.
+  - Issue 1: L'import du catalogue TopTex par PDF ne fonctionne pas en production. (P0)
+  - Issue 2: La recherche de produit TopTex par référence n'affiche pas l'image du produit. (P0)
+
+  Issues Detail:
+  - Issue 1:
+     - **Description:** L'upload du fichier PDF depuis l'interface du prestataire échoue, probablement en raison de la taille du fichier et des timeouts du serveur.
+     - **Attempted fixes:** Aucune correction n'a été tentée. L'agent a seulement posé un diagnostic.
+     - **Next debug checklist:**
+        - Modifier l'endpoint backend  dans  pour accepter les fichiers volumineux, idéalement en implémentant une logique de traitement par chunks (morceaux).
+        - Mettre à jour la fonction  dans  pour envoyer le fichier en chunks.
+     - **Why fix this issue and what will be achieved with the fix?** Cette fonctionnalité est essentielle pour permettre aux prestataires de peupler rapidement leur catalogue. Elle est actuellement inutilisable.
+     - **Status:** NOT STARTED
+     - **Should Test frontend/backend/both after fix?** both
+     - **Is recurring issue?** N
+  - Issue 2:
+     - **Description:** La fonctionnalité de recherche par référence fonctionne mais ne parvient pas à afficher l'image du produit, rendant le résultat incomplet. L'agent suspecte un changement dans la structure des URLs du CDN de TopTex.
+     - **Attempted fixes:** Aucune.
+     - **Next debug checklist:**
+        - Analyser manuellement le site  pour déterminer le nouveau format de l'URL des images.
+        - Mettre à jour la logique de scraping dans la fonction  du fichier  pour construire l'URL correcte de l'image.
+     - **Why fix this issue and what will be achieved with the fix?** Une fiche produit sans image est peu utile. La correction rendra la fonctionnalité complète et professionnelle.
+     - **Status:** NOT STARTED
+     - **Should Test frontend/backend/both after fix?** both
+     - **Is recurring issue?** N
 
 **In progress Task List**:
-  - Task 1: Refactorisation du frontend (P0)
-  - Task 2: Intégration de SumUp (P1)
-  - Task 3: Finalisation du système de facturation (P1)
-
- Task Detail:
-  - Task 1:
-     - Where to resume: Le fichier  doit être vidé de sa logique et recomposé en utilisant les nouveaux composants créés dans . Il faut importer ces composants et leur passer les props nécessaires. Une fois le tableau de bord principal refactorisé, des tests complets du frontend seront nécessaires pour s'assurer qu'aucune régression n'a été introduite.
-     - What will be achieved with this? Rendre le dashboard organisateur maintenable, performant et faciliter l'ajout de futures fonctionnalités.
-     - Status: IN PROGRESS
-     - Should Test frontend/backend/both after fix? frontend
-     - Blocked on something: Non.
-  - Task 2:
-     - Where to resume: L'intégration SumUp a été simulée car l'outil  a échoué. La logique backend existe mais est inactive. Il faut retenter d'obtenir le playbook via l'outil et implémenter le flux de paiement réel, incluant la redirection et le callback/webhook.
-     - What will be achieved with this? Permettre aux participants de payer réellement leurs commandes de produits dérivés.
-     - Status: BLOCKED
-     - Blocked on something: L'outil  qui n'a pas pu fournir de playbook.
-  - Task 3:
-     - Where to resume: Une fonction  existe. Il manque une interface dédiée pour la gestion des factures (côté admin/organisateur), la personnalisation des modèles et la possibilité pour le participant de télécharger à nouveau une facture.
-     - What will be achieved with this? Un système de facturation complet et professionnel.
-     - Status: NOT STARTED
-     - Should Test frontend/backend/both after fix? both
-     - Blocked on something: Non.
+Aucune tâche n'est en cours. La priorité est la résolution des deux bugs bloquants.
 
 **Upcoming and Future Tasks**
 *   **Upcoming Tasks (P1):**
-    *   **Finaliser l'intégration SumUp.**
-    *   **Améliorer le système de facturation.**
+    *   Améliorer le système de facturation (génération, personnalisation, accès participant).
 *   **Future Tasks (P2):**
-    *   Gestion Communautaire : Permettre aux organisateurs d'interagir avec leurs participants.
+    *   Gestion Communautaire (interaction organisateur/participants).
     *   Contact direct pour les demandes de remboursement.
     *   Plateforme de location de matériel RFID.
-    *   Fermeture automatique des inscriptions.
     -   Développement d'une application mobile dédiée au check-in.
     -   Statistiques avancées pour les organisateurs.
     -   Intégration Twilio pour les notifications SMS.
 
 **Completed work in this session**
-- **Refactorisation massive du Backend :**
-  - Le fichier monolithique  (plus de 4000 lignes) a été entièrement décomposé.
-  - La logique a été répartie dans des routeurs FastAPI dédiés (, , , , , , , etc.) dans le répertoire .
-  - Le fichier  agit désormais comme un simple point d'entrée qui inclut tous les routeurs.
-  - La nouvelle architecture a été testée avec succès via  pour vérifier que tous les endpoints majeurs sont fonctionnels.
+- **Refonte complète du Dashboard Participant:** Création d'un hub avec des widgets dynamiques ().
+- **Amélioration du Dashboard Prestataire:** Ajout de widgets financiers et d'analyse des ventes ().
+- **Intégration de SumUp:** Mise en place du flux de paiement réel pour la boutique avec les clés API de l'utilisateur.
+- **Création d'un Outil d'Import TopTex:** Développement d'une fonctionnalité permettant aux prestataires d'importer des produits depuis TopTex via un fichier PDF ou par référence produit ().
+- **Système de Notifications:** Ajout d'un endpoint backend () et d'un composant UI () pour les alertes en temps réel.
+- **Mise en place du Seeding de Données:** Création d'un script dans  qui peuple la base de données avec des comptes, événements et produits par défaut au démarrage du serveur.
+- **Corrections de bugs divers:** Visibilité des produits prestataires pour l'organisateur, association correcte des commandes aux prestataires, affichage des couleurs des produits.
 
 **Earlier issues found/mentioned but not fixed**
-- La dette technique du fichier  est en cours de résolution.
-- Le problème de l'intégration SumUp bloquée persiste.
-
-**Known issue recurrence from previous fork**
-- N/A
+Les deux problèmes listés dans **All Pending/In progress Issue list** ont été découverts en fin de session et n'ont pas encore été corrigés.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Frontend:** React, TailwindCSS, Shadcn UI, , .
-- **Backend:** FastAPI,  pour la modularisation.
-- **Database:** MongoDB.
-- **Authentication:** JWT.
-- **Payment:** Square (utilisé pour les liens de paiement), SumUp (simulé).
-- **Documents:**  pour la génération de factures PDF.
+- **Frontend:** React, TailwindCSS, Shadcn UI
+- **Backend:** FastAPI, 
+- **Database:** MongoDB
+- **Payment:** SumUp (live), Square
+- **PDF Parsing:** 
+- **Web Scraping:** , 
 
 **key DB schema**
-- Aucune modification dans cette session.
+- : Ajout de  et .
+-  & : Champ  ajouté pour gérer la visibilité.
+- : Nouvelle collection pour stocker les alertes utilisateur.
 
 **changes in tech stack**
-- Aucune modification dans cette session.
+- **Dépendances Backend ajoutées :** usage: pymupdf [-h]
+               {show,clean,join,extract,embed-info,embed-add,embed-del,embed-upd,embed-extract,embed-copy,gettext,internal}
+               ...
+
+------------------------- Basic PyMuPDF Functions -------------------------
+
+options:
+  -h, --help            show this help message and exit
+
+Subcommands:
+  {show,clean,join,extract,embed-info,embed-add,embed-del,embed-upd,embed-extract,embed-copy,gettext,internal}
+                        Enter 'command -h' for subcommand specific help, ,  (pour l'import TopTex).
 
 **All files of reference**
-- **Fichiers modifiés :**
-  - : Réécrit pour être un point d'entrée minimaliste.
-  - : Mis à jour avec les dépendances partagées.
-- **Nouveaux fichiers (Backend) :**
-  - Tous les fichiers dans  (ex: , , etc.).
-  - : Contient tous les modèles Pydantic.
-- **Nouveaux fichiers (Frontend) :**
-  - Tous les fichiers dans  (ex: , etc.).
-- **Fichier en cours de refactorisation :**
-  - 
+- : Modifié pour inclure le script de seeding et les nouveaux routeurs.
+- : Nouveau fichier pour la logique d'import TopTex (contient les bugs à corriger).
+- : Modifié pour l'intégration de SumUp.
+- : Modifié pour ajouter l'interface d'import TopTex (contient la partie frontend des bugs).
+- : Nouveau fichier contenant la refonte du dashboard participant.
+- : Modifié pour intégrer le widget de paiement SumUp.
 
 **Areas that need refactoring**:
-- ****: **CRITIQUE**. La refactorisation a commencé mais doit être achevée. C'est la dernière pièce majeure de dette technique dans le projet.
+- L'endpoint d'import PDF () doit être refactorisé pour gérer des fichiers volumineux sans causer de timeout.
 
 **key api endpoints**
-- Les endpoints n'ont pas changé fonctionnellement, mais leur code source est maintenant localisé dans les fichiers du répertoire .
+- : Endpoint pour l'upload de PDF. **(BUGGÉ)**
+- : Endpoint pour la recherche par référence. **(BUGGÉ - IMAGE)**
+- : Modifié pour créer un checkout SumUp.
+- : Nouvel endpoint pour vérifier le statut d'un paiement SumUp.
+- : Nouveaux endpoints pour le dashboard participant.
+- : Nouveaux endpoints pour les widgets du dashboard prestataire.
+- : Nouveaux endpoints pour le système de notifications.
 
 **Critical Info for New Agent**
-- **Priorité à la Refactorisation Frontend :** Votre tâche la plus immédiate est de terminer la refactorisation de . Vous devez remplacer le contenu du fichier par une composition des nouveaux composants créés dans .
-- **Validation Post-Refactorisation :** Une fois la refactorisation du tableau de bord terminée, il est impératif d'utiliser l'agent de test frontend () pour effectuer une régression complète de toutes les fonctionnalités du tableau de bord organisateur.
-- **Intégration Bloquée :** L'intégration SumUp est toujours bloquée. Une fois le refactoring terminé, ce sera la prochaine tâche technique à aborder.
+- **Priorité Absolue aux Bugs de Production :** Votre première mission est de corriger les deux bugs critiques signalés par l'utilisateur concernant l'import TopTex. Le déploiement a eu lieu et la fonctionnalité est cassée en production.
+    1.  **Bug 1 (PDF Upload) :** L'upload de gros fichiers PDF échoue. La piste à suivre est l'implémentation d'un envoi par chunks côté frontend et d'une gestion adaptée côté backend.
+    2.  **Bug 2 (Image Manquante) :** La recherche par référence ne récupère pas l'image. Il faut investiguer le format actuel des URLs d'images sur  et corriger la logique de scraping.
+- **L'intégration SumUp est en production** avec de vraies clés API. Soyez prudent lors des tests de paiement.
+- **Le seeding de la base de données est actif** au démarrage du serveur ( dans ), ce qui garantit un environnement de test cohérent.
 
 **documents and test reports created in this job**
-- Aucun nouveau document ou rapport de test n'a été créé.
+- 
+- 
+- 
 
 **Last 10 User Messages and any pending HUMAN messages**
-- : NON VAS Y (interprété comme Vas-y, donnant le feu vert pour commencer).
+Les derniers messages de l'utilisateur concernent le test en production, le signalement des deux bugs sur la fonctionnalité d'import TopTex, et la confirmation par l'agent que ces problèmes seront corrigés.
 
 **Project Health Check:**
-- **Broken:** None.
-- **Mocked:** L'intégration du paiement SumUp est toujours simulée.
-- **Technical Debt:** **MOYENNE**. La dette critique du backend a été résolue. La dette restante est concentrée sur le fichier , dont la résolution est en cours.
+- **Broken:** La fonctionnalité d'import de catalogue TopTex depuis un fichier PDF est cassée en production. La recherche par référence est partiellement cassée (image manquante).
+- **Mocked:** Aucun.
+- **Technical Debt:** Faible. La principale dette est l'absence de gestion des fichiers volumineux pour l'upload, qui doit être ajoutée.
 
 **3rd Party Integrations**
-- **Square (Payments):** Intégré et utilisé.
-- **Resend (Email):** Intégré.
-- **recharts (Charts):** Intégré.
-- **fpdf2 (PDF Generation):** Intégré.
-- **SumUp (Payments):** Partiellement implémenté (simulé), bloqué.
+- **SumUp (Payments):** Intégré et fonctionnel avec les clés de l'utilisateur.
+- **TopTex (Product Catalog):** Intégration via scraping/parsing. **Partiellement cassée.**
+- **Square (Payments):** Existant.
+- **Resend (Email):** Existant.
+- **fpdf2 (PDF Generation):** Existant.
 
 **Testing status**
-- Testing agent used after significant changes: NO (pas encore pour le frontend, mais prévu).
-- Troubleshoot agent used after agent stuck in loop: NO.
+- Testing agent used after significant changes: YES (deux fois avec succès avant la découverte des derniers bugs).
 - Test files created: []
-- Known regressions: None, mais une vérification complète du frontend est nécessaire.
+- Known regressions: Les deux bugs sur l'import TopTex sont des régressions ou des problèmes non détectés lors des tests initiaux.
 
 **Credentials to test flow:**
+Les identifiants sont maintenant créés automatiquement par le script de seeding au démarrage.
 | Rôle | Email | Mot de passe |
 |---|---|---|
 | Admin |  |  |
@@ -163,4 +173,4 @@ Il n'y a pas de problème bloquant. La tâche en cours est la refactorisation du
 | Prestataire |  |  |
 
 **What agent forgot to execute**
-L'agent a suivi le plan et les priorités de manière exemplaire, en s'attaquant d'abord à la dette technique la plus critique (backend) avant de passer à la suivante (frontend). Rien n'a été oublié.</analysis>
+L'agent n'a pas anticipé que le fichier PDF TopTex serait trop volumineux pour un upload standard, et n'a pas non plus prévu que les URLs des images du CDN de TopTex pourraient changer. Ces oublis ont conduit aux bugs actuels en production.</analysis>
