@@ -23,46 +23,60 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 ## Ce qui est implémenté
 
 ### Mars 2026 - Session 5 (Actuelle)
-- **PDF 600MB** : Limite portée à 600MB, progression page par page en temps réel
-- **Fiches produits portrait** : Cartes en format 3:4 adapté vêtements, design modernisé
-- **Galerie multi-photos** : Jusqu'à 10 photos par produit, carrousel avec flèches et dots, upload multiple, badge "X photos"
+**Phase 1 ✅ :**
+- Suppression produit prestataire par l'organisateur (bouton poubelle)
+- Suppression upload PDF TopTex (gardé uniquement recherche par référence)
+- Cartes produits portrait (3:4) avec carrousel dans l'espace organisateur
+- Cartes catalogue prestataire portrait dans l'espace organisateur
+- Galerie multi-photos (10 max) pour les prestataires
+- Limite PDF 600MB avec progression page par page
 
 ### Mars 2026 - Session 4
-- **Fix Upload PDF TopTex** : Background task + streaming chunks
-- **Fix Image lookup TopTex** : Extraction og:image
-- **Partage événement** : Modal animé Facebook/X/WhatsApp/Email + copier lien
-- **Commission non modifiable** par organisateur (imposée prestataire)
-- **Suppression "Devenir Organisateur"** pour non-organisateurs
-- **Produits prestataire verrouillés** pour organisateur (badge + Lock)
+- Fix Upload PDF TopTex + Fix Image lookup TopTex
+- Partage événement modal moderne
+- Commission non modifiable par organisateur
+- Suppression "Devenir Organisateur" pour non-organisateurs
+- Produits prestataire verrouillés pour organisateur
 
 ### Mars 2026 - Sessions 1-3
-- Refactorisation backend (routeurs modulaires)
-- Dashboard Participant (7 widgets)
+- Refactorisation backend, Dashboard Participant (7 widgets)
 - Dashboard Prestataire (finances, ventes)
-- Intégration SumUp
-- Notifications temps réel
-- Messagerie participant-prestataire
-- Seeding données auto
+- Intégration SumUp, Notifications temps réel
+- Messagerie participant-prestataire, Seeding données auto
+
+## EN COURS — Phase 2 : Workflow Prestataire ↔ Organisateur
+
+### Étape 1 ✅ (Catalogue prestataire brut — déjà fait)
+Le prestataire intègre ses produits bruts sans personnalisation logo.
+
+### Étape 2 (À faire)
+- Upload logo par l'organisateur
+- Sélection produits → notification au prestataire
+- Le prestataire reçoit logo + liste des produits sélectionnés
+
+### Étape 3 (À faire)
+- Vue par organisateur dans l'espace prestataire (classement sélections)
+- Personnalisation produits (nouvelles photos avec logo)
+- Mise à jour auto des produits dans l'espace organisateur
+- Statut : "En attente" → "Prêt à publier"
+- Système d'alertes pour le prestataire
+
+## Phase 3 (À faire) — Finances & Commissions
+- Commission admin : 1€/produit vendu par le prestataire
+- Espace Admin - Finances : Total commissions admin
+- Espace Prestataire - Finances : Prix d'achat vs revente, commissions déduites, marge nette
 
 ## Backlog Priorisé
 
-### P1 (Moyenne priorité)
-- [ ] Système de facturation avancé
-- [ ] Refactorisation frontend OrganizerDashboard.js
+### P1
+- [ ] Phase 2 : Workflow Prestataire ↔ Organisateur
+- [ ] Phase 3 : Finances & Commissions admin/prestataire
 
-### P2 (Future)
+### P2
+- [ ] Système de facturation avancé
 - [ ] Gestion communautaire
 - [ ] Contact direct remboursements
 - [ ] Location matériel RFID
 - [ ] App mobile check-in
 - [ ] Statistiques avancées organisateurs
 - [ ] Notifications SMS (Twilio)
-
-## Intégrations Tierces
-| Service | Statut |
-|---------|--------|
-| Square | Intégré |
-| SumUp | INTÉGRÉ |
-| Resend | Intégré |
-| fpdf2 | Intégré |
-| TopTex | INTÉGRÉ (PDF 600MB + lookup) |
