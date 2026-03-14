@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   ShoppingBag, Package, Euro, TrendingUp, FileText, Plus, Edit, Trash2,
-  MessageSquare, Send, Loader2, X, ChevronRight, ChevronLeft, PieChart as PieChartIcon, BarChart3, Users, ArrowDownRight, Upload, Check, Search, ImagePlus
+  MessageSquare, Send, Loader2, X, ChevronRight, ChevronLeft, PieChart as PieChartIcon, BarChart3, Users, ArrowDownRight, Upload, Check, Search, ImagePlus, ClipboardList, Eye, Clock, CheckCircle
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -51,6 +51,11 @@ const ProviderDashboard = () => {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [cardImageIndex, setCardImageIndex] = useState({});
   const imageInputRef = useRef(null);
+  const [selections, setSelections] = useState([]);
+  const [activeSelection, setActiveSelection] = useState(null);
+  const [customizeImages, setCustomizeImages] = useState([]);
+  const [uploadingCustomize, setUploadingCustomize] = useState(false);
+  const customizeInputRef = useRef(null);
 
   const categories = ['Textile', 'Accessoire', 'Gourde', 'Sac', 'Nutrition', 'Équipement'];
 
@@ -260,6 +265,52 @@ const ProviderDashboard = () => {
     return imgs;
   };
 
+  const fetchSelections = useCallback(async () => {
+    try {
+      const res = await api.get('/provider/selections');
+      setSelections(res.data.selections || []);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === 'selections') fetchSelections();
+  }, [activeSection, fetchSelections]);
+
+  const handleCustomizeUpload = async (files, selectionId, productIndex) => {
+    if (!files || files.length === 0) return;
+    setUploadingCustomize(true);
+    try {
+      const uploaded = [...customizeImages];
+      for (const file of Array.from(files).slice(0, 10 - uploaded.length)) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await api.post('/upload/image', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        uploaded.push(res.data.url);
+      }
+      setCustomizeImages(uploaded);
+    } catch { toast.error('Erreur upload'); }
+    finally { setUploadingCustomize(false); }
+  };
+
+  const handleSaveCustomization = async (selectionId, productIndex) => {
+    if (customizeImages.length === 0) { toast.error('Ajoutez au moins une photo'); return; }
+    try {
+      await api.put(`/provider/selections/${selectionId}/customize/${productIndex}`, { images: customizeImages });
+      toast.success('Produit personnalise ! Les photos sont synchronisees chez l\'organisateur.');
+      setCustomizeImages([]);
+      setActiveSelection(null);
+      fetchSelections();
+    } catch (e) { toast.error(e.response?.data?.detail || 'Erreur'); }
+  };
+
+  const handleSelectionStatus = async (selectionId, status) => {
+    try {
+      await api.put(`/provider/selections/${selectionId}/status`, { status });
+      toast.success('Statut mis a jour');
+      fetchSelections();
+    } catch (e) { toast.error(e.response?.data?.detail || 'Erreur'); }
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="loader" /></div>;
 
   const statCards = [
@@ -269,12 +320,13 @@ const ProviderDashboard = () => {
     { label: 'Revenu net', value: `${(stats.net_revenue || 0).toFixed(0)}€`, icon: TrendingUp, color: 'text-brand' },
   ];
 
+  const pendingSelections = selections.filter(s => s.status === 'pending').length;
   const navItems = [
     { id: 'catalogue', label: 'Catalogue', icon: ShoppingBag },
+    { id: 'selections', label: 'Selections', icon: ClipboardList, badge: pendingSelections },
     { id: 'import', label: 'Import TopTex', icon: Package },
     { id: 'finances', label: 'Finances', icon: Euro },
     { id: 'ventes', label: 'Ventes', icon: BarChart3 },
-    { id: 'logos', label: 'Logos', icon: FileText, badge: organizerLogos.length },
     { id: 'commandes', label: 'Commandes', icon: FileText },
     { id: 'messages', label: 'Messages', icon: MessageSquare, badge: conversations.reduce((a, c) => a + (c.unread || 0), 0) },
   ];
@@ -400,6 +452,164 @@ const ProviderDashboard = () => {
           </div>
         )}
 
+
+
+
+        {/* ===== SELECTIONS (Workflow Organisateur) ===== */}
+        {activeSection === 'selections' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} data-testid="provider-selections-section">
+            <h3 className="font-heading font-bold text-base uppercase mb-4">Selections par Organisateur</h3>
+
+            {/* Stats bar */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              {[
+                { label: 'En attente', count: selections.filter(s => s.status === 'pending').length, color: 'text-amber-500', bg: 'bg-amber-50', icon: Clock },
+                { label: 'En cours', count: selections.filter(s => s.status === 'in_progress').length, color: 'text-blue-500', bg: 'bg-blue-50', icon: Edit },
+                { label: 'Prets', count: selections.filter(s => s.status === 'ready').length, color: 'text-green-500', bg: 'bg-green-50', icon: CheckCircle },
+              ].map(st => (
+                <div key={st.label} className={`${st.bg} border border-slate-200 p-4 rounded-lg flex items-center gap-3`}>
+                  <st.icon className={`w-6 h-6 ${st.color}`} />
+                  <div>
+                    <p className="font-heading font-black text-2xl">{st.count}</p>
+                    <p className="text-[11px] text-slate-500 uppercase font-heading">{st.label}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {selections.length === 0 ? (
+              <div className="bg-white border border-slate-200 p-12 text-center rounded-lg">
+                <ClipboardList className="w-16 h-16 mx-auto mb-4 text-slate-200" />
+                <h4 className="font-heading font-bold text-lg uppercase mb-2">Aucune selection</h4>
+                <p className="text-slate-500 text-sm">Les organisateurs verront votre catalogue et feront leurs selections ici.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {selections.map(sel => {
+                  const statusConfig = {
+                    pending: { label: 'En attente', color: 'bg-amber-100 text-amber-700', icon: Clock },
+                    in_progress: { label: 'En cours', color: 'bg-blue-100 text-blue-700', icon: Edit },
+                    ready: { label: 'Pret a publier', color: 'bg-green-100 text-green-700', icon: CheckCircle },
+                  };
+                  const sc = statusConfig[sel.status] || statusConfig.pending;
+                  const customizedCount = (sel.products || []).filter(p => p.customized).length;
+                  return (
+                    <div key={sel.selection_id} className="bg-white border border-slate-200 rounded-lg overflow-hidden" data-testid={`selection-${sel.selection_id}`}>
+                      {/* Selection header */}
+                      <div className="p-5 border-b border-slate-100 flex items-center gap-4">
+                        <div className="w-14 h-14 bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden shrink-0">
+                          {sel.organizer_logo ? (
+                            <img src={sel.organizer_logo} alt="" className="w-full h-full object-contain p-1" />
+                          ) : (
+                            <Users className="w-7 h-7 text-slate-300" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-heading font-bold text-base uppercase">{sel.organizer_name}</h4>
+                          <p className="text-[11px] text-slate-500">{sel.products?.length || 0} produit(s) selectionne(s) — {customizedCount} personnalise(s)</p>
+                          <p className="text-[10px] text-slate-400">{sel.updated_at ? format(new Date(sel.updated_at), 'dd MMM yyyy HH:mm', { locale: fr }) : ''}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${sc.color}`}>
+                            <sc.icon className="w-3 h-3 inline mr-1" />{sc.label}
+                          </span>
+                          {sel.status === 'pending' && (
+                            <Button size="sm" className="h-8 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded gap-1" onClick={() => handleSelectionStatus(sel.selection_id, 'in_progress')}>
+                              <Edit className="w-3 h-3" /> Demarrer
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Products grid */}
+                      <div className="p-5">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                          {(sel.products || []).map((prod, idx) => {
+                            const prodImgs = prod.customized_images?.length > 0 ? prod.customized_images : (prod.images?.length > 0 ? prod.images : (prod.image_url ? [prod.image_url] : []));
+                            return (
+                              <div key={idx} className={`border rounded-lg overflow-hidden ${prod.customized ? 'border-green-300 bg-green-50/30' : 'border-slate-200'}`} data-testid={`sel-product-${idx}`}>
+                                <div className="relative aspect-[3/4] bg-slate-50 flex items-center justify-center overflow-hidden">
+                                  {prodImgs.length > 0 ? (
+                                    <img src={prodImgs[0]} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <Package className="w-12 h-12 text-slate-200" />
+                                  )}
+                                  {prod.customized && (
+                                    <div className="absolute top-2 right-2">
+                                      <CheckCircle className="w-5 h-5 text-green-500 bg-white rounded-full" />
+                                    </div>
+                                  )}
+                                  {prod.customized_images?.length > 1 && (
+                                    <span className="absolute bottom-2 left-2 bg-black/60 text-white px-2 py-0.5 text-[10px] font-bold rounded">{prod.customized_images.length} photos</span>
+                                  )}
+                                </div>
+                                <div className="p-3">
+                                  <h5 className="font-heading font-bold text-xs leading-tight line-clamp-2 mb-2">{prod.name}</h5>
+                                  {prod.customized ? (
+                                    <span className="text-[10px] font-bold text-green-600 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Personnalise</span>
+                                  ) : (
+                                    <Button size="sm" className="w-full h-7 text-[11px] bg-brand hover:bg-brand/90 text-white rounded gap-1" onClick={() => { setActiveSelection({ selectionId: sel.selection_id, productIndex: idx, product: prod }); setCustomizeImages([]); }}>
+                                      <ImagePlus className="w-3 h-3" /> Personnaliser
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Customize dialog */}
+            <Dialog open={!!activeSelection} onOpenChange={(open) => { if (!open) { setActiveSelection(null); setCustomizeImages([]); } }}>
+              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="font-heading text-xl uppercase">Personnaliser le produit</DialogTitle>
+                  <DialogDescription className="sr-only">Ajouter les photos personnalisees avec le logo de l'organisateur</DialogDescription>
+                </DialogHeader>
+                {activeSelection && (
+                  <div className="space-y-4 pt-4">
+                    <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg">
+                      <p className="font-heading font-bold text-sm">{activeSelection.product?.name}</p>
+                      <p className="text-[11px] text-slate-500 mt-1">Ajoutez les photos du produit personnalise avec le logo de l'organisateur.</p>
+                    </div>
+
+                    {/* Current images */}
+                    {customizeImages.length > 0 && (
+                      <div className="grid grid-cols-5 gap-2">
+                        {customizeImages.map((img, i) => (
+                          <div key={i} className="relative aspect-square bg-slate-50 rounded-lg overflow-hidden border border-slate-200 group">
+                            <img src={img} alt="" className="w-full h-full object-cover" />
+                            <button onClick={() => setCustomizeImages(prev => prev.filter((_, j) => j !== i))} className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {customizeImages.length < 10 && (
+                      <div>
+                        <input ref={customizeInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleCustomizeUpload(e.target.files, activeSelection.selectionId, activeSelection.productIndex)} />
+                        <Button type="button" variant="outline" className="w-full h-12 text-xs gap-2 border-dashed rounded" onClick={() => customizeInputRef.current?.click()} disabled={uploadingCustomize}>
+                          {uploadingCustomize ? <><Loader2 className="w-4 h-4 animate-spin" /> Upload en cours...</> : <><ImagePlus className="w-5 h-5" /> Ajouter les photos personnalisees ({customizeImages.length}/10)</>}
+                        </Button>
+                      </div>
+                    )}
+
+                    <Button className="w-full bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase rounded" onClick={() => handleSaveCustomization(activeSelection.selectionId, activeSelection.productIndex)} disabled={customizeImages.length === 0}>
+                      Enregistrer la personnalisation
+                    </Button>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+          </motion.div>
+        )}
 
 
         {/* ===== IMPORT TOPTEX ===== */}

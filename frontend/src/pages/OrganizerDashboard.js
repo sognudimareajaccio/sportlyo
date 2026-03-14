@@ -2115,6 +2115,8 @@ ${JSON.stringify({
                             <div className="absolute top-3 left-3 flex flex-col gap-1">
                               <span className="bg-violet-600 text-white px-2 py-0.5 text-[10px] font-bold uppercase rounded">{p.category}</span>
                               {p.source === 'provider' && <span className="bg-blue-500 text-white px-2 py-0.5 text-[10px] font-bold uppercase rounded">Prestataire</span>}
+                              {p.source === 'provider' && p.customization_status === 'pending' && <span className="bg-amber-500 text-white px-2 py-0.5 text-[10px] font-bold uppercase rounded">En attente</span>}
+                              {p.source === 'provider' && p.customization_status === 'ready' && <span className="bg-green-500 text-white px-2 py-0.5 text-[10px] font-bold uppercase rounded">Pret</span>}
                               {!p.active && <span className="bg-red-500 text-white px-2 py-0.5 text-[10px] font-bold uppercase rounded">Inactif</span>}
                               {imgs.length > 1 && <span className="bg-black/60 text-white px-2 py-0.5 text-[10px] font-bold rounded">{imgs.length} photos</span>}
                             </div>

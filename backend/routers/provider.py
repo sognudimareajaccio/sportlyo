@@ -226,16 +226,73 @@ async def add_provider_product_to_event(request: Request, current_user: dict = D
         "price": pp["price"],
         "organizer_commission": commission,
         "image_url": pp.get("image_url", ""),
+        "images": pp.get("images", []),
         "sizes": pp.get("sizes", []),
         "colors": pp.get("colors", []),
         "stock": pp.get("stock", 100),
         "sold": 0,
         "active": True,
+        "customization_status": "pending",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     await db.products.insert_one(product)
     del product["_id"]
+
+    # Create or update selection for this organizer+provider pair
+    org_user = await db.users.find_one({"user_id": current_user['user_id']}, {"_id": 0, "name": 1, "company_name": 1, "logo_url": 1})
+    existing_sel = await db.selections.find_one({
+        "organizer_id": current_user['user_id'],
+        "provider_id": pp["provider_id"],
+        "status": {"$in": ["pending", "in_progress"]}
+    })
+
+    product_entry = {
+        "provider_product_id": provider_product_id,
+        "organizer_product_id": product["product_id"],
+        "name": pp["name"],
+        "image_url": pp.get("image_url", ""),
+        "images": pp.get("images", []),
+        "category": pp.get("category", ""),
+        "event_id": event_id,
+        "customized": False,
+        "customized_images": [],
+        "added_at": datetime.now(timezone.utc).isoformat()
+    }
+
+    if existing_sel:
+        await db.selections.update_one(
+            {"_id": existing_sel["_id"]},
+            {
+                "$push": {"products": product_entry},
+                "$set": {"updated_at": datetime.now(timezone.utc).isoformat(),
+                         "organizer_logo": org_user.get("logo_url", "")}
+            }
+        )
+    else:
+        selection = {
+            "selection_id": f"sel_{uuid.uuid4().hex[:12]}",
+            "organizer_id": current_user['user_id'],
+            "organizer_name": org_user.get("company_name") or org_user.get("name", ""),
+            "organizer_logo": org_user.get("logo_url", ""),
+            "provider_id": pp["provider_id"],
+            "provider_name": pp.get("provider_name", ""),
+            "products": [product_entry],
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.selections.insert_one(selection)
+
+    # Notify provider
+    from routers.notifications import create_notification
+    await create_notification(
+        pp["provider_id"],
+        f"Nouvelle selection : {org_user.get('company_name') or org_user.get('name', '')} a selectionne \"{pp['name']}\" pour son evenement.",
+        "new_selection",
+        {"organizer_id": current_user['user_id'], "product_name": pp["name"]}
+    )
+
     return {"product": product}
 
 @router.post("/provider/messages")
