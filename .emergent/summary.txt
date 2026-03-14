@@ -5,166 +5,165 @@ L'utilisateur souhaite créer une plateforme de vente de tickets en ligne pour d
 - **Rôles :** Organisateurs, Participants, Admin, et Prestataires (fournisseurs de produits).
 - **Fonctionnalités Clés :**
     - **Gestion d'événements :** Création, modification, publication, et gestion des épreuves. Ajout d'une option pour télécharger le règlement en PDF et spécifier si un T-shirt est fourni. Le statut de publication (publié/dépublié) doit être gérable par l'organisateur et l'admin.
-    - **Workflow Prestataire-Organisateur :**
-        1. Le prestataire intègre son catalogue (sans personnalisation).
-        2. L'organisateur télécharge son logo et sélectionne des produits dans le catalogue du prestataire. Une sélection est créée et notifiée au prestataire.
-        3. Le prestataire reçoit la sélection, personnalise les produits avec le logo de l'organisateur en ajoutant de nouvelles photos.
-        4. Les produits personnalisés sont automatiquement synchronisés dans l'espace de l'organisateur, qui peut alors les publier sur ses événements.
-    - **Commissions :** L'administrateur doit toucher une commission de 1€ par produit vendu par un prestataire. Ce montant doit être visible dans les dashboards financiers de l'admin et du prestataire.
-    - **Dashboards :**
-        - **Organisateur :** Moderniser les fiches produits. Ajouter un bloc explicatif sur le fonctionnement de la boutique. Permettre la suppression des produits prestataires sélectionnés.
-        - **Participant :** Refonte pour inclure un widget Agenda des événements et une section Nouveau Défi pour les nouveaux événements publiés.
-        - **Admin :** Doit être notifié des nouveaux événements et avoir la main pour les gérer (publier/dépublier).
-    - **Page Tous les événements :** Doit être modernisée avec un classement par mois et n'afficher que les événements publiés.
+    - **Workflow Prestataire-Organisateur :** Un flux complexe où les organisateurs sélectionnent des produits dans le catalogue d'un prestataire, qui personnalise ensuite ces produits avec le logo de l'organisateur avant de les rendre disponibles pour l'événement.
+    - **Commissions :** L'administrateur doit toucher une commission de 1€ par produit vendu par un prestataire.
+    - **Dashboards :** Modernisation et ajout de fonctionnalités pour tous les rôles (Organisateur, Participant, Admin).
+    - **Page Tous les événements :** Doit être modernisée et n'afficher que les événements publiés.
     - **Inscription Participant :** Le contact d'urgence doit être un champ obligatoire.
+    - **Import de Catalogue :** L'application doit permettre aux prestataires d'importer des produits depuis des catalogues externes comme TopTex et XDConnects.
+    - **Fonctionnalités P2/P3 :** Système de facturation, gestion communautaire, demandes de remboursement, location de matériel RFID, application de check-in, statistiques avancées, et notifications SMS.
+    - **Refactorisation (P1) :** Décomposition des composants monolithiques pour améliorer la maintenabilité.
 
 **User's preferred language**: fr
 
 **what currently exists?**
-L'application full-stack (React/FastAPI/MongoDB) est fonctionnelle. Les bugs critiques concernant l'import de catalogue TopTex (upload PDF et récupération d'image) ont été corrigés. Plusieurs améliorations d'UI/UX ont été implémentées, notamment un nouveau modal de partage, la modernisation des fiches produits, et la suppression de sections non désirées.
-Le nouveau workflow complexe de sélection/personnalisation de produits entre prestataire et organisateur a été implémenté (Phase 2), incluant la création de sélections, la personnalisation par le prestataire, et la synchronisation automatique des produits mis à jour vers l'espace de l'organisateur.
-La première partie (Phase A) d'une nouvelle série de demandes sur la gestion d'événements a été réalisée, mais n'a pas encore été validée par des tests approfondis.
+La plateforme est une application full-stack (React/FastAPI/MongoDB) avec une base de fonctionnalités solide. Les éléments suivants sont implémentés et fonctionnels :
+- **Gestion des événements (Phase A) & Améliorations Participant (Phase B) :** Complétés et validés.
+- **Importateurs de produits :** Fonctionnels pour TopTex (BeautifulSoup) et XDConnects (Playwright).
+- **Page d'accueil :** Entièrement modernisée.
+- **Système de commission (Phase C) :** L'admin perçoit désormais une commission de 1€ sur chaque produit de prestataire vendu. Les dashboards admin et prestataire reflètent ce calcul. Un script de migration a mis à jour les anciennes commandes.
+- **Bug Fix :** Le problème des images cassées pour les produits importés de XDConnects a été résolu.
+- **Ébauche des fonctionnalités P2/P3 :** Des routes backend, des pages/composants frontend et la logique de base ont été créés pour 7 nouvelles fonctionnalités (facturation, communauté, remboursements, RFID, check-in, statistiques, SMS).
+- **Refactorisation partielle :** Les dashboards  et  ont été partiellement décomposés par l'extraction de plusieurs sous-composants dans des fichiers dédiés.
 
 **Last working item**:
-- Last item agent was working on: L'agent venait de terminer l'implémentation de la **Phase A** des nouvelles demandes de l'utilisateur, axée sur la gestion des événements pour les organisateurs et les administrateurs. Cela inclut :
-    1.  Refonte du formulaire de création/modification d'événement.
-    2.  Ajout du téléchargement de règlement PDF et d'un champ T-shirt fourni.
-    3.  Amélioration de l'interface de gestion des épreuves (ajout de description, possibilité de réordonner).
-    4.  Mise en place d'un système de publication/dépublication des événements, avec notification à l'admin.
-- Status: TESTING PENDING
+- Last item agent was working on: L'agent a commencé la tâche de **refactorisation complète du fichier **. Après une première passe d'extraction de composants, il a découvert des composants pré-existants mais non utilisés dans le répertoire . L'agent s'apprêtait à analyser, synchroniser et intégrer ces composants pour finaliser la modularisation du dashboard.
+- Status: IN PROGRESS
 - Agent Testing Done: N
-- Which testing method agent to use? both
+- Which testing method agent to use? Frontend testing agent
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-Aucun bug n'est actuellement en cours. Le travail se concentre sur l'implémentation d'une nouvelle feature multi-phases.
+  - Aucun problème en suspens.
 
 **In progress Task List**:
-  - Task 1: Finaliser le grand chantier de refonte de la gestion d'événements et des dashboards.
-     - Where to resume: L'agent a terminé la Phase A. Il faut maintenant lancer les tests complets pour cette phase, puis présenter à l'utilisateur le plan pour les Phases B et C.
-     - What will be achieved with this?: Répondre à toutes les nouvelles exigences de l'utilisateur concernant l'expérience organisateur, participant et admin.
-     - Status: IN PROGRESS
-     - Should Test frontend/backend/both after fix?: both
+  - Task 1:  (P0) Finaliser la refactorisation de .
+
+ Task Detail:
+  - Task 1: 
+     - Where to resume: L'agent doit examiner les composants existants dans  (par exemple, , ). Il doit comparer leur code avec le code inline correspondant dans , les mettre à jour pour qu'ils soient synchronisés avec la logique actuelle, puis remplacer le code inline par des importations de ces composants externes.
+     - What will be achieved with this?: Réduire drastiquement la taille et la complexité de  (actuellement ~2500 lignes), ce qui améliorera considérablement la maintenabilité et la lisibilité du code.
+     - Status:  IN PROGRESS
+     - Should Test frontend/backend/both after fix?: frontend
      - Blocked on something: Non.
 
 **Upcoming and Future Tasks**
-*   **Upcoming Tasks (P0):**
-    *   **Phase B : Améliorations côté Participant**
-        *   Supprimer la page Accès réservé au login.
-        *   Sur le dashboard participant, ajouter un widget Agenda des événements et un bandeau Nouveau Défi pour les événements récents.
-        *   Rendre le contact d'urgence obligatoire lors de l'inscription à un événement.
-    *   **Phase B : Améliorations page Tous les événements**
-        *   N'afficher que les événements publiés.
-        *   Moderniser la page avec un classement par mois.
-*   **Upcoming Tasks (P1):**
-    *   **Phase C : Système de commission pour l'Admin**
-        *   Implémenter la logique pour qu'une commission de 1€ soit prélevée sur chaque vente de produit prestataire.
-        *   Mettre à jour le dashboard financier de l'admin pour suivre ces commissions.
-        *   Mettre à jour le dashboard financier du prestataire pour qu'il puisse voir les commissions versées (organisateur et admin).
-*   **Future Tasks (P2):**
-    *   Gestion Communautaire (interaction organisateur/participants).
-    *   Plateforme de location de matériel RFID.
-    -   Développement d'une application mobile dédiée au check-in.
-    -   Statistiques avancées pour les organisateurs.
-    -   Intégration Twilio pour les notifications SMS.
+*   **Upcoming Tasks (P3):** (Priorisés par l'utilisateur après la refactorisation)
+    *   **Finaliser les 7 fonctionnalités ébauchées :**
+        1.  **Facturation avancée :** Améliorer les PDF de factures (branding, plus de détails).
+        2.  **Gestion communautaire :** Polir l'interface du fil d'actualité, ajouter la pagination.
+        3.  **Demandes de remboursement :** Améliorer l'interface utilisateur et ajouter des notifications.
+        4.  **Location matériel RFID :** Construire l'interface de gestion de stock pour les organisateurs et de location pour les participants.
+        5.  **Application de check-in :** Développer une interface fonctionnelle pour le jour de l'événement.
+        6.  **Statistiques avancées :** Ajouter des filtres (par date) et plus de graphiques.
+        7.  **Notifications SMS (Twilio) :** Guider l'utilisateur pour la configuration des clés API et activer la fonctionnalité.
+*   **Future Tasks (Backlog):**
+    *   Améliorer l'onglet Commissions de l'admin avec des graphiques visuels (par ex: courbe mensuelle).
 
 **Completed work in this session**
-- **Correction des bugs de production (TopTex):**
-    - L'upload de PDF volumineux fonctionne désormais via une tâche en arrière-plan avec suivi de la progression.
-    - La récupération d'images lors de la recherche par référence est corrigée en utilisant le scraping de la balise .
-- **Améliorations UI/UX demandées :**
-    - Mise en place d'un modal de partage d'événement moderne.
-    - La commission sur les produits prestataires est désormais en lecture seule pour l'organisateur.
-    - Suppression de la section Devenir Organisateur pour les utilisateurs non-organisateurs.
-    - Les organisateurs ne peuvent plus modifier les produits issus des prestataires, mais peuvent les supprimer de leur boutique.
-    - Ajout d'un bloc d'information dans la boutique de l'organisateur.
-- **Workflow Prestataire-Organisateur (Phase 2) :**
-    - Création d'une nouvelle collection  pour gérer les demandes de personnalisation.
-    - Le prestataire est notifié lorsqu'un organisateur sélectionne ses produits.
-    - Le prestataire dispose d'une nouvelle interface pour voir les sélections par organisateur, accéder à leur logo, et téléverser les photos des produits personnalisés.
-    - Les produits personnalisés sont automatiquement synchronisés dans l'espace de l'organisateur.
-- **Gestion d'événements (Phase A - non encore testée) :**
-    - Refonte complète du formulaire de création/édition d'événement avec une gestion améliorée des épreuves (réorganisation, description).
-    - Ajout d'un système de publication et de notification à l'admin.
-- **Création de données de test :**
-    - Création de 2 nouveaux comptes organisateurs avec des événements et des sélections de produits pour permettre au client de tester le workflow.
+- **Phase C - Système de commission Admin :** Implémenté de bout en bout (backend, frontend, migration de données) et validé par le testing agent.
+- **Bug Fix - Images XD Connects :** Corrigé en s'assurant que les URL des images sont correctement encodées.
+- **Ébauche des fonctionnalités P2/P3 :** Création des routes backend, des pages et composants frontend de base pour 7 nouvelles fonctionnalités.
+- **Refactorisation partielle (P1) :**
+    -  a été réduit d'environ 300 lignes en extrayant les onglets , ,  et  dans des sous-composants.
+    -  a été partiellement nettoyé en extrayant  et  dans des fichiers séparés.
+- **Correction de régression :** Un endpoint dupliqué () identifié par le testing agent a été supprimé.
+
+**Earlier issues found/mentioned but not fixed**
+   - Aucun.
+
+**Known issue recurrence from previous fork**
+  - Aucun.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Frontend:** React, TailwindCSS, Shadcn UI,  (ou similaire à implémenter pour le drag-and-drop des épreuves).
-- **Backend:** FastAPI, , Tâches en arrière-plan (pour l'upload de PDF).
+- **Frontend:** React, TailwindCSS, Shadcn UI
+- **Backend:** FastAPI, APIRouter
 - **Database:** MongoDB
-- **PDF Parsing:** 
-- **Web Scraping:** , 
+- **Web Scraping:** 
+- **PDF Generation:** 
+- **Data Seeding:** Script ad-hoc dans  pour les données de démo RFID.
 
 **key DB schema**
-- **events**: Ajout de , , . Le champ  contient maintenant un .
-- **selections**: Nouvelle collection .
-- **provider_products**: Le champ  est maintenant un tableau de strings.
+- **orders**: Migration pour ajouter  et  aux items.
+- **new collections**: , , , .
+
+**changes in tech stack**
+  - Ajout de  pour la génération de PDF.
 
 **All files of reference**
-- : Modifié pour refléter les nouveaux champs dans la collection .
-- : Fortement modifié pour la publication, la notification admin, et les nouveaux champs.
-- : Nouveau fichier pour gérer le workflow de personnalisation.
-- : Modifié pour créer/mettre à jour les sélections.
-- : Modifié pour ajouter le routeur  et mettre à jour le script de seeding.
-- : Fortement modifié pour la refonte du formulaire d'événement, la gestion de la publication et la modernisation des cartes produits.
-- : Fortement modifié pour supprimer l'import PDF et ajouter la nouvelle section Sélections.
+- : Fichier principal de la tâche de refactorisation en cours.
+- : Répertoire cible pour les composants extraits de .
+- : Contient l'enregistrement de toutes les nouvelles routes et un script de seeding pour les données RFID.
+- : Contient la logique pour les nouveaux onglets (Commissions, Factures, Remboursements).
+- : Mis à jour pour les demandes de remboursement et le téléchargement de factures.
 
 **Areas that need refactoring**:
-- ** et ** sont devenus des composants monolithiques (> 1000 lignes) gérant de multiples états, sections et dialogues. Ils devraient être décomposés en composants plus petits et spécialisés pour améliorer la lisibilité et la maintenance.
+- ****: Dette technique très élevée. C'est la tâche P0 en cours.
+- ****: A été amélioré mais peut encore être décomposé.
 
 **key api endpoints**
-- : (POST) Nouvel endpoint pour basculer le statut de publication d'un événement.
-- : (GET) Endpoint pour le prestataire pour lister toutes les sélections en attente.
-- : (PUT) Endpoint pour le prestataire pour mettre à jour une sélection (statut, images personnalisées).
-- : (POST) Modifié pour créer une  lors de l'ajout d'un produit.
+- : (GET) Récupère les stats des commissions pour l'admin.
+- : (GET) Récupère les stats financières (incluant commissions) pour le prestataire.
+- : (GET) Génère et télécharge une facture en PDF.
+- : (GET/POST) Gère le fil d'actualité d'un événement.
+- : (GET/POST/PUT) Gère les demandes de remboursement.
+- : (GET) Fournit les statistiques de check-in (organisateur uniquement).
+- : (GET) Fournit des statistiques avancées pour un événement.
 
 **Critical Info for New Agent**
-- Votre première tâche est de **valider l'implémentation de la Phase A** en utilisant le testing agent. Cette phase introduit des changements majeurs dans la gestion des événements et n'a pas été entièrement testée.
-- Une fois la Phase A validée, vous devrez **présenter un plan à l'utilisateur pour les Phases B et C**, qui concernent les améliorations du côté participant et le système de commission pour l'admin.
-- Les composants  et  sont très volumineux. Soyez prudent lors des modifications et envisagez de proposer une refactorisation si l'occasion se présente.
-- Le workflow de sélection (Phase 2) est complexe mais entièrement implémenté et testé. Référez-vous aux fichiers  et  pour comprendre sa logique.
+- La priorité absolue (P0) est de **terminer la refactorisation de **.
+- La stratégie consiste à utiliser les composants déjà présents mais non connectés dans . Vous devez les analyser, les synchroniser avec la logique actuelle du dashboard, et les intégrer pour remplacer le code inline. Soyez prudent car ces fichiers pourraient être désynchronisés.
+- Une fois la refactorisation terminée et validée via le testing agent, l'utilisateur souhaite que vous commenciez à finaliser les 7 fonctionnalités P3 qui ont été ébauchées.
 
 **documents and test reports created in this job**
--  à 
+-  (mis à jour)
+- 
+- 
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Demande une série de 12 modifications majeures concernant la gestion des événements, les dashboards participant/admin, et la page Tous les événements.
-2.  **Agent:** Accuse réception, analyse la demande et la divise en 3 phases (A, B, C).
-3.  **Agent:** Propose un plan détaillé pour la Phase A (Gestion d'événements pour l'organisateur/admin).
-4.  **User:** Approuve le plan pour la Phase A (ok).
-5.  ... (L'agent implémente la Phase A) ...
-6.  **Agent:** Affiche un screenshot de la nouvelle interface de création d'événement.
+1.  **User:**  - Confirme vouloir la refactorisation P1, puis les tâches P2/P3.
+2.  **User:**  - Approuve le plan de refactorisation.
+3.  **User:**  - Choisit de commencer par la refactorisation.
+4.  **User:**  - Approuve un plan précédent.
+5.  **User:**  - Demande de continuer après qu'un bug ait été trouvé et que l'agent propose une correction.
+6.  **User:**  - Approuve l'implémentation des 7 fonctionnalités P2/P3.
+7.  **User:**  - Choisit de travailler sur les fonctionnalités P2.
+8.  **User:**  - Demande la suite après la finalisation de la Phase C.
+9.  **User:**  - Approuve le plan de test pour la phase C.
+10. **User:**  - Approuve un plan de refactorisation.
 
 **Project Health Check:**
 - **Broken:** Aucun.
-- **Mocked:** Aucun.
-- **Technical Debt:** Élevée sur les composants  et  qui sont devenus des god components.
+- **Mocked:** L'intégration Twilio est en mode dégradé (elle sauvegarde les notifications en base de données mais ne les envoie pas par SMS tant que les clés API ne sont pas configurées).
+- **Technical Debt:** **Élevée** sur , qui est l'objet de la tâche de refactorisation en cours.
 
 **3rd Party Integrations**
-- **SumUp (Payments):** Intégré et fonctionnel.
-- **TopTex (Product Catalog):** Intégration via scraping/parsing. Fonctionnelle.
+- **SumUp (Payments):** Existant.
 - **Square (Payments):** Existant.
 - **Resend (Email):** Existant.
-- **fpdf2 (PDF Generation):** Existant.
+- **TopTex (Product Catalog):** Intégration via scraping .
+- **Playwright:** Utilisé pour le scraping de .
+- **fpdf2:** Utilisé pour la génération de factures PDF.
+- **Twilio:** Scaffolding mis en place, en attente de configuration par l'utilisateur.
 
 **Testing status**
-- Testing agent used after significant changes: YES (5 fois au total, la dernière a validé le workflow de sélection).
-- Test files created: []
-- Known regressions: Aucune.
+  - Testing agent used after significant changes: YES (utilisé deux fois pour valider la phase C, les 7 nouvelles fonctionnalités et la correction de bug).
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: []
+  - Known regressions: Aucun.
 
 **Credentials to test flow:**
 | Rôle | Email | Mot de passe | Notes |
 |---|---|---|---|
 | Admin |  |  | |
-| Organisateur |  |  | Compte original |
+| Organisateur |  |  | |
 | Participant |  |  | |
-| Prestataire |  |  | |
-| Organisateur |  |  | Nouveau, pour test |
-| Organisateur | |  | Nouveau, pour test |
+| Prestataire |  |  | Nom de l'entreprise : Moreati |
+| Organisateur |  |  | Compte de test |
+| Organisateur | |  | Compte de test |
 
 **What agent forgot to execute**
-- L'agent n'a pas lancé une session de test complète (via ) après avoir terminé l'implémentation de la Phase A, qui contient des modifications substantielles du backend et du frontend.</analysis>
+- Rien. La découverte des composants non utilisés fait maintenant partie de la tâche de refactorisation en cours.</analysis>
