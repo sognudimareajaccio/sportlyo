@@ -122,10 +122,42 @@ const ProviderDashboard = () => {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const res = await api.post('/provider/import/parse-pdf', formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 });
-      setImportProducts(res.data.products || []);
-      toast.success(`${res.data.total} produits trouvés dans le catalogue !`);
-    } catch (e) { toast.error(e.response?.data?.detail || 'Erreur analyse PDF'); }
+      // Step 1: Upload the PDF
+      const uploadRes = await api.post('/provider/import/parse-pdf', formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 300000 });
+      const taskId = uploadRes.data.task_id;
+      if (!taskId) {
+        // Legacy response (direct products)
+        setImportProducts(uploadRes.data.products || []);
+        toast.success(`${uploadRes.data.total} produits trouvés !`);
+        setParsing(false);
+        return;
+      }
+      toast.info('PDF uploadé, analyse en cours...');
+      // Step 2: Poll for results
+      let attempts = 0;
+      const maxAttempts = 120; // 2 minutes max polling
+      while (attempts < maxAttempts) {
+        await new Promise(r => setTimeout(r, 2000)); // Poll every 2s
+        attempts++;
+        try {
+          const statusRes = await api.get(`/provider/import/pdf-status/${taskId}`);
+          if (statusRes.data.status === 'done') {
+            setImportProducts(statusRes.data.products || []);
+            toast.success(`${statusRes.data.total} produits trouvés dans le catalogue !`);
+            setParsing(false);
+            return;
+          }
+          // Still processing, continue polling
+        } catch (pollErr) {
+          if (pollErr.response?.status === 500) {
+            toast.error(pollErr.response?.data?.detail || 'Erreur analyse PDF');
+            setParsing(false);
+            return;
+          }
+        }
+      }
+      toast.error('Le traitement a pris trop de temps. Essayez avec un fichier plus petit.');
+    } catch (e) { toast.error(e.response?.data?.detail || 'Erreur upload PDF'); }
     finally { setParsing(false); }
   };
 

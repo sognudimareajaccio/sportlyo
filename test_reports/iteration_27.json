@@ -1,0 +1,81 @@
+{
+  "summary": "Iteration 27: TopTex Import Bug Fixes Testing - BOTH BUGS VERIFIED FIXED. 13/13 backend tests passed. PA4045 and K356 lookups return valid image_url from cdn.toptex.com. PDF upload uses background task pattern with task_id polling. Add-single import works correctly.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "Provider login works (boutique@sportlyo.fr / boutique123)",
+    "GET /api/provider/import/lookup/PA4045 returns 200 with valid image_url containing cdn.toptex.com",
+    "GET /api/provider/import/lookup/K356 returns 200 with valid image_url containing cdn.toptex.com",
+    "Lookup returns product name, price, sizes, colors from og:image scraping",
+    "Lookup invalid reference returns 400",
+    "Lookup requires authentication (401/403 without token)",
+    "POST /api/provider/import/parse-pdf returns task_id for background processing",
+    "GET /api/provider/import/pdf-status/{task_id} returns status (uploading/processing/done/error)",
+    "PDF status returns 404 for invalid task_id",
+    "PDF endpoint validates file type (rejects non-PDF)",
+    "PDF endpoint requires authentication",
+    "POST /api/provider/import/add-single successfully adds lookup product to catalogue",
+    "POST /api/provider/import/confirm validates empty products list",
+    "Frontend Import TopTex tab loads correctly",
+    "Frontend lookup input and button work",
+    "Frontend shows product with image after lookup",
+    "Frontend 'Ajouter au catalogue' button works",
+    "Product appears in Catalogue after add-single import"
+  ],
+
+  "bug_fixes_verified": {
+    "bug_1_pdf_background_task": {
+      "status": "FIXED",
+      "description": "PDF upload now uses background task pattern",
+      "test_evidence": "POST /api/provider/import/parse-pdf returns {task_id, message}. GET /api/provider/import/pdf-status/{task_id} returns status and products when done."
+    },
+    "bug_2_image_url_og_image": {
+      "status": "FIXED",
+      "description": "TopTex lookup extracts image_url from og:image meta tag",
+      "test_evidence": {
+        "PA4045": "https://cdn.toptex.com/pictures/PA4045-14_2026.jpg?w=660",
+        "K356": "https://cdn.toptex.com/pictures/K356-01_2025.jpg?w=660"
+      }
+    }
+  },
+
+  "test_report_links": [
+    "/app/backend/tests/test_toptex_bugs.py",
+    "/app/test_reports/pytest/pytest_toptex_bugs.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [],
+
+  "updated_files": [
+    "/app/backend/tests/test_toptex_bugs.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (13/13 tests passed)",
+    "frontend": "100% (all UI features verified)"
+  },
+
+  "test_credentials": {
+    "provider": "boutique@sportlyo.fr / boutique123",
+    "preview_access": "?preview=SPORTLYO2026"
+  },
+
+  "seed_data_creation": "Added K356 product to provider catalogue via add-single endpoint",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 27 verified TopTex import bug fixes. Bug 1: PDF upload uses background task pattern - parse-pdf returns task_id, pdf-status polls for completion. Bug 2: Image URLs now correctly extracted from og:image meta tag, returning cdn.toptex.com URLs. K356 was added to catalogue during testing (now 19 products). Lookup endpoints: /api/provider/import/lookup/{ref}, /api/provider/import/add-single, /api/provider/import/parse-pdf, /api/provider/import/pdf-status/{task_id}."
+}

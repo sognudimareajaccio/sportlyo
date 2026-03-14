@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Request
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Request, BackgroundTasks
 from deps import db, get_current_user
 import fitz  # PyMuPDF
 import re
@@ -7,11 +7,15 @@ import tempfile
 import os
 import httpx
 import logging
+import asyncio
 from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
+
+# In-memory store for background PDF processing tasks
+_pdf_tasks = {}
 
 TOPTEX_IMG = "https://cdn.toptex.com/pictures"
 
@@ -150,6 +154,25 @@ def parse_toptex_pdf(pdf_path: str) -> list:
     return result
 
 
+def _process_pdf_sync(task_id: str, pdf_path: str):
+    """Process PDF synchronously in background thread."""
+    try:
+        _pdf_tasks[task_id]["status"] = "processing"
+        products = parse_toptex_pdf(pdf_path)
+        _pdf_tasks[task_id]["status"] = "done"
+        _pdf_tasks[task_id]["products"] = products
+        _pdf_tasks[task_id]["total"] = len(products)
+    except Exception as e:
+        logger.error(f"PDF processing error for task {task_id}: {e}")
+        _pdf_tasks[task_id]["status"] = "error"
+        _pdf_tasks[task_id]["error"] = str(e)
+    finally:
+        try:
+            os.unlink(pdf_path)
+        except:
+            pass
+
+
 @router.post("/provider/import/parse-pdf")
 async def parse_toptex_catalog(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
     if current_user['role'] != 'provider':
@@ -158,17 +181,60 @@ async def parse_toptex_catalog(file: UploadFile = File(...), current_user: dict 
     if not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Fichier PDF requis")
 
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+    # Stream file to disk in chunks to handle large files
+    tmp_path = os.path.join(tempfile.gettempdir(), f"toptex_{uuid.uuid4().hex}.pdf")
+    total_size = 0
+    max_size = 100 * 1024 * 1024  # 100MB limit
+
     try:
-        content = await file.read()
-        tmp.write(content)
-        tmp.close()
-        products = parse_toptex_pdf(tmp.name)
-        return {"products": products, "total": len(products)}
+        with open(tmp_path, "wb") as f:
+            while True:
+                chunk = await file.read(512 * 1024)  # 512KB chunks
+                if not chunk:
+                    break
+                total_size += len(chunk)
+                if total_size > max_size:
+                    os.unlink(tmp_path)
+                    raise HTTPException(status_code=413, detail="Fichier trop volumineux (max 100MB)")
+                f.write(chunk)
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur d'analyse: {str(e)}")
-    finally:
-        os.unlink(tmp.name)
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+        raise HTTPException(status_code=500, detail=f"Erreur upload: {str(e)}")
+
+    # Create a background task
+    task_id = uuid.uuid4().hex[:16]
+    _pdf_tasks[task_id] = {"status": "uploading", "products": [], "total": 0, "error": None}
+
+    # Run the CPU-intensive PDF processing in a thread
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, _process_pdf_sync, task_id, tmp_path)
+
+    return {"task_id": task_id, "message": "Analyse du PDF en cours..."}
+
+
+@router.get("/provider/import/pdf-status/{task_id}")
+async def get_pdf_task_status(task_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] != 'provider':
+        raise HTTPException(status_code=403, detail="Prestataire requis")
+
+    task = _pdf_tasks.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Tache non trouvee")
+
+    if task["status"] == "done":
+        products = task["products"]
+        # Clean up task after retrieval
+        del _pdf_tasks[task_id]
+        return {"status": "done", "products": products, "total": len(products)}
+    elif task["status"] == "error":
+        error = task["error"]
+        del _pdf_tasks[task_id]
+        raise HTTPException(status_code=500, detail=f"Erreur d'analyse: {error}")
+    else:
+        return {"status": task["status"]}
 
 
 @router.post("/provider/import/confirm")
@@ -288,30 +354,25 @@ async def lookup_toptex_reference(ref: str, current_user: dict = Depends(get_cur
                 price = float(match.group(1).replace(',', '.'))
                 break
 
-        # Extract colors
+        # Extract colors from sticker images (most reliable source)
         colors = []
-        # Look for color swatches/labels
-        for el in soup.find_all(['span', 'div', 'li', 'img']):
-            alt = el.get('alt', '')
-            title = el.get('title', '')
-            for candidate in [alt, title]:
-                if candidate and any(c in candidate.lower() for c in ['black', 'white', 'navy', 'red', 'blue', 'green', 'grey', 'orange', 'yellow', 'pink']):
-                    clean = candidate.strip()
-                    if clean and clean not in colors and len(clean) < 50:
-                        colors.append(clean)
-
-        # Also look for color names in text between "couleur" markers
-        color_section = re.findall(r'(?:Black|White|Navy|Sporty\s+\w+|Dark\s+\w+|Light\s+\w+|Fluorescent\s+\w+|Sky\s+\w+)(?:\s*/\s*(?:Black|White|Navy|Sporty\s+\w+|Dark\s+\w+|Light\s+\w+|Fluorescent\s+\w+|Sky\s+\w+))*', prod_res.text)
-        for c in color_section:
-            c = c.strip()
-            if c and c not in colors:
-                colors.append(c)
+        for img in soup.find_all('img', src=True, alt=True):
+            src = img.get('src', '')
+            alt = img.get('alt', '').strip()
+            if 'stickers/' in src and alt and len(alt) < 60:
+                if alt not in colors:
+                    colors.append(alt)
         colors = list(dict.fromkeys(colors))[:12]  # dedupe, max 12
 
-        # Translate colors
+        # Translate colors (handle multi-color like "Black / White")
         translated_colors = []
         for c in colors:
-            translated = COLOR_MAP.get(c.upper(), c)
+            if '/' in c:
+                parts = [p.strip() for p in c.split('/')]
+                translated_parts = [COLOR_MAP.get(p.upper(), p) for p in parts]
+                translated = ' / '.join(translated_parts)
+            else:
+                translated = COLOR_MAP.get(c.upper(), c)
             if translated not in translated_colors:
                 translated_colors.append(translated)
 
@@ -343,16 +404,28 @@ async def lookup_toptex_reference(ref: str, current_user: dict = Depends(get_cur
 
         description = ' — '.join(desc_parts) if desc_parts else name
 
-        # Image URL
-        image_url = f"https://cdn.toptex.com/pictures/{ref}_2026.jpg?w=660"
-        # Check if 2026 image exists, fallback to 2025
-        try:
-            async with httpx.AsyncClient(timeout=5) as client:
-                img_check = await client.head(image_url)
-                if img_check.status_code != 200:
-                    image_url = f"https://cdn.toptex.com/pictures/{ref}_2025.jpg?w=660"
-        except:
-            pass
+        # Image URL - extract from og:image meta tag (most reliable)
+        image_url = ""
+        og_img = soup.find('meta', property='og:image')
+        if og_img and og_img.get('content'):
+            image_url = og_img['content']
+            # Ensure good resolution
+            if '?w=' not in image_url:
+                image_url += '?w=660'
+            elif '?w=' in image_url:
+                image_url = re.sub(r'\?w=\d+', '?w=660', image_url)
+
+        # Fallback: find main product image from gallery
+        if not image_url:
+            for img in soup.find_all('img', src=True):
+                src = img['src']
+                if f'{ref}_' in src and 'cdn.toptex.com/pictures' in src:
+                    image_url = re.sub(r'\?w=\d+', '', src) + '?w=660'
+                    break
+
+        # Final fallback: construct URL
+        if not image_url:
+            image_url = f"https://cdn.toptex.com/pictures/{ref}_2026.jpg?w=660"
 
         # Determine category
         category = "Sport"
