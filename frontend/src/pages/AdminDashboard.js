@@ -4,7 +4,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   Users, Calendar, Euro, TrendingUp, BarChart3,
-  Settings, Search, ChevronLeft, ChevronRight, Download, FileText, MessageSquare, ShoppingBag, Check, X
+  Settings, Search, ChevronLeft, ChevronRight, Download, FileText, MessageSquare, ShoppingBag, Check, X,
+  CheckCircle, XCircle
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -34,6 +35,9 @@ const AdminDashboard = () => {
   const [eventFilter, setEventFilter] = useState('all');
   const [providers, setProviders] = useState([]);
   const [commissionData, setCommissionData] = useState(null);
+  const [allInvoices, setAllInvoices] = useState([]);
+  const [invoiceTotals, setInvoiceTotals] = useState({ total_count: 0, total_amount: 0 });
+  const [refundRequests, setRefundRequests] = useState([]);
 
   useEffect(() => {
     if (user?.role !== 'admin') {
@@ -46,13 +50,15 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [statsRes, usersRes, paymentsRes, eventsRes, providersRes, commissionsRes] = await Promise.all([
+      const [statsRes, usersRes, paymentsRes, eventsRes, providersRes, commissionsRes, invoicesRes, refundsRes] = await Promise.all([
         adminApi.getStats(),
         adminApi.getUsers({ page: 1, limit: 20 }),
         adminApi.getPayments({ page: 1, limit: 100 }),
         api.get('/events'),
         api.get('/admin/providers'),
-        api.get('/admin/commissions')
+        api.get('/admin/commissions'),
+        api.get('/admin/invoices'),
+        api.get('/admin/refunds/all')
       ]);
       setStats(statsRes.data);
       setUsers(usersRes.data.users);
@@ -62,6 +68,9 @@ const AdminDashboard = () => {
       setEvents(eventsRes.data.events || eventsRes.data || []);
       setProviders(providersRes.data.providers || []);
       setCommissionData(commissionsRes.data);
+      setAllInvoices(invoicesRes.data.invoices || []);
+      setInvoiceTotals({ total_count: invoicesRes.data.total_count || 0, total_amount: invoicesRes.data.total_amount || 0 });
+      setRefundRequests(refundsRes.data.refunds || []);
     } catch (error) {
       console.error('Error fetching admin data:', error);
       toast.error('Erreur lors du chargement des données');
@@ -180,7 +189,7 @@ const AdminDashboard = () => {
               <p className="text-slate-400">Gérez la plateforme SportLyo</p>
             </div>
             <div className="flex gap-2">
-              {['overview', 'users', 'payments', 'commissions', 'providers', 'messages'].map(tab => (
+              {['overview', 'users', 'payments', 'commissions', 'invoices', 'refunds', 'providers', 'messages'].map(tab => (
                 <Button
                   key={tab}
                   variant={activeTab === tab ? 'default' : 'outline'}
@@ -188,7 +197,7 @@ const AdminDashboard = () => {
                   onClick={() => setActiveTab(tab)}
                   data-testid={`tab-${tab}`}
                 >
-                  {tab === 'overview' ? 'Vue d\'ensemble' : tab === 'users' ? 'Utilisateurs' : tab === 'payments' ? 'Paiements' : tab === 'commissions' ? 'Commissions' : tab === 'providers' ? `Prestataires${providers.filter(p => p.status === 'pending').length > 0 ? ` (${providers.filter(p => p.status === 'pending').length})` : ''}` : 'Messages'}
+                  {tab === 'overview' ? 'Vue d\'ensemble' : tab === 'users' ? 'Utilisateurs' : tab === 'payments' ? 'Paiements' : tab === 'commissions' ? 'Commissions' : tab === 'invoices' ? 'Factures' : tab === 'refunds' ? 'Remboursements' : tab === 'providers' ? `Prestataires${providers.filter(p => p.status === 'pending').length > 0 ? ` (${providers.filter(p => p.status === 'pending').length})` : ''}` : 'Messages'}
                 </Button>
               ))}
             </div>
@@ -610,6 +619,172 @@ const AdminDashboard = () => {
                       </tr>
                     </tfoot>
                   )}
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'refunds' && (
+          <div className="space-y-6" data-testid="refunds-tab">
+            {/* Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-asphalt text-white p-6 border-l-4 border-brand">
+                <p className="text-xs font-heading uppercase text-slate-400 mb-1">Demandes en attente</p>
+                <p className="text-3xl font-heading font-extrabold text-brand" data-testid="refunds-pending-count">{refundRequests.filter(r => r.status === 'pending').length}</p>
+              </div>
+              <div className="bg-white border border-slate-200 p-6">
+                <p className="text-xs font-heading uppercase text-slate-500 mb-1">Approuves</p>
+                <p className="text-3xl font-heading font-extrabold text-green-600">{refundRequests.filter(r => r.status === 'approved').length}</p>
+              </div>
+              <div className="bg-white border border-slate-200 p-6">
+                <p className="text-xs font-heading uppercase text-slate-500 mb-1">Montant rembourse</p>
+                <p className="text-3xl font-heading font-extrabold text-slate-800">{refundRequests.filter(r => r.status === 'approved').reduce((s, r) => s + (r.amount || 0), 0).toFixed(2)}€</p>
+              </div>
+            </div>
+
+            {/* Refund requests table */}
+            <div className="bg-white border border-slate-200" data-testid="refunds-table">
+              <div className="p-4 border-b">
+                <h3 className="font-heading font-bold uppercase">Demandes de remboursement</h3>
+              </div>
+              <div className="divide-y">
+                {refundRequests.length > 0 ? refundRequests.map(ref => (
+                  <div key={ref.refund_id} className="p-4 hover:bg-slate-50 transition-colors" data-testid={`refund-row-${ref.refund_id}`}>
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className="font-heading font-bold text-sm">{ref.user_name} <span className="text-slate-400 font-normal text-xs">({ref.user_email})</span></p>
+                        <p className="text-xs text-slate-500">{ref.event_title}</p>
+                        <p className="text-xs text-slate-500 mt-1">Motif : <span className="italic text-slate-600">{ref.reason}</span></p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-heading font-bold text-lg">{ref.amount?.toFixed(2)}€</p>
+                        <span className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase ${ref.status === 'approved' ? 'bg-green-100 text-green-700' : ref.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                          {ref.status === 'approved' ? 'Approuve' : ref.status === 'rejected' ? 'Refuse' : 'En attente'}
+                        </span>
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          {ref.created_at && format(new Date(ref.created_at), 'd MMM yyyy HH:mm', { locale: fr })}
+                        </p>
+                      </div>
+                    </div>
+                    {ref.status === 'pending' && (
+                      <div className="flex gap-2 mt-2">
+                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white text-xs gap-1"
+                          data-testid={`approve-refund-${ref.refund_id}`}
+                          onClick={async () => {
+                            try {
+                              await api.put(`/admin/refunds/${ref.refund_id}/process`, { status: 'approved' });
+                              setRefundRequests(prev => prev.map(r => r.refund_id === ref.refund_id ? { ...r, status: 'approved' } : r));
+                              toast.success('Remboursement approuve');
+                            } catch { toast.error('Erreur'); }
+                          }}>
+                          <CheckCircle className="w-3 h-3" /> Approuver
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-xs gap-1 text-red-600 border-red-200"
+                          data-testid={`reject-refund-${ref.refund_id}`}
+                          onClick={async () => {
+                            try {
+                              await api.put(`/admin/refunds/${ref.refund_id}/process`, { status: 'rejected', admin_note: 'Refuse par admin' });
+                              setRefundRequests(prev => prev.map(r => r.refund_id === ref.refund_id ? { ...r, status: 'rejected' } : r));
+                              toast.success('Remboursement refuse');
+                            } catch { toast.error('Erreur'); }
+                          }}>
+                          <XCircle className="w-3 h-3" /> Refuser
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )) : (
+                  <div className="p-8 text-center text-slate-400 text-sm">Aucune demande de remboursement</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'invoices' && (
+          <div className="space-y-6" data-testid="invoices-tab">
+            {/* Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-asphalt text-white p-6 border-l-4 border-brand">
+                <p className="text-xs font-heading uppercase text-slate-400 mb-1">Total factures</p>
+                <p className="text-3xl font-heading font-extrabold text-brand" data-testid="invoices-total-count">{invoiceTotals.total_count}</p>
+              </div>
+              <div className="bg-white border border-slate-200 p-6">
+                <p className="text-xs font-heading uppercase text-slate-500 mb-1">Montant total facture</p>
+                <p className="text-3xl font-heading font-extrabold text-slate-800" data-testid="invoices-total-amount">{invoiceTotals.total_amount.toFixed(2)}€</p>
+              </div>
+            </div>
+
+            {/* Invoices Table */}
+            <div className="bg-white border border-slate-200" data-testid="invoices-table">
+              <div className="p-4 border-b">
+                <h3 className="font-heading font-bold uppercase">Toutes les factures</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="text-left p-3 font-heading text-xs font-bold uppercase">N° Facture</th>
+                      <th className="text-left p-3 font-heading text-xs font-bold uppercase">Client</th>
+                      <th className="text-left p-3 font-heading text-xs font-bold uppercase">Type</th>
+                      <th className="text-right p-3 font-heading text-xs font-bold uppercase">Montant</th>
+                      <th className="text-center p-3 font-heading text-xs font-bold uppercase">Statut</th>
+                      <th className="text-left p-3 font-heading text-xs font-bold uppercase">Date</th>
+                      <th className="text-center p-3 font-heading text-xs font-bold uppercase">PDF</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allInvoices.map(inv => (
+                      <tr key={inv.invoice_id} className="border-b hover:bg-slate-50" data-testid={`admin-invoice-${inv.invoice_id}`}>
+                        <td className="p-3 font-mono text-xs font-bold">{inv.invoice_number}</td>
+                        <td className="p-3">
+                          <div className="font-medium text-sm">{inv.user_name || '—'}</div>
+                          <div className="text-xs text-slate-400">{inv.user_email || ''}</div>
+                        </td>
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 text-[10px] font-bold uppercase ${inv.source_type === 'registration' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+                            {inv.source_type === 'registration' ? 'Inscription' : 'Boutique'}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right font-heading font-bold">{inv.total?.toFixed(2)}€</td>
+                        <td className="p-3 text-center">
+                          <span className="px-2 py-0.5 text-[10px] font-bold uppercase bg-green-100 text-green-700">
+                            {inv.status === 'paid' ? 'Payée' : inv.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-xs text-slate-500">
+                          {inv.created_at && format(new Date(inv.created_at), 'd MMM yyyy', { locale: fr })}
+                        </td>
+                        <td className="p-3 text-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1 text-xs h-7"
+                            data-testid={`admin-download-invoice-${inv.invoice_id}`}
+                            onClick={async () => {
+                              try {
+                                const res = await api.get(`/invoices/${inv.invoice_id}/pdf`, { responseType: 'blob' });
+                                const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `facture_${inv.invoice_number}.pdf`;
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                                window.URL.revokeObjectURL(url);
+                              } catch { /* ignore */ }
+                            }}
+                          >
+                            <Download className="w-3 h-3" /> PDF
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                    {allInvoices.length === 0 && (
+                      <tr><td colSpan="7" className="p-8 text-center text-slate-400">Aucune facture</td></tr>
+                    )}
+                  </tbody>
                 </table>
               </div>
             </div>

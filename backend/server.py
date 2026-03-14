@@ -33,6 +33,13 @@ from routers.notifications import router as notifications_router
 from routers.toptex_import import router as toptex_router
 from routers.selections import router as selections_router
 from routers.xdconnects_import import router as xdconnects_router
+from routers.invoices import router as invoices_router
+from routers.community import router as community_router
+from routers.refunds import router as refunds_router
+from routers.rfid import router as rfid_router
+from routers.checkin import router as checkin_router
+from routers.analytics import router as analytics_router
+from routers.sms import router as sms_router
 
 app.include_router(auth_router)
 app.include_router(events_router)
@@ -51,6 +58,13 @@ app.include_router(notifications_router)
 app.include_router(toptex_router)
 app.include_router(selections_router)
 app.include_router(xdconnects_router)
+app.include_router(invoices_router)
+app.include_router(community_router)
+app.include_router(refunds_router)
+app.include_router(rfid_router)
+app.include_router(checkin_router)
+app.include_router(analytics_router)
+app.include_router(sms_router)
 
 
 # ============== HEALTH CHECK ==============
@@ -291,6 +305,23 @@ async def seed_default_accounts():
                 {"$set": {"items": updated_items}}
             )
         logger.info(f"Migration: backfilled admin_commission on order {o['order_id']}")
+
+    # Seed RFID equipment if empty
+    rfid_count = await db.rfid_equipment.count_documents({})
+    if rfid_count == 0:
+        rfid_items = [
+            {"equipment_id": "rfid_chip_basic", "name": "Puce RFID UHF passive", "description": "Puce de chronometrage passive UHF, ideale pour les courses de masse. Etanche, legere, fixation au dossard.", "category": "chronometrage", "daily_rate": 0.50, "quantity_total": 2000, "quantity_available": 2000, "image_url": "", "specs": {"frequency": "860-960 MHz", "range": "10m", "weight": "2g"}},
+            {"equipment_id": "rfid_reader_gate", "name": "Portique lecteur RFID", "description": "Portique de detection double antenne pour ligne d'arrivee. Detection automatique des passages.", "category": "chronometrage", "daily_rate": 150, "quantity_total": 10, "quantity_available": 10, "image_url": "", "specs": {"range": "6m", "speed": "200 tags/sec"}},
+            {"equipment_id": "rfid_mat_timing", "name": "Tapis de chronometrage", "description": "Tapis de sol avec antennes integrees. Installation rapide, resistant aux intemperies.", "category": "chronometrage", "daily_rate": 200, "quantity_total": 8, "quantity_available": 8, "image_url": "", "specs": {"width": "4m", "detection": "99.9%"}},
+            {"equipment_id": "rfid_handheld", "name": "Lecteur RFID portable", "description": "Terminal portable pour le check-in et la verification des dossards sur le terrain.", "category": "accessoire", "daily_rate": 35, "quantity_total": 20, "quantity_available": 20, "image_url": "", "specs": {"battery": "8h", "bluetooth": True}},
+            {"equipment_id": "rfid_display", "name": "Ecran resultats LED", "description": "Ecran geant LED pour affichage des temps en direct. Visible en plein soleil.", "category": "affichage", "daily_rate": 120, "quantity_total": 5, "quantity_available": 5, "image_url": "", "specs": {"size": "2m x 1m", "brightness": "5000 nits"}},
+            {"equipment_id": "rfid_server_kit", "name": "Serveur chronometrage", "description": "Kit serveur avec logiciel de chronometrage, backup automatique et export resultats.", "category": "logiciel", "daily_rate": 80, "quantity_total": 6, "quantity_available": 6, "image_url": "", "specs": {"participants_max": 10000, "backup": "temps reel"}},
+        ]
+        from datetime import datetime, timezone
+        for item in rfid_items:
+            item["created_at"] = datetime.now(timezone.utc).isoformat()
+            await db.rfid_equipment.insert_one(item)
+        logger.info("Seed: created 6 RFID equipment items")
 
 
 @app.on_event("shutdown")

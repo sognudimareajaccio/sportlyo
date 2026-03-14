@@ -21,6 +21,7 @@ import { eventsApi, registrationsApi } from '../services/api';
 import { toast } from 'sonner';
 import api from '../services/api';
 import { PaymentForm, CreditCard as SquareCreditCard } from 'react-square-web-payments-sdk';
+import EventCommunity from '../components/EventCommunity';
 
 const sportLabels = {
   cycling: 'Cyclisme',
@@ -778,6 +779,15 @@ const EventDetailPage = () => {
             >
               <h2 className="font-heading text-lg font-bold uppercase mb-1">Organisé par</h2>
               <p className="text-xl font-heading font-bold text-white" data-testid="organizer-name">{event.organizer_name}</p>
+            </motion.div>
+
+            {/* Community Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.5 }}
+            >
+              <EventCommunity eventId={eventId} />
             </motion.div>
           </div>
 

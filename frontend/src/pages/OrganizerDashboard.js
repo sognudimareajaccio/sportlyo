@@ -13,7 +13,7 @@ import {
   Search, Share2, MessageSquare, Mail, Shield, Send, Filter,
   CheckCircle, Package, Shirt, ArrowUp, ArrowDown, Home, Trophy, ExternalLink,
   Handshake, Phone, MapPinned, Heart, Star, Award, Globe2, Lock, ChevronLeft,
-  ShoppingBag, Palette, Tag as TagIcon, GripVertical, FileDown, ToggleLeft, ToggleRight
+  ShoppingBag, Palette, Tag as TagIcon, GripVertical, FileDown, ToggleLeft, ToggleRight, Radio
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '../components/ui/dialog';
@@ -65,6 +65,159 @@ const SectionHeader = ({ title, onBack }) => (
     <h2 className="font-heading text-2xl font-bold uppercase">{title}</h2>
   </div>
 );
+
+const SmsSection = ({ events }) => {
+  const [selectedEvent, setSelectedEvent] = React.useState('');
+  const [smsMessage, setSmsMessage] = React.useState('');
+  const [sending, setSending] = React.useState(false);
+  const [history, setHistory] = React.useState([]);
+
+  React.useEffect(() => {
+    (async () => {
+      try { const res = await api.get('/sms/history'); setHistory(res.data.history || []); } catch { /* ignore */ }
+    })();
+  }, []);
+
+  const handleSend = async () => {
+    if (!selectedEvent || !smsMessage.trim()) return;
+    setSending(true);
+    try {
+      const res = await api.post('/sms/send', { event_id: selectedEvent, message: smsMessage, recipients: 'all' });
+      setHistory(prev => [res.data.sms, ...prev]);
+      setSmsMessage('');
+      toast.success(res.data.message);
+    } catch (err) { toast.error(err.response?.data?.detail || 'Erreur'); }
+    setSending(false);
+  };
+
+  return (
+    <div className="space-y-6" data-testid="sms-section">
+      <div className="bg-white border border-slate-200 p-4" data-testid="sms-compose">
+        <h3 className="font-heading font-bold text-sm uppercase mb-3">Envoyer un SMS</h3>
+        <select className="w-full border border-slate-200 rounded p-2 text-sm mb-3" value={selectedEvent} onChange={(e) => setSelectedEvent(e.target.value)} data-testid="sms-event-select">
+          <option value="">Choisir un evenement...</option>
+          {events.map(e => <option key={e.event_id} value={e.event_id}>{e.title}</option>)}
+        </select>
+        <textarea className="w-full border border-slate-200 rounded p-3 text-sm resize-none mb-2" rows={3} placeholder="Votre message SMS..." value={smsMessage} onChange={(e) => setSmsMessage(e.target.value)} maxLength={500} data-testid="sms-message-input" />
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-slate-400">{smsMessage.length}/500</span>
+          <Button className="bg-brand text-white gap-1 font-heading font-bold text-xs" onClick={handleSend} disabled={!selectedEvent || !smsMessage.trim() || sending} data-testid="sms-send-btn">
+            <Send className="w-3.5 h-3.5" /> {sending ? 'Envoi...' : 'Envoyer'}
+          </Button>
+        </div>
+      </div>
+      {history.length > 0 && (
+        <div className="bg-white border border-slate-200" data-testid="sms-history">
+          <div className="p-4 border-b"><h3 className="font-heading font-bold text-sm uppercase">Historique SMS</h3></div>
+          <div className="divide-y">
+            {history.map(sms => (
+              <div key={sms.sms_id} className="p-3" data-testid={`sms-row-${sms.sms_id}`}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className={`px-2 py-0.5 text-[10px] font-bold uppercase ${sms.status === 'sent' ? 'bg-green-100 text-green-700' : sms.status === 'queued' ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100 text-slate-700'}`}>
+                    {sms.status === 'sent' ? 'Envoye' : sms.status === 'queued' ? 'En attente' : sms.status}
+                  </span>
+                  <span className="text-[10px] text-slate-400">{sms.created_at && format(new Date(sms.created_at), 'd MMM yyyy HH:mm', { locale: fr })}</span>
+                </div>
+                <p className="text-sm text-slate-700">{sms.message}</p>
+                <p className="text-xs text-slate-400 mt-1">{sms.recipient_count} destinataire(s) / {sms.total_participants} participants</p>
+                {sms.note && <p className="text-xs text-orange-500 mt-1">{sms.note}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const AnalyticsSection = () => {
+  const [analytics, setAnalytics] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get('/organizer/analytics');
+        setAnalytics(res.data);
+      } catch { /* ignore */ }
+      finally { setLoading(false); }
+    })();
+  }, []);
+  if (loading) return <div className="text-center py-8 text-slate-400">Chargement...</div>;
+  if (!analytics) return <div className="text-center py-8 text-slate-400">Aucune donnee</div>;
+  const { overview, events, monthly_trend, tshirt_distribution } = analytics;
+  return (
+    <div className="space-y-6" data-testid="analytics-section">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Evenements', value: overview.total_events, color: 'text-blue-600' },
+          { label: 'Inscriptions', value: overview.total_registrations, color: 'text-emerald-600' },
+          { label: 'Revenus inscriptions', value: `${overview.total_revenue.toFixed(0)}€`, color: 'text-brand' },
+          { label: 'Check-in rate', value: `${overview.checkin_rate}%`, color: 'text-purple-600' },
+        ].map((s, i) => (
+          <div key={i} className="bg-white border border-slate-200 p-4 text-center" data-testid={`analytics-stat-${i}`}>
+            <p className={`font-heading font-black text-2xl ${s.color}`}>{s.value}</p>
+            <p className="text-[10px] text-slate-400 uppercase font-heading mt-1">{s.label}</p>
+          </div>
+        ))}
+      </div>
+      {monthly_trend.length > 0 && (
+        <div className="bg-white border border-slate-200 p-4" data-testid="analytics-monthly">
+          <h3 className="font-heading font-bold text-sm uppercase mb-3">Tendance mensuelle</h3>
+          <div className="flex items-end gap-2 h-32">
+            {monthly_trend.map((m, i) => {
+              const maxRev = Math.max(...monthly_trend.map(x => x.revenue), 1);
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                  <span className="text-[9px] font-bold text-slate-600">{m.revenue.toFixed(0)}€</span>
+                  <div className="w-full bg-brand/80 rounded-t" style={{ height: `${(m.revenue / maxRev) * 100}%`, minHeight: '4px' }} />
+                  <span className="text-[9px] text-slate-400">{m.month.slice(5)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {events.length > 0 && (
+        <div className="bg-white border border-slate-200" data-testid="analytics-events">
+          <div className="p-4 border-b"><h3 className="font-heading font-bold text-sm uppercase">Par evenement</h3></div>
+          <div className="divide-y">
+            {events.map(evt => (
+              <div key={evt.event_id} className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="font-heading font-bold text-sm">{evt.title}</p>
+                    <p className="text-xs text-slate-500">{evt.location} — {evt.registrations} inscrits</p>
+                  </div>
+                  <p className="font-heading font-bold text-lg text-brand">{evt.revenue.toFixed(0)}€</p>
+                </div>
+                {evt.races?.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {evt.races.map((r, ri) => (
+                      <span key={ri} className="px-2 py-0.5 bg-slate-100 text-xs">{r.name}: {r.count} ({r.revenue.toFixed(0)}€)</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {tshirt_distribution.length > 0 && (
+        <div className="bg-white border border-slate-200 p-4" data-testid="analytics-tshirts">
+          <h3 className="font-heading font-bold text-sm uppercase mb-3">Repartition tailles T-shirt</h3>
+          <div className="flex gap-3">
+            {tshirt_distribution.map((t, i) => (
+              <div key={i} className="flex-1 text-center bg-slate-50 p-2">
+                <p className="font-heading font-bold text-lg">{t.count}</p>
+                <p className="text-[10px] text-slate-500 uppercase">{t.size}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const OrganizerDashboard = () => {
   const { user, updateUser } = useAuth();
@@ -701,6 +854,9 @@ const OrganizerDashboard = () => {
     { id: 'bookings', label: 'Réservation Entreprises', icon: Building2, desc: 'Équipes & tarifs groupe', color: 'bg-cyan-600' },
     { id: 'sponsors', label: 'Sponsors & Donateurs', icon: Heart, desc: 'Sponsoring & mécénat', color: 'bg-rose-500' },
     { id: 'boutique', label: 'Boutique Produits', icon: ShoppingBag, desc: 'Catalogue & ventes', color: 'bg-violet-500' },
+    { id: 'analytics', label: 'Statistiques', icon: TrendingUp, desc: 'Analytics avances', color: 'bg-slate-600' },
+    { id: 'rfid', label: 'Location RFID', icon: Radio, desc: 'Materiel chronometrage', color: 'bg-yellow-600' },
+    { id: 'sms', label: 'Notifications SMS', icon: MessageSquare, desc: 'SMS aux participants', color: 'bg-lime-600' },
   ];
 
   // Filtered participants for search
@@ -2390,6 +2546,31 @@ ${JSON.stringify({
                 </div>
               </div>
             ) : null}
+          </motion.div>
+        )}
+
+        {activeSection === 'analytics' && (
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+            <SectionHeader title="Statistiques Avancees" onBack={() => setActiveSection('hub')} />
+            <AnalyticsSection />
+          </motion.div>
+        )}
+
+        {activeSection === 'rfid' && (
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+            <SectionHeader title="Location Materiel RFID" onBack={() => setActiveSection('hub')} />
+            <div className="text-center py-8">
+              <Radio className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+              <p className="text-slate-500 mb-4">Accedez au catalogue de materiel RFID</p>
+              <a href="/rfid"><Button className="btn-primary gap-2"><Radio className="w-4 h-4" /> Ouvrir le catalogue RFID</Button></a>
+            </div>
+          </motion.div>
+        )}
+
+        {activeSection === 'sms' && (
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+            <SectionHeader title="Notifications SMS" onBack={() => setActiveSection('hub')} />
+            <SmsSection events={events} />
           </motion.div>
         )}
 

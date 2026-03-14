@@ -6,9 +6,12 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 ## Architecture
 - **Frontend:** React, TailwindCSS, Shadcn UI, framer-motion, recharts, date-fns
 - **Backend:** FastAPI avec routeurs modulaires
-- **Database:** MongoDB (collections: users, events, products, provider_products, orders, selections, notifications, provider_messages, registrations, promo_codes, invoices)
+- **Database:** MongoDB
 - **Auth:** JWT
-- **Paiements:** Square, SumUp (INTÉGRÉ)
+- **Paiements:** Square, SumUp
+- **PDF:** fpdf2
+- **SMS:** Twilio (graceful degradation)
+- **Scraping:** BeautifulSoup4, Playwright
 
 ## Credentials de test
 | Rôle | Email | Mot de passe |
@@ -17,83 +20,141 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 | Organisateur | club@paris-sport.fr | club123 |
 | Participant | pierre@test.com | test1234 |
 | Prestataire | boutique@sportlyo.fr | boutique123 |
-| Organisateur | contact@lyonrunning.fr | lyon1234 |
-| Organisateur | events@marseilletrail.fr | mars1234 |
 
 ## Ce qui est implémenté
 
+### Mars 2026 - Session 9 (P2 Features)
+
+**1. Facturation avancée (PDF) ✅ (testé iteration_36):**
+- `GET /api/invoices/{id}/pdf` : Génération PDF professionnelle avec fpdf2
+- `GET /api/admin/invoices` : Vue admin de toutes les factures
+- Bouton "Télécharger PDF" dans dashboard participant et admin
+- Onglet "Factures" dans le dashboard Admin
+
+**2. Gestion communautaire ✅ (testé iteration_36):**
+- Composant `EventCommunity` intégré dans EventDetailPage
+- CRUD posts communautaires (créer, supprimer, liker, épingler)
+- Système de réponses (replies) avec notifications
+- Badge "Organisateur" pour les posts de l'organisateur
+- Routeur: `backend/routers/community.py`
+
+**3. Demandes de remboursement ✅ (testé iteration_36):**
+- Bouton "Demander un remboursement" sur chaque inscription payée
+- Formulaire avec motif obligatoire
+- Onglet "Remboursements" dans Admin : approuver/refuser
+- Notifications admin et organisateur automatiques
+- Routeur: `backend/routers/refunds.py`
+
+**4. Location matériel RFID ✅ (testé iteration_36):**
+- Catalogue de 6 équipements RFID seedés au démarrage
+- Page `/rfid` avec panier, sélection d'événement, dates
+- Système de demande de location (pending → confirmed/rejected)
+- Gestion admin dans dashboard
+- Routeur: `backend/routers/rfid.py`
+
+**5. Application check-in mobile ✅ (testé iteration_36):**
+- Page `/checkin` pour les organisateurs
+- Scan par numéro de dossard ou recherche par nom
+- Stats en temps réel (enregistrés/restants/taux)
+- Annulation de check-in (undo)
+- Affichage contact d'urgence et taille T-shirt
+- Routeur: `backend/routers/checkin.py`
+
+**6. Statistiques avancées organisateurs ✅ (testé iteration_36):**
+- `GET /api/organizer/analytics` : Vue d'ensemble, tendance mensuelle, breakdown par événement et par épreuve
+- Section "Statistiques" dans le hub organisateur
+- Graphiques barres mensuels, répartition tailles T-shirt
+- Routeur: `backend/routers/analytics.py`
+
+**7. Notifications SMS (Twilio) ✅ (testé iteration_36):**
+- Envoi SMS aux participants d'un événement
+- Mode graceful degradation : SMS stockés en base si Twilio non configuré
+- Historique des envois avec statut
+- Section "Notifications SMS" dans hub organisateur
+- Config Twilio vérifiable via `/api/sms/config`
+- **NOTE: Twilio non configuré - SMS en mode queue uniquement**
+- Routeur: `backend/routers/sms.py`
+
 ### Mars 2026 - Session 8
 
-**Phase C — Système de commission Admin ✅ (testé iteration_35):**
-- Commission admin de 1€ par produit prestataire vendu
-- Endpoint `GET /api/admin/commissions` avec total, breakdown par prestataire, commandes récentes
-- Onglet "Commissions" dans le dashboard Admin avec cartes résumé, tableau par prestataire, et historique des commandes
-- Dashboard prestataire mis à jour avec 4 cartes financières : Ventes, Commission organisateurs, Commission plateforme (orange), Revenu net
-- Breakdown par organisateur enrichi avec 3 colonnes (commission organisateur, commission plateforme, revenu net)
-- `GET /api/provider/stats` et `GET /api/provider/financial-breakdown` incluent désormais `total_admin_commission`
-- `POST /api/shop/order` calcule et stocke `admin_commission_total` sur chaque commande
-- Migration automatique des commandes existantes au démarrage du serveur
+**Phase C — Commission Admin ✅ (testé iteration_35):**
+- Commission 1€/produit prestataire vendu
+- Onglet "Commissions" dans dashboard Admin
+- Dashboard prestataire mis à jour avec commission plateforme
 
 **Bug fix — Images XD Connects ✅:**
-- Sanitisation des URLs d'images : encodage des espaces en `%20` côté backend (scraper) et frontend (getProductImages)
-- Note : certaines images XD Connects peuvent rester cassées à cause de restrictions CORS du CDN xdconnects.com
+- Sanitisation URLs images (%20)
 
-### Mars 2026 - Session 7
-
-**Import XD Connects / Xindao ✅ (testé iteration_34):**
-- Nouvel onglet "Import XD Connects" dans l'espace prestataire
-- Recherche par référence via scraping Playwright
-- Affichage fiche produit complète + ajout au catalogue en un clic
-
-**Bug fix — Cloche notifications ✅**
-**Changement nom prestataire**: SportWear Lyon → Moreati ✅
-
-### Mars 2026 - Session 6 (Phases A & B)
-
-**Phase A - Gestion événements ✅ (testé iteration_32):**
-- Refonte formulaire création/édition événement (multi-étapes)
-- Upload règlement PDF + champ "T-shirt fourni"
-- Système publication/dépublication
-
-**Phase B - Améliorations participant & événements ✅ (testé iteration_33):**
-- Dashboard participant: widgets "Nouveau Défi" + "Agenda"
-- Contact d'urgence obligatoire à l'inscription
-- Page "Tous les événements" : classement par mois + seuls publiés
-
-### Sessions précédentes
-- Workflow Prestataire ↔ Organisateur, Galerie multi-photos
-- Dashboard Prestataire (finances, ventes), Intégration SumUp
-- Notifications temps réel, Messagerie, Seeding données
+### Sessions précédentes (6-7)
+- Phase A & B (événements, participant) ✅
+- Import XDConnects/Playwright ✅
+- Corrections cloche notifications, nom prestataire ✅
+- Améliorations homepage ✅
 
 ## Backlog Priorisé
 
 ### P1 — Refactorisation
-- [ ] Décomposer OrganizerDashboard.js (2837 lignes) en composants
-- [ ] Décomposer ProviderDashboard.js (1191 lignes) en composants
+- [ ] Décomposer OrganizerDashboard.js (~2900 lignes)
+- [ ] Décomposer ProviderDashboard.js (~1200 lignes)
 
-### P2
-- [ ] Système de facturation avancé
-- [ ] Gestion communautaire
-- [ ] Contact direct remboursements
-- [ ] Location matériel RFID
-- [ ] App mobile check-in
-- [ ] Statistiques avancées organisateurs
-- [ ] Notifications SMS (Twilio)
+### P2 — Complété ✅
+- [x] Facturation avancée PDF
+- [x] Gestion communautaire
+- [x] Remboursements
+- [x] Location RFID
+- [x] Check-in mobile
+- [x] Statistiques avancées
+- [x] Notifications SMS (Twilio)
 
-## Endpoints Clés
-- `POST /api/events` → création événement avec notifications admin
-- `PUT /api/events/{id}/publish` → publication/dépublication
-- `GET /api/events` → événements publiés uniquement
-- `GET /api/admin/commissions` → commissions admin sur ventes prestataires
-- `POST /api/shop/order` → commande avec calcul admin_commission_total
-- `GET /api/provider/stats` → stats prestataire avec admin_commission
-- `GET /api/provider/financial-breakdown` → breakdown financier avec admin_commission par organisateur
-- `POST /api/organizer/add-provider-product` → crée sélection + notifie
-- `GET /api/provider/selections` → sélections par organisateur
-- `GET /api/provider/import/xdconnects/lookup/{ref}` → recherche produit XD Connects
+### P3 — Futur
+- [ ] Configurer clés Twilio pour envoi réel de SMS
+- [ ] Gestion admin RFID (ajout/modification équipements)
+- [ ] Export CSV des statistiques organisateur
+- [ ] Intégration paiement en ligne pour les locations RFID
+- [ ] Amélioration graphiques (recharts) dans analytics
 
-## DB Schema clés
-- **events**: published (bool), regulations_pdf_url (str), provides_tshirt (bool), races[].description (str)
-- **orders**: admin_commission_total (float), items[].admin_commission (float), items[].provider_id (str)
-- **selections**: organizer_id, organizer_logo, products[{customization_status, custom_images}], status
-- **registrations**: emergency_contact (requis), emergency_phone (requis)
+## Code Architecture
+```
+/app/backend/routers/
+├── admin.py          # Admin dashboard, commissions
+├── analytics.py      # NEW - Organizer analytics
+├── checkin.py        # NEW - Check-in mobile
+├── community.py      # NEW - Event community posts/replies
+├── events.py         # Event CRUD
+├── invoices.py       # NEW - PDF invoices
+├── notifications.py  # Real-time notifications
+├── organizer.py      # Organizer dashboard
+├── provider.py       # Provider dashboard
+├── provider_products.py
+├── refunds.py        # NEW - Refund requests
+├── rfid.py           # NEW - RFID equipment rental
+├── selections.py     # Provider-organizer workflow
+├── shop.py           # Shop orders
+├── sms.py            # NEW - SMS notifications (Twilio)
+├── toptex_importer.py
+├── uploads.py
+├── users.py
+└── xdconnects_import.py
+```
+
+## Endpoints Clés (nouveaux)
+- `GET /api/invoices/{id}/pdf` → PDF facture
+- `GET /api/admin/invoices` → Toutes les factures
+- `GET /api/events/{id}/community` → Posts communautaires
+- `POST /api/refunds/request` → Demande remboursement
+- `GET /api/admin/refunds/all` → Toutes les demandes
+- `GET /api/rfid/equipment` → Catalogue RFID
+- `POST /api/rfid/rentals` → Demande location
+- `POST /api/checkin/scan` → Check-in participant
+- `GET /api/checkin/stats/{event_id}` → Stats check-in
+- `GET /api/organizer/analytics` → Analytics avancées
+- `POST /api/sms/send` → Envoi SMS
+- `GET /api/sms/config` → Config Twilio
+
+## DB Collections (nouvelles)
+- **community_posts**: posts communautaires par événement
+- **community_replies**: réponses aux posts
+- **refund_requests**: demandes de remboursement
+- **rfid_equipment**: catalogue matériel RFID
+- **rfid_rentals**: demandes de location
+- **sms_notifications**: historique SMS envoyés/en attente

@@ -247,12 +247,6 @@ async def checkin_scan(request: Request, current_user: dict = Depends(get_curren
     return {"status": "ok", "registration": reg, "message": f"Dossard {reg['bib_number']} valide !"}
 
 
-@router.get("/checkin/stats/{event_id}")
-async def checkin_stats(event_id: str, current_user: dict = Depends(get_current_user)):
-    total = await db.registrations.count_documents({"event_id": event_id, "payment_status": "completed"})
-    checked_in = await db.registrations.count_documents({"event_id": event_id, "checked_in": True})
-    return {"total_registered": total, "checked_in": checked_in, "remaining": total - checked_in}
-
 
 # ============== CONTACT ADMIN ==============
 

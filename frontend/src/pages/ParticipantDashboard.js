@@ -7,7 +7,7 @@ import {
   User, Calendar, Trophy, TrendingUp, ShoppingBag, MessageSquare,
   ChevronRight, ArrowLeft, Home, MapPin, Clock, Upload, CheckCircle,
   XCircle, ExternalLink, FileText, Loader2, Send, Package, Edit,
-  Footprints, Mountain, Euro, BarChart3, Save, Flame, Sparkles, ArrowRight
+  Footprints, Mountain, Euro, BarChart3, Save, Flame, Sparkles, ArrowRight, Download
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -61,17 +61,22 @@ const ParticipantDashboard = () => {
   const [newMsg, setNewMsg] = useState('');
   // New features
   const [newEvents, setNewEvents] = useState([]);
+  const [myRefunds, setMyRefunds] = useState([]);
+  const [refundReason, setRefundReason] = useState('');
+  const [requestingRefund, setRequestingRefund] = useState(null);
 
   const fetchInitialData = async () => {
     try {
-      const [regsRes, invRes, newEvtsRes] = await Promise.all([
+      const [regsRes, invRes, newEvtsRes, refundsRes] = await Promise.all([
         registrationsApi.getAll(),
         api.get('/invoices'),
-        api.get('/participant/new-events')
+        api.get('/participant/new-events'),
+        api.get('/refunds/my')
       ]);
       setRegistrations(regsRes.data.registrations);
       setInvoices(invRes.data.invoices || []);
       setNewEvents(newEvtsRes.data.events || []);
+      setMyRefunds(refundsRes.data.refunds || []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -509,6 +514,59 @@ const ParticipantDashboard = () => {
                           )}
                         </div>
                       )}
+                      {/* Refund section */}
+                      {reg.payment_status === 'completed' && (
+                        <div className="mt-3 pt-3 border-t border-slate-100">
+                          {(() => {
+                            const existingRefund = myRefunds.find(r => r.registration_id === reg.registration_id);
+                            if (existingRefund) {
+                              return (
+                                <div className={`flex items-center gap-2 text-sm ${existingRefund.status === 'approved' ? 'text-green-600' : existingRefund.status === 'rejected' ? 'text-red-600' : 'text-orange-600'}`} data-testid={`refund-status-${reg.registration_id}`}>
+                                  {existingRefund.status === 'approved' ? <CheckCircle className="w-4 h-4" /> : existingRefund.status === 'rejected' ? <XCircle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                                  <span className="font-medium">
+                                    {existingRefund.status === 'approved' ? 'Remboursement approuve' : existingRefund.status === 'rejected' ? 'Remboursement refuse' : 'Demande en cours'}
+                                  </span>
+                                </div>
+                              );
+                            }
+                            if (requestingRefund === reg.registration_id) {
+                              return (
+                                <div className="space-y-2" data-testid={`refund-form-${reg.registration_id}`}>
+                                  <textarea
+                                    className="w-full border border-slate-200 rounded p-2 text-sm resize-none"
+                                    rows={2}
+                                    placeholder="Motif du remboursement..."
+                                    value={refundReason}
+                                    onChange={(e) => setRefundReason(e.target.value)}
+                                    data-testid={`refund-reason-${reg.registration_id}`}
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white text-xs" disabled={!refundReason.trim()}
+                                      data-testid={`refund-confirm-${reg.registration_id}`}
+                                      onClick={async () => {
+                                        try {
+                                          await api.post('/refunds/request', { registration_id: reg.registration_id, reason: refundReason });
+                                          toast.success('Demande de remboursement envoyee');
+                                          setRequestingRefund(null);
+                                          setRefundReason('');
+                                          fetchInitialData();
+                                        } catch (err) { toast.error(err.response?.data?.detail || 'Erreur'); }
+                                      }}>Confirmer</Button>
+                                    <Button size="sm" variant="outline" className="text-xs" onClick={() => { setRequestingRefund(null); setRefundReason(''); }}>Annuler</Button>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return (
+                              <Button variant="outline" size="sm" className="text-xs text-red-600 border-red-200 gap-1"
+                                data-testid={`refund-request-btn-${reg.registration_id}`}
+                                onClick={() => setRequestingRefund(reg.registration_id)}>
+                                Demander un remboursement
+                              </Button>
+                            );
+                          })()}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -536,9 +594,30 @@ const ParticipantDashboard = () => {
                           <p className="text-xs text-slate-500">{inv.source_type === 'order' ? 'Commande boutique' : 'Inscription'} — {inv.created_at && format(new Date(inv.created_at), 'd MMM yyyy', { locale: fr })}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3">
                         <span className="font-heading font-bold text-lg">{inv.total?.toFixed(2)}€</span>
                         <span className="px-2 py-0.5 text-[10px] font-bold uppercase bg-green-100 text-green-700">Payée</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 text-xs h-8"
+                          data-testid={`download-invoice-${inv.invoice_id}`}
+                          onClick={async () => {
+                            try {
+                              const res = await api.get(`/invoices/${inv.invoice_id}/pdf`, { responseType: 'blob' });
+                              const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `facture_${inv.invoice_number}.pdf`;
+                              document.body.appendChild(a);
+                              a.click();
+                              a.remove();
+                              window.URL.revokeObjectURL(url);
+                            } catch { /* ignore */ }
+                          }}
+                        >
+                          <Download className="w-3.5 h-3.5" /> PDF
+                        </Button>
                       </div>
                     </div>
                   ))}

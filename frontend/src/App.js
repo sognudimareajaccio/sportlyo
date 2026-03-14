@@ -29,6 +29,7 @@ import OrgaLandingPage from "./pages/OrgaLandingPage";
 import MessagingPage from "./pages/MessagingPage";
 import EventShopPage from "./pages/EventShopPage";
 import ProviderDashboard from "./pages/ProviderDashboard";
+import RfidRentalPage from "./pages/RfidRentalPage";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 // Protected Route Component
@@ -138,6 +139,22 @@ const AppRouter = () => {
           element={
             <ProtectedRoute>
               <CheckInPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/checkin"
+          element={
+            <ProtectedRoute>
+              <CheckInPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/rfid"
+          element={
+            <ProtectedRoute>
+              <RfidRentalPage />
             </ProtectedRoute>
           }
         />
