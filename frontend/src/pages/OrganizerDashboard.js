@@ -11,9 +11,9 @@ import {
   Route, Navigation, Globe, Facebook, Instagram, Youtube, Twitter, Tag, Timer,
   Target, Wind, Flag, CircleDot, Dumbbell, Swords, BarChart3,
   Search, Share2, MessageSquare, Mail, Shield, Send, Filter,
-  CheckCircle, Package, Shirt, ArrowUp, Home, Trophy, ExternalLink,
+  CheckCircle, Package, Shirt, ArrowUp, ArrowDown, Home, Trophy, ExternalLink,
   Handshake, Phone, MapPinned, Heart, Star, Award, Globe2, Lock, ChevronLeft,
-  ShoppingBag, Palette, Tag as TagIcon
+  ShoppingBag, Palette, Tag as TagIcon, GripVertical, FileDown, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '../components/ui/dialog';
@@ -155,6 +155,7 @@ const OrganizerDashboard = () => {
     elevation_gain: '', image_url: '', requires_pps: false,
     requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '',
     races: [], route_url: '', exact_address: '', regulations: '',
+    regulations_pdf_url: '', published: false, provides_tshirt: true,
     themes: [], circuit_type: '', has_timer: null,
     website_url: '', facebook_url: '', instagram_url: '', twitter_url: '', youtube_url: ''
   });
@@ -548,7 +549,7 @@ const OrganizerDashboard = () => {
       await eventsApi.create(eventData);
       toast.success('Événement créé !');
       setShowCreateDialog(false); setCreateStep(1);
-      setNewEvent({ title: '', description: '', sport_type: 'running', location: '', date: '', max_participants: 100, price: 25, distances: '', elevation_gain: '', image_url: '', requires_pps: false, requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '', races: [], route_url: '', exact_address: '', regulations: '', themes: [], circuit_type: '', has_timer: null, website_url: '', facebook_url: '', instagram_url: '', twitter_url: '', youtube_url: '' });
+      setNewEvent({ title: '', description: '', sport_type: 'running', location: '', date: '', max_participants: 100, price: 25, distances: '', elevation_gain: '', image_url: '', requires_pps: false, requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '', races: [], route_url: '', exact_address: '', regulations: '', regulations_pdf_url: '', published: false, provides_tshirt: true, themes: [], circuit_type: '', has_timer: null, website_url: '', facebook_url: '', instagram_url: '', twitter_url: '', youtube_url: '' });
       setImagePreview(null); fetchEvents();
     } catch (error) { toast.error(error.response?.data?.detail || 'Erreur création'); }
     finally { setCreating(false); }
@@ -560,7 +561,7 @@ const OrganizerDashboard = () => {
     if (!editingEvent.title || !editingEvent.location) { toast.error('Champs obligatoires'); return; }
     setEditing(true);
     try {
-      const updateData = { title: editingEvent.title, description: editingEvent.description, sport_type: editingEvent.sport_type, date: editingEvent.date, location: editingEvent.location, max_participants: editingEvent.max_participants, price: editingEvent.price, distances: editingEvent.distances, elevation_gain: editingEvent.elevation_gain, image_url: editingEvent.image_url, requires_pps: editingEvent.requires_pps, races: editingEvent.races || [] };
+      const updateData = { title: editingEvent.title, description: editingEvent.description, sport_type: editingEvent.sport_type, date: editingEvent.date, location: editingEvent.location, max_participants: editingEvent.max_participants, price: editingEvent.price, distances: editingEvent.distances, elevation_gain: editingEvent.elevation_gain, image_url: editingEvent.image_url, requires_pps: editingEvent.requires_pps, races: editingEvent.races || [], regulations_pdf_url: editingEvent.regulations_pdf_url || '', published: editingEvent.published, provides_tshirt: editingEvent.provides_tshirt !== false };
       await eventsApi.update(editingEvent.event_id, updateData);
       toast.success('Événement mis à jour !');
       setShowEditDialog(false); setEditingEvent(null); setImagePreview(null); fetchEvents();
@@ -569,7 +570,7 @@ const OrganizerDashboard = () => {
   };
 
   const addRace = (isEdit = false) => {
-    const nr = { name: '', price: 25, max_participants: 100, distance_km: '', elevation_gain: '' };
+    const nr = { name: '', price: 25, max_participants: 100, distance_km: '', elevation_gain: '', description: '' };
     if (isEdit && editingEvent) setEditingEvent(p => ({ ...p, races: [...(p.races || []), nr] }));
     else setNewEvent(p => ({ ...p, races: [...(p.races || []), nr] }));
   };
@@ -580,6 +581,25 @@ const OrganizerDashboard = () => {
   const removeRace = (i, isEdit = false) => {
     if (isEdit && editingEvent) setEditingEvent(p => ({ ...p, races: p.races.filter((_, idx) => idx !== i) }));
     else setNewEvent(p => ({ ...p, races: p.races.filter((_, idx) => idx !== i) }));
+  };
+  const moveRace = (i, direction, isEdit = false) => {
+    const swap = (arr, a, b) => { const copy = [...arr]; [copy[a], copy[b]] = [copy[b], copy[a]]; return copy; };
+    const target = direction === 'up' ? i - 1 : i + 1;
+    if (isEdit && editingEvent) setEditingEvent(p => ({ ...p, races: swap(p.races, i, target) }));
+    else setNewEvent(p => ({ ...p, races: swap(p.races, i, target) }));
+  };
+
+  const handleRegulationUpload = async (e, isEdit = false) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.name.toLowerCase().endsWith('.pdf')) { toast.error('Fichier PDF requis'); return; }
+    try {
+      const formData = new FormData(); formData.append('file', file);
+      const response = await api.post('/upload/image', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const url = `${process.env.REACT_APP_BACKEND_URL}${response.data.url}`;
+      if (isEdit) setEditingEvent(p => ({ ...p, regulations_pdf_url: url }));
+      else setNewEvent(p => ({ ...p, regulations_pdf_url: url }));
+      toast.success('Reglement PDF telecharge');
+    } catch { toast.error('Erreur upload'); }
   };
 
   const handleImageUpload = async (e, isEdit = false) => {
@@ -927,9 +947,12 @@ const OrganizerDashboard = () => {
                       <div className="relative h-40 overflow-hidden">
                         <img src={event.image_url || 'https://images.unsplash.com/photo-1766970096430-204f27f6e247?w=800'} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                        <div className="absolute top-3 left-3">
+                        <div className="absolute top-3 left-3 flex gap-1">
                           <span className={`inline-flex items-center px-2.5 py-1 text-xs font-heading font-bold uppercase tracking-wider ${event.status === 'active' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
                             {event.status === 'active' ? 'Actif' : 'Annulé'}
+                          </span>
+                          <span className={`inline-flex items-center px-2.5 py-1 text-xs font-heading font-bold uppercase tracking-wider ${event.published ? 'bg-brand text-white' : 'bg-slate-500 text-white'}`}>
+                            {event.published ? 'Publie' : 'Brouillon'}
                           </span>
                         </div>
                         <div className="absolute bottom-3 left-3 flex items-center gap-2">
@@ -957,6 +980,9 @@ const OrganizerDashboard = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 pt-3 border-t border-slate-100">
+                          <Button variant="outline" size="sm" className={`h-8 text-xs gap-1 ${event.published ? 'text-amber-600' : 'text-green-600'}`} onClick={async () => { try { await api.put(`/events/${event.event_id}/publish`, { published: !event.published }); fetchEvents(); toast.success(event.published ? 'Evenement depublie' : 'Evenement publie !'); } catch(e) { toast.error('Erreur'); } }} data-testid={`publish-toggle-${event.event_id}`}>
+                            {event.published ? <><ToggleRight className="w-3.5 h-3.5" />Depublier</> : <><ToggleLeft className="w-3.5 h-3.5" />Publier</>}
+                          </Button>
                           <Link to={`/organizer/event/${event.event_id}`} className="flex-1">
                             <Button variant="outline" size="sm" className="w-full text-xs font-heading uppercase tracking-wider gap-1.5 h-8"><Settings className="w-3.5 h-3.5" />Gérer</Button>
                           </Link>
@@ -2581,7 +2607,7 @@ ${JSON.stringify({
       {/* =============== CREATE EVENT DIALOG =============== */}
       <Dialog open={showCreateDialog} onOpenChange={(open) => {
         setShowCreateDialog(open);
-        if (!open) { setCreateStep(1); setNewEvent({ title: '', description: '', sport_type: 'running', location: '', date: '', max_participants: 100, price: 25, distances: '', elevation_gain: '', image_url: '', requires_pps: false, requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '', races: [], route_url: '', exact_address: '', regulations: '', themes: [], circuit_type: '', has_timer: null, website_url: '', facebook_url: '', instagram_url: '', twitter_url: '', youtube_url: '' }); setImagePreview(null); }
+        if (!open) { setCreateStep(1); setNewEvent({ title: '', description: '', sport_type: 'running', location: '', date: '', max_participants: 100, price: 25, distances: '', elevation_gain: '', image_url: '', requires_pps: false, requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '', races: [], route_url: '', exact_address: '', regulations: '', regulations_pdf_url: '', published: false, provides_tshirt: true, themes: [], circuit_type: '', has_timer: null, website_url: '', facebook_url: '', instagram_url: '', twitter_url: '', youtube_url: '' }); setImagePreview(null); }
       }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
           <div className="p-6 pb-0">
@@ -2631,7 +2657,8 @@ ${JSON.stringify({
                 </div>
                 <div className="flex items-center gap-6 p-4 bg-slate-50 border">
                   <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={newEvent.requires_pps} onChange={(e) => setNewEvent(p => ({ ...p, requires_pps: e.target.checked }))} className="w-4 h-4 accent-brand" /><span className="text-sm font-medium">PPS obligatoire</span></label>
-                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={newEvent.allows_teams} onChange={(e) => setNewEvent(p => ({ ...p, allows_teams: e.target.checked }))} className="w-4 h-4 accent-brand" /><span className="text-sm font-medium">Équipes autorisées</span></label>
+                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={newEvent.allows_teams} onChange={(e) => setNewEvent(p => ({ ...p, allows_teams: e.target.checked }))} className="w-4 h-4 accent-brand" /><span className="text-sm font-medium">Equipes autorisees</span></label>
+                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={newEvent.provides_tshirt} onChange={(e) => setNewEvent(p => ({ ...p, provides_tshirt: e.target.checked }))} className="w-4 h-4 accent-brand" /><Shirt className="w-4 h-4 text-brand" /><span className="text-sm font-medium">T-shirt fourni</span></label>
                 </div>
                 <div className="flex justify-between pt-2">
                   <Button variant="outline" onClick={() => setCreateStep(1)} className="gap-2"><ArrowLeft className="w-4 h-4" /> Retour</Button>
@@ -2654,7 +2681,25 @@ ${JSON.stringify({
                   <div className="flex items-center gap-2 mt-2"><span className="text-xs text-slate-400">ou</span><Input placeholder="URL de l'image" value={newEvent.image_url} onChange={(e) => { setNewEvent(p => ({ ...p, image_url: e.target.value })); setImagePreview(null); }} className="flex-1 text-sm" /></div>
                 </div>
                 <div><Label className="text-sm font-heading uppercase text-slate-500 mb-2 block">Description</Label><Textarea placeholder="Décrivez votre événement..." rows={3} value={newEvent.description} onChange={(e) => setNewEvent(p => ({ ...p, description: e.target.value }))} /></div>
-                <div><Label className="text-sm font-heading uppercase text-slate-500 mb-2"><FileText className="w-4 h-4 text-brand inline mr-1" />Règlement</Label><Textarea placeholder="Conditions de participation..." rows={3} value={newEvent.regulations} onChange={(e) => setNewEvent(p => ({ ...p, regulations: e.target.value }))} /></div>
+                <div><Label className="text-sm font-heading uppercase text-slate-500 mb-2"><FileText className="w-4 h-4 text-brand inline mr-1" />Reglement</Label><Textarea placeholder="Conditions de participation..." rows={3} value={newEvent.regulations} onChange={(e) => setNewEvent(p => ({ ...p, regulations: e.target.value }))} /></div>
+                <div>
+                  <Label className="text-sm font-heading uppercase text-slate-500 mb-2 block"><FileDown className="w-4 h-4 text-brand inline mr-1" />Reglement PDF</Label>
+                  {newEvent.regulations_pdf_url ? (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded">
+                      <FileText className="w-5 h-5 text-green-600" />
+                      <span className="text-sm text-green-700 flex-1 truncate">Reglement PDF telecharge</span>
+                      <Button variant="ghost" size="sm" className="text-red-500 h-7" onClick={() => setNewEvent(p => ({ ...p, regulations_pdf_url: '' }))}><X className="w-4 h-4" /></Button>
+                    </div>
+                  ) : (
+                    <label className="block cursor-pointer">
+                      <input type="file" accept=".pdf" className="hidden" onChange={(e) => handleRegulationUpload(e, false)} />
+                      <div className="border-2 border-dashed border-slate-300 hover:border-brand p-4 text-center rounded transition-colors group">
+                        <FileDown className="w-6 h-6 mx-auto mb-1 text-slate-300 group-hover:text-brand" />
+                        <p className="text-xs font-heading uppercase text-slate-500 group-hover:text-brand">Telecharger le reglement PDF</p>
+                      </div>
+                    </label>
+                  )}
+                </div>
                 <div className="flex justify-between pt-2">
                   <Button variant="outline" onClick={() => setCreateStep(2)} className="gap-2"><ArrowLeft className="w-4 h-4" /> Retour</Button>
                   <div className="flex gap-2">
@@ -2667,29 +2712,41 @@ ${JSON.stringify({
             {createStep === 4 && (
               <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="p-6 space-y-5">
                 <div className="flex items-center justify-between">
-                  <div><Label className="text-sm font-heading uppercase text-slate-500 block">Épreuves</Label><p className="text-xs text-slate-400">Optionnel — tarifs par distance</p></div>
-                  <Button variant="outline" size="sm" onClick={() => addRace(false)} className="gap-1"><Plus className="w-4 h-4" /> Ajouter</Button>
+                  <div><Label className="text-sm font-heading uppercase text-slate-500 block">Epreuves</Label><p className="text-xs text-slate-400">Definissez les courses, distances et tarifs</p></div>
+                  <Button onClick={() => addRace(false)} className="bg-brand hover:bg-brand/90 text-white gap-1.5 font-heading font-bold uppercase text-xs" data-testid="add-race-btn"><Plus className="w-4 h-4" /> Ajouter une epreuve</Button>
                 </div>
                 {newEvent.races?.length > 0 ? (
                   <div className="space-y-3">{newEvent.races.map((race, i) => (
-                    <div key={i} className="flex gap-2 items-start p-4 bg-slate-50 border">
-                      <div className="flex-1">
-                        <Input placeholder="Nom (ex: 10km)" value={race.name} onChange={(e) => updateRace(i, 'name', e.target.value)} className="mb-2 font-heading font-bold" />
-                        <div className="grid grid-cols-3 gap-2">
-                          <div><Label className="text-[10px] font-heading uppercase text-slate-400">Prix (€)</Label><Input type="number" value={race.price} onChange={(e) => updateRace(i, 'price', parseFloat(e.target.value))} /></div>
-                          <div><Label className="text-[10px] font-heading uppercase text-slate-400">Places</Label><Input type="number" value={race.max_participants} onChange={(e) => updateRace(i, 'max_participants', parseInt(e.target.value))} /></div>
-                          <div><Label className="text-[10px] font-heading uppercase text-slate-400">Km</Label><Input type="number" value={race.distance_km} onChange={(e) => updateRace(i, 'distance_km', e.target.value)} /></div>
-                        </div>
+                    <div key={i} className="border border-slate-200 rounded-lg overflow-hidden bg-white" data-testid={`race-${i}`}>
+                      <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 border-b border-slate-100">
+                        <GripVertical className="w-4 h-4 text-slate-300" />
+                        <span className="font-heading font-bold text-xs uppercase text-brand">Epreuve {i + 1}</span>
+                        <div className="flex-1" />
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => moveRace(i, 'up')} disabled={i === 0}><ArrowUp className="w-3.5 h-3.5" /></Button>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => moveRace(i, 'down')} disabled={i === newEvent.races.length - 1}><ArrowDown className="w-3.5 h-3.5" /></Button>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500" onClick={() => removeRace(i)}><X className="w-4 h-4" /></Button>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => removeRace(i)} className="text-red-500"><X className="w-4 h-4" /></Button>
+                      <div className="p-4 space-y-3">
+                        <Input placeholder="Nom de l'epreuve (ex: Semi-Marathon, Trail 25km...)" value={race.name} onChange={(e) => updateRace(i, 'name', e.target.value)} className="font-heading font-bold text-base" />
+                        <div className="grid grid-cols-3 gap-3">
+                          <div><Label className="text-[10px] font-heading uppercase text-slate-400 mb-1 block">Prix (€)</Label><Input type="number" value={race.price} onChange={(e) => updateRace(i, 'price', parseFloat(e.target.value))} /></div>
+                          <div><Label className="text-[10px] font-heading uppercase text-slate-400 mb-1 block">Places max</Label><Input type="number" value={race.max_participants} onChange={(e) => updateRace(i, 'max_participants', parseInt(e.target.value))} /></div>
+                          <div><Label className="text-[10px] font-heading uppercase text-slate-400 mb-1 block">Distance (km)</Label><Input type="number" value={race.distance_km} onChange={(e) => updateRace(i, 'distance_km', e.target.value)} /></div>
+                        </div>
+                        <div><Label className="text-[10px] font-heading uppercase text-slate-400 mb-1 block">Descriptif (optionnel)</Label><Textarea placeholder="Details sur l'epreuve, parcours, ravitaillements..." rows={2} value={race.description || ''} onChange={(e) => updateRace(i, 'description', e.target.value)} className="text-sm" /></div>
+                      </div>
                     </div>
                   ))}</div>
                 ) : (
-                  <div className="text-center py-8 bg-slate-50 border border-dashed"><Clock className="w-8 h-8 mx-auto mb-2 text-slate-300" /><p className="text-sm text-slate-500">Aucune épreuve</p></div>
+                  <div className="text-center py-10 bg-slate-50 border-2 border-dashed border-slate-200 rounded-lg">
+                    <Flag className="w-10 h-10 mx-auto mb-3 text-slate-300" />
+                    <p className="font-heading font-bold text-sm uppercase text-slate-500 mb-1">Aucune epreuve</p>
+                    <p className="text-xs text-slate-400">Cliquez sur "Ajouter une epreuve" pour definir vos courses</p>
+                  </div>
                 )}
                 <div className="flex justify-between pt-2">
                   <Button variant="outline" onClick={() => setCreateStep(3)} className="gap-2"><ArrowLeft className="w-4 h-4" /> Retour</Button>
-                  <Button onClick={handleCreateEvent} disabled={creating} className="btn-primary gap-2">{creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Créer</Button>
+                  <Button onClick={handleCreateEvent} disabled={creating} className="btn-primary gap-2">{creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Creer</Button>
                 </div>
               </motion.div>
             )}
@@ -2700,16 +2757,22 @@ ${JSON.stringify({
       {/* EDIT DIALOG */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="font-heading text-xl uppercase">Modifier l'événement</DialogTitle><DialogDescription className="sr-only">Modification</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle className="font-heading text-xl uppercase">Modifier l'evenement</DialogTitle><DialogDescription className="sr-only">Modification</DialogDescription></DialogHeader>
           {editingEvent && (
             <div className="space-y-4 pt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2"><Label>Titre *</Label><Input value={editingEvent.title} onChange={(e) => setEditingEvent(p => ({ ...p, title: e.target.value }))} /></div>
                 <div><Label>Type</Label><Select value={editingEvent.sport_type} onValueChange={(v) => setEditingEvent(p => ({ ...p, sport_type: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{sportOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></div>
                 <div><Label>Date</Label><DateTimePicker value={editingEvent.date ? new Date(editingEvent.date).toISOString().slice(0, 16) : ''} onChange={(v) => setEditingEvent(p => ({ ...p, date: new Date(v).toISOString() }))} placeholder="Modifier" /></div>
-                <div><Label>Participants max</Label><Input type="number" value={editingEvent.max_participants} onChange={(e) => setEditingEvent(p => ({ ...p, max_participants: parseInt(e.target.value) }))} /></div>
-                <div className="col-span-2"><Label>Lieu</Label><Input value={editingEvent.location} onChange={(e) => setEditingEvent(p => ({ ...p, location: e.target.value }))} /></div>
+                <div><Label>Participants max (jauge)</Label><Input type="number" value={editingEvent.max_participants} onChange={(e) => setEditingEvent(p => ({ ...p, max_participants: parseInt(e.target.value) }))} /></div>
+                <div><Label>Lieu</Label><Input value={editingEvent.location} onChange={(e) => setEditingEvent(p => ({ ...p, location: e.target.value }))} /></div>
                 <div><Label>Prix (€)</Label><Input type="number" value={editingEvent.price} onChange={(e) => setEditingEvent(p => ({ ...p, price: parseFloat(e.target.value) }))} /></div>
+                <div>
+                  <Label>Options</Label>
+                  <div className="flex items-center gap-4 mt-2">
+                    <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={editingEvent.provides_tshirt !== false} onChange={(e) => setEditingEvent(p => ({ ...p, provides_tshirt: e.target.checked }))} className="w-4 h-4 accent-brand" /><Shirt className="w-4 h-4 text-brand" /><span className="text-xs font-medium">T-shirt fourni</span></label>
+                  </div>
+                </div>
                 <div className="col-span-2"><Label>Image</Label>
                   <div className="mt-2">
                     {(imagePreview || editingEvent.image_url) && <div className="relative mb-3 inline-block"><img src={imagePreview || editingEvent.image_url} alt="Preview" className="h-32 w-auto object-cover border" /><button onClick={() => { setImagePreview(null); setEditingEvent(p => ({ ...p, image_url: '' })); }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><X className="w-4 h-4" /></button></div>}
@@ -2717,21 +2780,52 @@ ${JSON.stringify({
                   </div>
                 </div>
                 <div className="col-span-2"><Label>Description</Label><Textarea rows={3} value={editingEvent.description} onChange={(e) => setEditingEvent(p => ({ ...p, description: e.target.value }))} /></div>
+                <div className="col-span-2">
+                  <Label className="mb-2 block"><FileDown className="w-4 h-4 text-brand inline mr-1" />Reglement PDF</Label>
+                  {editingEvent.regulations_pdf_url ? (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded">
+                      <FileText className="w-5 h-5 text-green-600" />
+                      <span className="text-sm text-green-700 flex-1">PDF telecharge</span>
+                      <a href={editingEvent.regulations_pdf_url} target="_blank" rel="noreferrer" className="text-xs text-brand hover:underline">Voir</a>
+                      <Button variant="ghost" size="sm" className="text-red-500 h-7" onClick={() => setEditingEvent(p => ({ ...p, regulations_pdf_url: '' }))}><X className="w-4 h-4" /></Button>
+                    </div>
+                  ) : (
+                    <label className="block cursor-pointer"><input type="file" accept=".pdf" className="hidden" onChange={(e) => handleRegulationUpload(e, true)} /><div className="border-2 border-dashed border-slate-300 hover:border-brand p-3 text-center rounded transition-colors group"><FileDown className="w-5 h-5 mx-auto mb-1 text-slate-300 group-hover:text-brand" /><p className="text-xs text-slate-500 group-hover:text-brand">Telecharger le reglement PDF</p></div></label>
+                  )}
+                </div>
+
+                {/* Épreuves modernisées */}
                 <div className="col-span-2 border-t pt-4">
-                  <div className="flex items-center justify-between mb-3"><Label className="text-base font-bold">Épreuves</Label><Button variant="outline" size="sm" onClick={() => addRace(true)}><Plus className="w-4 h-4 mr-1" />Ajouter</Button></div>
+                  <div className="flex items-center justify-between mb-3">
+                    <Label className="text-base font-bold">Epreuves</Label>
+                    <Button onClick={() => addRace(true)} className="bg-brand hover:bg-brand/90 text-white gap-1.5 font-heading font-bold uppercase text-xs"><Plus className="w-4 h-4" />Ajouter</Button>
+                  </div>
                   {editingEvent.races?.length > 0 ? (
                     <div className="space-y-3">{editingEvent.races.map((race, i) => (
-                      <div key={i} className="flex gap-2 items-start p-3 bg-slate-50">
-                        <div className="flex-1"><Input placeholder="Nom" value={race.name} onChange={(e) => updateRace(i, 'name', e.target.value, true)} className="mb-2" />
-                          <div className="grid grid-cols-3 gap-2"><div><Label className="text-xs">Prix</Label><Input type="number" value={race.price} onChange={(e) => updateRace(i, 'price', parseFloat(e.target.value), true)} /></div><div><Label className="text-xs">Places</Label><Input type="number" value={race.max_participants} onChange={(e) => updateRace(i, 'max_participants', parseInt(e.target.value), true)} /></div><div><Label className="text-xs">Km</Label><Input type="number" value={race.distance_km || ''} onChange={(e) => updateRace(i, 'distance_km', e.target.value, true)} /></div></div>
+                      <div key={i} className="border border-slate-200 rounded-lg overflow-hidden bg-white">
+                        <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 border-b border-slate-100">
+                          <GripVertical className="w-4 h-4 text-slate-300" />
+                          <span className="font-heading font-bold text-xs uppercase text-brand">Epreuve {i + 1}</span>
+                          <div className="flex-1" />
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => moveRace(i, 'up', true)} disabled={i === 0}><ArrowUp className="w-3.5 h-3.5" /></Button>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => moveRace(i, 'down', true)} disabled={i === editingEvent.races.length - 1}><ArrowDown className="w-3.5 h-3.5" /></Button>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500" onClick={() => removeRace(i, true)}><X className="w-4 h-4" /></Button>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => removeRace(i, true)} className="text-red-500"><X className="w-4 h-4" /></Button>
+                        <div className="p-4 space-y-3">
+                          <Input placeholder="Nom de l'epreuve" value={race.name} onChange={(e) => updateRace(i, 'name', e.target.value, true)} className="font-heading font-bold" />
+                          <div className="grid grid-cols-3 gap-3">
+                            <div><Label className="text-[10px] font-heading uppercase text-slate-400 mb-1 block">Prix (€)</Label><Input type="number" value={race.price} onChange={(e) => updateRace(i, 'price', parseFloat(e.target.value), true)} /></div>
+                            <div><Label className="text-[10px] font-heading uppercase text-slate-400 mb-1 block">Places max</Label><Input type="number" value={race.max_participants} onChange={(e) => updateRace(i, 'max_participants', parseInt(e.target.value), true)} /></div>
+                            <div><Label className="text-[10px] font-heading uppercase text-slate-400 mb-1 block">Distance (km)</Label><Input type="number" value={race.distance_km || ''} onChange={(e) => updateRace(i, 'distance_km', e.target.value, true)} /></div>
+                          </div>
+                          <div><Label className="text-[10px] font-heading uppercase text-slate-400 mb-1 block">Descriptif</Label><Textarea placeholder="Details sur l'epreuve..." rows={2} value={race.description || ''} onChange={(e) => updateRace(i, 'description', e.target.value, true)} className="text-sm" /></div>
+                        </div>
                       </div>
                     ))}</div>
-                  ) : <p className="text-sm text-slate-500 text-center py-4 bg-slate-50">Aucune épreuve</p>}
+                  ) : <p className="text-sm text-slate-500 text-center py-6 bg-slate-50 rounded border-2 border-dashed">Aucune epreuve — cliquez Ajouter</p>}
                 </div>
               </div>
-              <Button onClick={handleEditEvent} disabled={editing} className="w-full btn-primary">{editing ? 'Mise à jour...' : 'Enregistrer'}</Button>
+              <Button onClick={handleEditEvent} disabled={editing} className="w-full btn-primary">{editing ? 'Mise a jour...' : 'Enregistrer'}</Button>
             </div>
           )}
         </DialogContent>

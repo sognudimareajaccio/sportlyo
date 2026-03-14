@@ -58,6 +58,7 @@ class RaceConfig(BaseModel):
     current_participants: int = 0
     elevation_gain: Optional[int] = None
     distance_km: Optional[float] = None
+    description: Optional[str] = None
 
 
 class WaveConfig(BaseModel):
@@ -111,6 +112,9 @@ class EventCreate(BaseModel):
     route_url: Optional[str] = None
     exact_address: Optional[str] = None
     regulations: Optional[str] = None
+    regulations_pdf_url: Optional[str] = None
+    published: bool = False
+    provides_tshirt: bool = True
     themes: Optional[List[str]] = None
     circuit_type: Optional[str] = None
     has_timer: Optional[bool] = None

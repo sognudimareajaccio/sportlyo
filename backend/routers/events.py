@@ -20,7 +20,7 @@ async def get_events(
     page: int = Query(1, ge=1),
     limit: int = Query(12, ge=1, le=50)
 ):
-    query = {"status": "active"}
+    query = {"status": "active", "published": True}
     if sport_type and sport_type != 'all':
         query["sport_type"] = sport_type
     if location:
@@ -134,6 +134,9 @@ async def create_event(event_data: EventCreate, current_user: dict = Depends(get
         "route_url": event_data.route_url,
         "exact_address": event_data.exact_address,
         "regulations": event_data.regulations,
+        "regulations_pdf_url": event_data.regulations_pdf_url,
+        "published": event_data.published,
+        "provides_tshirt": event_data.provides_tshirt,
         "themes": event_data.themes,
         "circuit_type": event_data.circuit_type,
         "has_timer": event_data.has_timer,
@@ -156,6 +159,18 @@ async def create_event(event_data: EventCreate, current_user: dict = Depends(get
     await db.events.insert_one(event_doc)
     if '_id' in event_doc:
         del event_doc['_id']
+
+    # Notify all admins about new event
+    from routers.notifications import create_notification
+    admins = await db.users.find({"role": "admin"}, {"_id": 0, "user_id": 1}).to_list(50)
+    for admin in admins:
+        await create_notification(
+            admin["user_id"],
+            f"Nouvel evenement : \"{event_data.title}\" cree par {current_user['name']}",
+            "new_event",
+            {"event_id": event_id, "organizer_name": current_user['name']}
+        )
+
     return event_doc
 
 
@@ -169,6 +184,29 @@ async def update_event(event_id: str, request: Request, current_user: dict = Dep
     data = await request.json()
     await db.events.update_one({"event_id": event_id}, {"$set": data})
     return {"message": "Event updated"}
+
+
+@router.put("/events/{event_id}/publish")
+async def toggle_publish_event(event_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    event = await db.events.find_one({"event_id": event_id}, {"_id": 0})
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if event['organizer_id'] != current_user['user_id'] and current_user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Not authorized")
+    data = await request.json()
+    published = data.get("published", False)
+    await db.events.update_one({"event_id": event_id}, {"$set": {"published": published}})
+
+    if published:
+        from routers.notifications import create_notification
+        await create_notification(
+            event['organizer_id'],
+            f"Votre evenement \"{event['title']}\" est maintenant publie et visible par tous !",
+            "event_published",
+            {"event_id": event_id}
+        )
+
+    return {"message": f"Evenement {'publie' if published else 'depublie'}", "published": published}
 
 
 @router.delete("/events/{event_id}")

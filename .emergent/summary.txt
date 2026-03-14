@@ -4,173 +4,167 @@ L'utilisateur souhaite créer une plateforme de vente de tickets en ligne pour d
 **PRODUCT REQUIREMENTS:**
 - **Rôles :** Organisateurs, Participants, Admin, et Prestataires (fournisseurs de produits).
 - **Fonctionnalités Clés :**
-    - Gestion d'événements et inscriptions.
-    - **Boutique de Produits Dérivés :** Les organisateurs sélectionnent des articles depuis le catalogue d'un prestataire, et les participants peuvent les acheter.
-    - **Paiements :** Intégration de SumUp pour les paiements réels de la boutique.
+    - **Gestion d'événements :** Création, modification, publication, et gestion des épreuves. Ajout d'une option pour télécharger le règlement en PDF et spécifier si un T-shirt est fourni. Le statut de publication (publié/dépublié) doit être gérable par l'organisateur et l'admin.
+    - **Workflow Prestataire-Organisateur :**
+        1. Le prestataire intègre son catalogue (sans personnalisation).
+        2. L'organisateur télécharge son logo et sélectionne des produits dans le catalogue du prestataire. Une sélection est créée et notifiée au prestataire.
+        3. Le prestataire reçoit la sélection, personnalise les produits avec le logo de l'organisateur en ajoutant de nouvelles photos.
+        4. Les produits personnalisés sont automatiquement synchronisés dans l'espace de l'organisateur, qui peut alors les publier sur ses événements.
+    - **Commissions :** L'administrateur doit toucher une commission de 1€ par produit vendu par un prestataire. Ce montant doit être visible dans les dashboards financiers de l'admin et du prestataire.
     - **Dashboards :**
-        - **Participant (Nouvelle demande) :** Refonte complète avec des widgets (Profil, Inscriptions, Courses, Résultats, Bilan, Commandes).
-        - **Prestataire (Nouvelle demande) :** Ajout de widgets financiers (commissions, revenus) et d'analyse des ventes.
-    - **Messagerie :** Communication interne, y compris entre participant et prestataire.
-    - **Notifications (Nouvelle demande) :** Notifications en temps réel pour les participants (nouveaux messages, statut de commande).
-    - **Import de catalogue (Nouvelle demande) :** Outil pour que les prestataires importent des produits depuis le fournisseur TopTex via un fichier PDF ou en recherchant par référence produit.
-    - **Données de production (Nouvelle demande) :** Création automatique de comptes, événements et produits par défaut lors du déploiement en production pour faciliter les tests.
+        - **Organisateur :** Moderniser les fiches produits. Ajouter un bloc explicatif sur le fonctionnement de la boutique. Permettre la suppression des produits prestataires sélectionnés.
+        - **Participant :** Refonte pour inclure un widget Agenda des événements et une section Nouveau Défi pour les nouveaux événements publiés.
+        - **Admin :** Doit être notifié des nouveaux événements et avoir la main pour les gérer (publier/dépublier).
+    - **Page Tous les événements :** Doit être modernisée avec un classement par mois et n'afficher que les événements publiés.
+    - **Inscription Participant :** Le contact d'urgence doit être un champ obligatoire.
 
 **User's preferred language**: fr
 
 **what currently exists?**
-L'application full-stack (React/FastAPI/MongoDB) a été considérablement étendue. La refactorisation du backend est terminée. Une refonte majeure du dashboard participant a été effectuée. Le dashboard prestataire a été enrichi de widgets d'analyse. L'intégration du système de paiement SumUp est complète et fonctionnelle. Un système de notifications en temps réel a été ajouté. Un outil d'import de produits depuis le catalogue TopTex (fournisseur externe) a été développé. Enfin, un script de seeding a été mis en place pour peupler automatiquement la base de données en production avec des données de test (comptes, événements, produits).
+L'application full-stack (React/FastAPI/MongoDB) est fonctionnelle. Les bugs critiques concernant l'import de catalogue TopTex (upload PDF et récupération d'image) ont été corrigés. Plusieurs améliorations d'UI/UX ont été implémentées, notamment un nouveau modal de partage, la modernisation des fiches produits, et la suppression de sections non désirées.
+Le nouveau workflow complexe de sélection/personnalisation de produits entre prestataire et organisateur a été implémenté (Phase 2), incluant la création de sélections, la personnalisation par le prestataire, et la synchronisation automatique des produits mis à jour vers l'espace de l'organisateur.
+La première partie (Phase A) d'une nouvelle série de demandes sur la gestion d'événements a été réalisée, mais n'a pas encore été validée par des tests approfondis.
 
 **Last working item**:
-- Last item agent was working on: L'agent était en train de diagnostiquer deux bugs critiques signalés par l'utilisateur après le déploiement en production, liés à la nouvelle fonctionnalité d'import de catalogue TopTex.
-    1.  L'upload du catalogue PDF échoue.
-    2.  La recherche par référence produit ne récupère pas l'image.
-- Status: BLOCKED
+- Last item agent was working on: L'agent venait de terminer l'implémentation de la **Phase A** des nouvelles demandes de l'utilisateur, axée sur la gestion des événements pour les organisateurs et les administrateurs. Cela inclut :
+    1.  Refonte du formulaire de création/modification d'événement.
+    2.  Ajout du téléchargement de règlement PDF et d'un champ T-shirt fourni.
+    3.  Amélioration de l'interface de gestion des épreuves (ajout de description, possibilité de réordonner).
+    4.  Mise en place d'un système de publication/dépublication des événements, avec notification à l'admin.
+- Status: TESTING PENDING
 - Agent Testing Done: N
-- Which testing method agent to use? backend testing agent
-- User Testing Done: Y (L'utilisateur a testé en production et a signalé les bugs)
+- Which testing method agent to use? both
+- User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: L'import du catalogue TopTex par PDF ne fonctionne pas en production. (P0)
-  - Issue 2: La recherche de produit TopTex par référence n'affiche pas l'image du produit. (P0)
-
-  Issues Detail:
-  - Issue 1:
-     - **Description:** L'upload du fichier PDF depuis l'interface du prestataire échoue, probablement en raison de la taille du fichier et des timeouts du serveur.
-     - **Attempted fixes:** Aucune correction n'a été tentée. L'agent a seulement posé un diagnostic.
-     - **Next debug checklist:**
-        - Modifier l'endpoint backend  dans  pour accepter les fichiers volumineux, idéalement en implémentant une logique de traitement par chunks (morceaux).
-        - Mettre à jour la fonction  dans  pour envoyer le fichier en chunks.
-     - **Why fix this issue and what will be achieved with the fix?** Cette fonctionnalité est essentielle pour permettre aux prestataires de peupler rapidement leur catalogue. Elle est actuellement inutilisable.
-     - **Status:** NOT STARTED
-     - **Should Test frontend/backend/both after fix?** both
-     - **Is recurring issue?** N
-  - Issue 2:
-     - **Description:** La fonctionnalité de recherche par référence fonctionne mais ne parvient pas à afficher l'image du produit, rendant le résultat incomplet. L'agent suspecte un changement dans la structure des URLs du CDN de TopTex.
-     - **Attempted fixes:** Aucune.
-     - **Next debug checklist:**
-        - Analyser manuellement le site  pour déterminer le nouveau format de l'URL des images.
-        - Mettre à jour la logique de scraping dans la fonction  du fichier  pour construire l'URL correcte de l'image.
-     - **Why fix this issue and what will be achieved with the fix?** Une fiche produit sans image est peu utile. La correction rendra la fonctionnalité complète et professionnelle.
-     - **Status:** NOT STARTED
-     - **Should Test frontend/backend/both after fix?** both
-     - **Is recurring issue?** N
+Aucun bug n'est actuellement en cours. Le travail se concentre sur l'implémentation d'une nouvelle feature multi-phases.
 
 **In progress Task List**:
-Aucune tâche n'est en cours. La priorité est la résolution des deux bugs bloquants.
+  - Task 1: Finaliser le grand chantier de refonte de la gestion d'événements et des dashboards.
+     - Where to resume: L'agent a terminé la Phase A. Il faut maintenant lancer les tests complets pour cette phase, puis présenter à l'utilisateur le plan pour les Phases B et C.
+     - What will be achieved with this?: Répondre à toutes les nouvelles exigences de l'utilisateur concernant l'expérience organisateur, participant et admin.
+     - Status: IN PROGRESS
+     - Should Test frontend/backend/both after fix?: both
+     - Blocked on something: Non.
 
 **Upcoming and Future Tasks**
+*   **Upcoming Tasks (P0):**
+    *   **Phase B : Améliorations côté Participant**
+        *   Supprimer la page Accès réservé au login.
+        *   Sur le dashboard participant, ajouter un widget Agenda des événements et un bandeau Nouveau Défi pour les événements récents.
+        *   Rendre le contact d'urgence obligatoire lors de l'inscription à un événement.
+    *   **Phase B : Améliorations page Tous les événements**
+        *   N'afficher que les événements publiés.
+        *   Moderniser la page avec un classement par mois.
 *   **Upcoming Tasks (P1):**
-    *   Améliorer le système de facturation (génération, personnalisation, accès participant).
+    *   **Phase C : Système de commission pour l'Admin**
+        *   Implémenter la logique pour qu'une commission de 1€ soit prélevée sur chaque vente de produit prestataire.
+        *   Mettre à jour le dashboard financier de l'admin pour suivre ces commissions.
+        *   Mettre à jour le dashboard financier du prestataire pour qu'il puisse voir les commissions versées (organisateur et admin).
 *   **Future Tasks (P2):**
     *   Gestion Communautaire (interaction organisateur/participants).
-    *   Contact direct pour les demandes de remboursement.
     *   Plateforme de location de matériel RFID.
     -   Développement d'une application mobile dédiée au check-in.
     -   Statistiques avancées pour les organisateurs.
     -   Intégration Twilio pour les notifications SMS.
 
 **Completed work in this session**
-- **Refonte complète du Dashboard Participant:** Création d'un hub avec des widgets dynamiques ().
-- **Amélioration du Dashboard Prestataire:** Ajout de widgets financiers et d'analyse des ventes ().
-- **Intégration de SumUp:** Mise en place du flux de paiement réel pour la boutique avec les clés API de l'utilisateur.
-- **Création d'un Outil d'Import TopTex:** Développement d'une fonctionnalité permettant aux prestataires d'importer des produits depuis TopTex via un fichier PDF ou par référence produit ().
-- **Système de Notifications:** Ajout d'un endpoint backend () et d'un composant UI () pour les alertes en temps réel.
-- **Mise en place du Seeding de Données:** Création d'un script dans  qui peuple la base de données avec des comptes, événements et produits par défaut au démarrage du serveur.
-- **Corrections de bugs divers:** Visibilité des produits prestataires pour l'organisateur, association correcte des commandes aux prestataires, affichage des couleurs des produits.
-
-**Earlier issues found/mentioned but not fixed**
-Les deux problèmes listés dans **All Pending/In progress Issue list** ont été découverts en fin de session et n'ont pas encore été corrigés.
+- **Correction des bugs de production (TopTex):**
+    - L'upload de PDF volumineux fonctionne désormais via une tâche en arrière-plan avec suivi de la progression.
+    - La récupération d'images lors de la recherche par référence est corrigée en utilisant le scraping de la balise .
+- **Améliorations UI/UX demandées :**
+    - Mise en place d'un modal de partage d'événement moderne.
+    - La commission sur les produits prestataires est désormais en lecture seule pour l'organisateur.
+    - Suppression de la section Devenir Organisateur pour les utilisateurs non-organisateurs.
+    - Les organisateurs ne peuvent plus modifier les produits issus des prestataires, mais peuvent les supprimer de leur boutique.
+    - Ajout d'un bloc d'information dans la boutique de l'organisateur.
+- **Workflow Prestataire-Organisateur (Phase 2) :**
+    - Création d'une nouvelle collection  pour gérer les demandes de personnalisation.
+    - Le prestataire est notifié lorsqu'un organisateur sélectionne ses produits.
+    - Le prestataire dispose d'une nouvelle interface pour voir les sélections par organisateur, accéder à leur logo, et téléverser les photos des produits personnalisés.
+    - Les produits personnalisés sont automatiquement synchronisés dans l'espace de l'organisateur.
+- **Gestion d'événements (Phase A - non encore testée) :**
+    - Refonte complète du formulaire de création/édition d'événement avec une gestion améliorée des épreuves (réorganisation, description).
+    - Ajout d'un système de publication et de notification à l'admin.
+- **Création de données de test :**
+    - Création de 2 nouveaux comptes organisateurs avec des événements et des sélections de produits pour permettre au client de tester le workflow.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Frontend:** React, TailwindCSS, Shadcn UI
-- **Backend:** FastAPI, 
+- **Frontend:** React, TailwindCSS, Shadcn UI,  (ou similaire à implémenter pour le drag-and-drop des épreuves).
+- **Backend:** FastAPI, , Tâches en arrière-plan (pour l'upload de PDF).
 - **Database:** MongoDB
-- **Payment:** SumUp (live), Square
 - **PDF Parsing:** 
 - **Web Scraping:** , 
 
 **key DB schema**
-- : Ajout de  et .
--  & : Champ  ajouté pour gérer la visibilité.
-- : Nouvelle collection pour stocker les alertes utilisateur.
-
-**changes in tech stack**
-- **Dépendances Backend ajoutées :** usage: pymupdf [-h]
-               {show,clean,join,extract,embed-info,embed-add,embed-del,embed-upd,embed-extract,embed-copy,gettext,internal}
-               ...
-
-------------------------- Basic PyMuPDF Functions -------------------------
-
-options:
-  -h, --help            show this help message and exit
-
-Subcommands:
-  {show,clean,join,extract,embed-info,embed-add,embed-del,embed-upd,embed-extract,embed-copy,gettext,internal}
-                        Enter 'command -h' for subcommand specific help, ,  (pour l'import TopTex).
+- **events**: Ajout de , , . Le champ  contient maintenant un .
+- **selections**: Nouvelle collection .
+- **provider_products**: Le champ  est maintenant un tableau de strings.
 
 **All files of reference**
-- : Modifié pour inclure le script de seeding et les nouveaux routeurs.
-- : Nouveau fichier pour la logique d'import TopTex (contient les bugs à corriger).
-- : Modifié pour l'intégration de SumUp.
-- : Modifié pour ajouter l'interface d'import TopTex (contient la partie frontend des bugs).
-- : Nouveau fichier contenant la refonte du dashboard participant.
-- : Modifié pour intégrer le widget de paiement SumUp.
+- : Modifié pour refléter les nouveaux champs dans la collection .
+- : Fortement modifié pour la publication, la notification admin, et les nouveaux champs.
+- : Nouveau fichier pour gérer le workflow de personnalisation.
+- : Modifié pour créer/mettre à jour les sélections.
+- : Modifié pour ajouter le routeur  et mettre à jour le script de seeding.
+- : Fortement modifié pour la refonte du formulaire d'événement, la gestion de la publication et la modernisation des cartes produits.
+- : Fortement modifié pour supprimer l'import PDF et ajouter la nouvelle section Sélections.
 
 **Areas that need refactoring**:
-- L'endpoint d'import PDF () doit être refactorisé pour gérer des fichiers volumineux sans causer de timeout.
+- ** et ** sont devenus des composants monolithiques (> 1000 lignes) gérant de multiples états, sections et dialogues. Ils devraient être décomposés en composants plus petits et spécialisés pour améliorer la lisibilité et la maintenance.
 
 **key api endpoints**
-- : Endpoint pour l'upload de PDF. **(BUGGÉ)**
-- : Endpoint pour la recherche par référence. **(BUGGÉ - IMAGE)**
-- : Modifié pour créer un checkout SumUp.
-- : Nouvel endpoint pour vérifier le statut d'un paiement SumUp.
-- : Nouveaux endpoints pour le dashboard participant.
-- : Nouveaux endpoints pour les widgets du dashboard prestataire.
-- : Nouveaux endpoints pour le système de notifications.
+- : (POST) Nouvel endpoint pour basculer le statut de publication d'un événement.
+- : (GET) Endpoint pour le prestataire pour lister toutes les sélections en attente.
+- : (PUT) Endpoint pour le prestataire pour mettre à jour une sélection (statut, images personnalisées).
+- : (POST) Modifié pour créer une  lors de l'ajout d'un produit.
 
 **Critical Info for New Agent**
-- **Priorité Absolue aux Bugs de Production :** Votre première mission est de corriger les deux bugs critiques signalés par l'utilisateur concernant l'import TopTex. Le déploiement a eu lieu et la fonctionnalité est cassée en production.
-    1.  **Bug 1 (PDF Upload) :** L'upload de gros fichiers PDF échoue. La piste à suivre est l'implémentation d'un envoi par chunks côté frontend et d'une gestion adaptée côté backend.
-    2.  **Bug 2 (Image Manquante) :** La recherche par référence ne récupère pas l'image. Il faut investiguer le format actuel des URLs d'images sur  et corriger la logique de scraping.
-- **L'intégration SumUp est en production** avec de vraies clés API. Soyez prudent lors des tests de paiement.
-- **Le seeding de la base de données est actif** au démarrage du serveur ( dans ), ce qui garantit un environnement de test cohérent.
+- Votre première tâche est de **valider l'implémentation de la Phase A** en utilisant le testing agent. Cette phase introduit des changements majeurs dans la gestion des événements et n'a pas été entièrement testée.
+- Une fois la Phase A validée, vous devrez **présenter un plan à l'utilisateur pour les Phases B et C**, qui concernent les améliorations du côté participant et le système de commission pour l'admin.
+- Les composants  et  sont très volumineux. Soyez prudent lors des modifications et envisagez de proposer une refactorisation si l'occasion se présente.
+- Le workflow de sélection (Phase 2) est complexe mais entièrement implémenté et testé. Référez-vous aux fichiers  et  pour comprendre sa logique.
 
 **documents and test reports created in this job**
-- 
-- 
-- 
+-  à 
 
 **Last 10 User Messages and any pending HUMAN messages**
-Les derniers messages de l'utilisateur concernent le test en production, le signalement des deux bugs sur la fonctionnalité d'import TopTex, et la confirmation par l'agent que ces problèmes seront corrigés.
+1.  **User:** Demande une série de 12 modifications majeures concernant la gestion des événements, les dashboards participant/admin, et la page Tous les événements.
+2.  **Agent:** Accuse réception, analyse la demande et la divise en 3 phases (A, B, C).
+3.  **Agent:** Propose un plan détaillé pour la Phase A (Gestion d'événements pour l'organisateur/admin).
+4.  **User:** Approuve le plan pour la Phase A (ok).
+5.  ... (L'agent implémente la Phase A) ...
+6.  **Agent:** Affiche un screenshot de la nouvelle interface de création d'événement.
 
 **Project Health Check:**
-- **Broken:** La fonctionnalité d'import de catalogue TopTex depuis un fichier PDF est cassée en production. La recherche par référence est partiellement cassée (image manquante).
+- **Broken:** Aucun.
 - **Mocked:** Aucun.
-- **Technical Debt:** Faible. La principale dette est l'absence de gestion des fichiers volumineux pour l'upload, qui doit être ajoutée.
+- **Technical Debt:** Élevée sur les composants  et  qui sont devenus des god components.
 
 **3rd Party Integrations**
-- **SumUp (Payments):** Intégré et fonctionnel avec les clés de l'utilisateur.
-- **TopTex (Product Catalog):** Intégration via scraping/parsing. **Partiellement cassée.**
+- **SumUp (Payments):** Intégré et fonctionnel.
+- **TopTex (Product Catalog):** Intégration via scraping/parsing. Fonctionnelle.
 - **Square (Payments):** Existant.
 - **Resend (Email):** Existant.
 - **fpdf2 (PDF Generation):** Existant.
 
 **Testing status**
-- Testing agent used after significant changes: YES (deux fois avec succès avant la découverte des derniers bugs).
+- Testing agent used after significant changes: YES (5 fois au total, la dernière a validé le workflow de sélection).
 - Test files created: []
-- Known regressions: Les deux bugs sur l'import TopTex sont des régressions ou des problèmes non détectés lors des tests initiaux.
+- Known regressions: Aucune.
 
 **Credentials to test flow:**
-Les identifiants sont maintenant créés automatiquement par le script de seeding au démarrage.
-| Rôle | Email | Mot de passe |
-|---|---|---|
-| Admin |  |  |
-| Organisateur |  |  |
-| Participant |  |  |
-| Prestataire |  |  |
+| Rôle | Email | Mot de passe | Notes |
+|---|---|---|---|
+| Admin |  |  | |
+| Organisateur |  |  | Compte original |
+| Participant |  |  | |
+| Prestataire |  |  | |
+| Organisateur |  |  | Nouveau, pour test |
+| Organisateur | |  | Nouveau, pour test |
 
 **What agent forgot to execute**
-L'agent n'a pas anticipé que le fichier PDF TopTex serait trop volumineux pour un upload standard, et n'a pas non plus prévu que les URLs des images du CDN de TopTex pourraient changer. Ces oublis ont conduit aux bugs actuels en production.</analysis>
+- L'agent n'a pas lancé une session de test complète (via ) après avoir terminé l'implémentation de la Phase A, qui contient des modifications substantielles du backend et du frontend.</analysis>
