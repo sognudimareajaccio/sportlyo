@@ -2004,6 +2004,40 @@ ${JSON.stringify({
               </div>
             </div>
 
+            {/* Explication du fonctionnement */}
+            <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6 mb-6 rounded-lg" data-testid="boutique-explainer">
+              <h3 className="font-heading font-bold text-base uppercase tracking-wide mb-4 flex items-center gap-2">
+                <ShoppingBag className="w-5 h-5 text-brand" /> Comment fonctionne la boutique ?
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5">
+                {[
+                  { step: '1', title: 'Importez votre logo', desc: 'Transmettez votre logo HD au prestataire pour personnaliser vos produits aux couleurs de votre evenement.', icon: Upload },
+                  { step: '2', title: 'Selectionnez vos articles', desc: 'Parcourez le catalogue prestataire et choisissez les produits que vous souhaitez vendre a vos participants.', icon: Package },
+                  { step: '3', title: 'Personnalisation', desc: 'Le prestataire applique votre logo et vous transmet les visuels. Vous publiez les produits sur vos evenements.', icon: Palette },
+                  { step: '4', title: 'Vendez & Gagnez', desc: 'Vos participants achetent directement. Vous touchez une commission sur chaque vente sans aucun stock a gerer !', icon: Euro },
+                ].map(({ step, title, desc, icon: Icon }) => (
+                  <div key={step} className="relative">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-7 h-7 bg-brand text-white text-xs font-bold rounded-full flex items-center justify-center shrink-0">{step}</span>
+                      <h4 className="font-heading font-bold text-sm uppercase">{title}</h4>
+                    </div>
+                    <p className="text-[11px] text-slate-300 leading-relaxed pl-9">{desc}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="bg-white/10 backdrop-blur rounded-lg p-4 flex items-start gap-3">
+                <TrendingUp className="w-6 h-6 text-green-400 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-heading font-bold text-sm uppercase text-green-400 mb-1">Votre avantage financier</h4>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    Chaque produit vendu vous rapporte une <strong className="text-white">commission fixe par unite</strong> definie par le prestataire. 
+                    Aucun investissement initial, aucun stock a gerer, aucun risque financier. Le prestataire s'occupe de la production et de l'expedition. 
+                    <strong className="text-white"> Vous generez des revenus supplementaires</strong> tout en offrant a vos participants des produits personnalises a l'image de votre evenement.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
               {[
