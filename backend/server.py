@@ -32,6 +32,7 @@ from routers.participant import router as participant_router
 from routers.notifications import router as notifications_router
 from routers.toptex_import import router as toptex_router
 from routers.selections import router as selections_router
+from routers.xdconnects_import import router as xdconnects_router
 
 app.include_router(auth_router)
 app.include_router(events_router)
@@ -49,6 +50,7 @@ app.include_router(participant_router)
 app.include_router(notifications_router)
 app.include_router(toptex_router)
 app.include_router(selections_router)
+app.include_router(xdconnects_router)
 
 
 # ============== HEALTH CHECK ==============

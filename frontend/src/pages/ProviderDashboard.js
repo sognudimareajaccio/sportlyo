@@ -48,6 +48,10 @@ const ProviderDashboard = () => {
   const [lookupRef, setLookupRef] = useState('');
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupResult, setLookupResult] = useState(null);
+  // XDConnects lookup
+  const [xdLookupRef, setXdLookupRef] = useState('');
+  const [xdLookupLoading, setXdLookupLoading] = useState(false);
+  const [xdLookupResult, setXdLookupResult] = useState(null);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [cardImageIndex, setCardImageIndex] = useState({});
   const imageInputRef = useRef(null);
@@ -233,6 +237,32 @@ const ProviderDashboard = () => {
     } catch (e) { toast.error(e.response?.data?.detail || 'Erreur import'); }
   };
 
+  // XDConnects handlers
+  const handleXdLookup = async () => {
+    if (!xdLookupRef.trim()) { toast.error('Entrez une reference XD Connects'); return; }
+    setXdLookupLoading(true);
+    setXdLookupResult(null);
+    try {
+      const res = await api.get(`/provider/import/xdconnects/lookup/${xdLookupRef.trim()}`);
+      setXdLookupResult(res.data.product);
+      toast.success('Produit trouve !');
+    } catch (e) {
+      const msg = e.response?.data?.detail || 'Erreur recherche';
+      toast.error(msg);
+    } finally { setXdLookupLoading(false); }
+  };
+
+  const handleXdAddSingle = async () => {
+    if (!xdLookupResult) return;
+    try {
+      await api.post('/provider/import/xdconnects/add-single', { product: xdLookupResult });
+      toast.success(`${xdLookupResult.ref} ajouté au catalogue !`);
+      setXdLookupResult(null);
+      setXdLookupRef('');
+      fetchData();
+    } catch (e) { toast.error(e.response?.data?.detail || 'Erreur import'); }
+  };
+
   const handleImageUpload = async (files) => {
     if (!files || files.length === 0) return;
     const currentImages = productForm.images || [];
@@ -325,6 +355,7 @@ const ProviderDashboard = () => {
     { id: 'catalogue', label: 'Catalogue', icon: ShoppingBag },
     { id: 'selections', label: 'Selections', icon: ClipboardList, badge: pendingSelections },
     { id: 'import', label: 'Import TopTex', icon: Package },
+    { id: 'import-xd', label: 'Import XD Connects', icon: Package },
     { id: 'finances', label: 'Finances', icon: Euro },
     { id: 'ventes', label: 'Ventes', icon: BarChart3 },
     { id: 'commandes', label: 'Commandes', icon: FileText },
@@ -669,6 +700,85 @@ const ProviderDashboard = () => {
                         <Button variant="outline" size="sm" className="text-xs" onClick={() => setLookupResult(null)}>Annuler</Button>
                         {lookupResult.source_url && (
                           <a href={lookupResult.source_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-brand hover:underline">Voir sur TopTex</a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+
+        {/* ===== IMPORT XD CONNECTS ===== */}
+        {activeSection === 'import-xd' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} data-testid="provider-import-xd-section">
+            <h3 className="font-heading font-bold text-base uppercase mb-4">Import Catalogue XD Connects / Xindao</h3>
+
+            {/* LOOKUP BY REFERENCE */}
+            <div className="bg-white border border-slate-200 p-6 mb-6">
+              <h4 className="font-heading font-bold uppercase text-xs mb-3">Recherche par reference</h4>
+              <p className="text-xs text-slate-500 mb-4">Tapez une reference XD Connects (Xindao, IQONIQ, XD Design, VINGA, Urban Vitamin...) et le systeme recupere automatiquement toutes les infos du produit.</p>
+              <div className="flex gap-3 items-end">
+                <div className="flex-1 max-w-xs">
+                  <Label className="text-[10px] font-heading uppercase text-slate-400">Reference XD Connects</Label>
+                  <Input value={xdLookupRef} onChange={(e) => setXdLookupRef(e.target.value.toUpperCase())} placeholder="Ex: T9101, P706.33, V43009..."
+                    onKeyDown={(e) => e.key === 'Enter' && handleXdLookup()} className="font-mono text-sm h-10" data-testid="xd-lookup-ref-input" />
+                </div>
+                <Button className="bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase text-xs gap-2 h-10" onClick={handleXdLookup} disabled={xdLookupLoading} data-testid="xd-lookup-btn">
+                  {xdLookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  {xdLookupLoading ? 'Recherche...' : 'Rechercher'}
+                </Button>
+              </div>
+
+              {/* XD Lookup result */}
+              {xdLookupResult && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 border border-brand/30 bg-brand/5 p-4" data-testid="xd-lookup-result">
+                  <div className="flex gap-4">
+                    <div className="w-32 h-32 bg-white border overflow-hidden flex-shrink-0">
+                      <img src={xdLookupResult.image_url} alt={xdLookupResult.name} className="w-full h-full object-contain" onError={(e) => { e.target.style.display='none'; }} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <span className="font-mono text-xs font-bold text-brand bg-brand/10 px-2 py-0.5">{xdLookupResult.ref}</span>
+                          {xdLookupResult.brand && <span className="ml-2 text-xs font-bold text-slate-500">{xdLookupResult.brand}</span>}
+                          {xdLookupResult.category && <span className="ml-2 text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 uppercase">{xdLookupResult.category}</span>}
+                        </div>
+                        <span className="font-heading font-black text-xl text-brand">{xdLookupResult.price > 0 ? `${xdLookupResult.price.toFixed(2)}€` : 'Prix sur demande'}</span>
+                      </div>
+                      <h4 className="font-heading font-bold text-sm mt-1">{xdLookupResult.name}</h4>
+                      <p className="text-xs text-slate-400 mt-1 line-clamp-2">{xdLookupResult.short_description || xdLookupResult.description}</p>
+                      {xdLookupResult.material && (
+                        <p className="text-[10px] text-slate-500 mt-1">Matiere: {xdLookupResult.material}{xdLookupResult.grammage ? ` — ${xdLookupResult.grammage}` : ''}</p>
+                      )}
+                      {xdLookupResult.sizes?.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          <span className="text-[10px] text-slate-400">Tailles:</span>
+                          {xdLookupResult.sizes.map(s => <span key={s} className="bg-white px-1.5 py-0.5 text-[10px] font-bold border">{s}</span>)}
+                        </div>
+                      )}
+                      {xdLookupResult.colors?.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          <span className="text-[10px] text-slate-400">Couleurs:</span>
+                          {xdLookupResult.colors.map(c => <span key={c} className="bg-white px-1.5 py-0.5 text-[10px] font-bold border">{c}</span>)}
+                        </div>
+                      )}
+                      {xdLookupResult.usps?.length > 0 && (
+                        <div className="mt-2 space-y-0.5">
+                          {xdLookupResult.usps.slice(0, 3).map((usp, i) => (
+                            <p key={i} className="text-[10px] text-green-600 flex items-center gap-1"><CheckCircle className="w-3 h-3 flex-shrink-0" />{usp}</p>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3 mt-3">
+                        <Button className="bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase text-xs gap-2" onClick={handleXdAddSingle} data-testid="xd-add-single-btn">
+                          <Plus className="w-3 h-3" /> Ajouter au catalogue
+                        </Button>
+                        <Button variant="outline" size="sm" className="text-xs" onClick={() => setXdLookupResult(null)}>Annuler</Button>
+                        {xdLookupResult.source_url && (
+                          <a href={xdLookupResult.source_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-brand hover:underline">Voir sur XD Connects</a>
                         )}
                       </div>
                     </div>
