@@ -208,6 +208,7 @@ async def import_toptex_products(request: Request, current_user: dict = Depends(
             "image_url": p.get("image_url", ""),
             "suggested_commission": 5,
             "source": "toptex",
+            "active": True,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.provider_products.insert_one(product)
@@ -429,6 +430,7 @@ async def import_single_toptex_product(request: Request, current_user: dict = De
         "source": "toptex",
         "source_url": p.get("source_url", ""),
         "brand": p.get("brand", ""),
+        "active": True,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.provider_products.insert_one(product)
