@@ -22,6 +22,15 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 
 ## Ce qui est implémenté
 
+### Mars 2026 - Session 7
+
+**Import XD Connects / Xindao ✅ (testé iteration_34):**
+- Nouvel onglet "Import XD Connects" dans l'espace prestataire
+- Recherche par référence (T9101, P706.33, V43009...) via scraping Playwright
+- Affichage fiche produit complète (nom, prix, marque, catégorie, tailles, couleurs, matière, USPs)
+- Ajout au catalogue en un clic avec détection de doublons
+- Lien externe vers la page produit sur XDConnects
+
 ### Mars 2026 - Session 6 (Phases A & B)
 
 **Phase A - Gestion événements ✅ (testé iteration_32):**
@@ -79,6 +88,9 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 ### Refactorisation
 - [ ] Décomposer OrganizerDashboard.js (2838 lignes) en composants
 - [ ] Décomposer ProviderDashboard.js en composants
+
+- `/api/provider/import/xdconnects/lookup/{ref}` → (GET) Recherche produit XD Connects par référence
+- `/api/provider/import/xdconnects/add-single` → (POST) Import produit XD Connects au catalogue
 
 ## Endpoints Clés
 - `POST /api/events` → création événement avec notifications admin
