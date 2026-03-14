@@ -4,9 +4,9 @@
 Plateforme de vente de tickets en ligne pour des événements sportifs (marathon, trail, vélo, etc.), nommée SportLyo.
 
 ## Architecture
-- **Frontend:** React, TailwindCSS, Shadcn UI, framer-motion, recharts
+- **Frontend:** React, TailwindCSS, Shadcn UI, framer-motion, recharts, date-fns
 - **Backend:** FastAPI avec routeurs modulaires
-- **Database:** MongoDB (collections: users, events, products, provider_products, orders, selections, notifications, provider_messages)
+- **Database:** MongoDB (collections: users, events, products, provider_products, orders, selections, notifications, provider_messages, registrations, promo_codes)
 - **Auth:** JWT
 - **Paiements:** Square, SumUp (INTÉGRÉ)
 
@@ -17,31 +17,40 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 | Organisateur | club@paris-sport.fr | club123 |
 | Participant | pierre@test.com | test1234 |
 | Prestataire | boutique@sportlyo.fr | boutique123 |
+| Organisateur | contact@lyonrunning.fr | lyon1234 |
+| Organisateur | events@marseilletrail.fr | mars1234 |
 
 ## Ce qui est implémenté
+
+### Mars 2026 - Session 6 (Phases A & B)
+
+**Phase A - Gestion événements ✅ (testé iteration_32):**
+- Refonte formulaire création/édition événement (multi-étapes)
+- Upload règlement PDF + champ "T-shirt fourni"
+- Gestion améliorée des épreuves (description, réorganisation up/down)
+- Système publication/dépublication avec badges Publié/Brouillon
+- Notification admin à la création d'événement
+
+**Phase B - Améliorations participant & événements ✅ (testé iteration_33):**
+- Suppression page "Accès réservé" (ComingSoonPage guard)
+- Dashboard participant: widget "Nouveau Défi" (événements récents)
+- Dashboard participant: widget "Agenda des événements" (inscriptions à venir avec J-X)
+- Contact d'urgence obligatoire à l'inscription (backend + frontend)
+- Page "Tous les événements": classement par mois + seuls événements publiés
 
 ### Mars 2026 - Session 5
 
 **Phase 1 ✅ :**
 - Suppression produit prestataire par l'organisateur
-- Suppression upload PDF TopTex (gardé uniquement recherche par référence)
-- Cartes produits portrait (3:4) avec carrousel dans l'espace organisateur + prestataire
-- Galerie multi-photos (10 max) pour les prestataires
-- Bloc explicatif boutique (4 étapes + avantage financier)
+- Cartes produits portrait avec carrousel
+- Galerie multi-photos pour les prestataires
+- Bloc explicatif boutique
 
 **Phase 2 ✅ : Workflow Prestataire ↔ Organisateur**
-- Étape 1: Catalogue prestataire brut (déjà fait)
-- Étape 2: Upload logo organisateur → sélection produits → notification prestataire
-  - Collection `selections` avec organizer_logo, products, status
-  - Quand l'organisateur ajoute un produit prestataire → sélection créée/enrichie + notification
-- Étape 3: Personnalisation par le prestataire
-  - Vue "Sélections" dans l'espace prestataire (classement par organisateur)
-  - Stats : En attente / En cours / Prêts
-  - Dialog de personnalisation avec upload photos (10 max)
-  - Auto-sync des photos vers l'espace organisateur
-  - Statut: pending → in_progress → ready
-  - Badges dans l'espace organisateur : "En attente" (amber) / "Prêt" (vert)
-  - Notifications automatiques (nouvelle sélection, personnalisation terminée)
+- Collection `selections` pour demandes de personnalisation
+- Upload logo organisateur → sélection → notification prestataire
+- Personnalisation par le prestataire avec auto-sync
+- Badges statut dans l'espace organisateur
 
 ### Sessions précédentes
 - Refactorisation backend, Dashboard Participant (7 widgets)
@@ -50,21 +59,13 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 - Messagerie, Seeding données auto
 - Partage événement modal, Commission non modifiable
 
-## EN COURS — Phase 3 : Finances & Commissions
-
-### À faire
-- Commission admin : 1€/produit vendu par le prestataire
-- Espace Admin - Finances : Total commissions admin, détail par prestataire
-- Espace Prestataire - Finances :
-  - Prix d'achat vs prix de revente
-  - Commission organisateur déduite
-  - Commission admin (1€) déduite
-  - Marge nette par produit et globale
-
 ## Backlog Priorisé
 
-### P1
-- [ ] Phase 3 : Finances & Commissions admin/prestataire
+### P0 — Prochaine priorité
+- [ ] Phase C : Système de commission Admin
+  - Commission admin 1€/produit vendu par le prestataire
+  - Dashboard financier admin : suivi commissions
+  - Dashboard financier prestataire : visibilité commissions (organisateur + admin)
 
 ### P2
 - [ ] Système de facturation avancé
@@ -75,11 +76,22 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 - [ ] Statistiques avancées organisateurs
 - [ ] Notifications SMS (Twilio)
 
-## Endpoints Clés Sélections
-- `POST /api/organizer/add-provider-product` → crée/enrichit une sélection + notifie
-- `GET /api/provider/selections` → sélections groupées par organisateur
-- `GET /api/provider/selections/stats` → compteurs par statut
-- `GET /api/provider/selections/{id}` → détail sélection
+### Refactorisation
+- [ ] Décomposer OrganizerDashboard.js (2838 lignes) en composants
+- [ ] Décomposer ProviderDashboard.js en composants
+
+## Endpoints Clés
+- `POST /api/events` → création événement avec notifications admin
+- `PUT /api/events/{id}/publish` → publication/dépublication
+- `GET /api/events` → événements publiés uniquement
+- `GET /api/organizer/events` → tous les événements de l'organisateur
+- `GET /api/participant/new-events` → événements récents pour "Nouveau Défi"
+- `POST /api/registrations` → inscription avec validation contact d'urgence obligatoire
+- `POST /api/organizer/add-provider-product` → crée sélection + notifie
+- `GET /api/provider/selections` → sélections par organisateur
 - `PUT /api/provider/selections/{id}/customize/{index}` → personnalise + auto-sync
-- `PUT /api/provider/selections/{id}/status` → met à jour le statut
-- `GET /api/organizer/selections` → sélections côté organisateur
+
+## DB Schema clés
+- **events**: published (bool), regulations_pdf_url (str), provides_tshirt (bool), races[].description (str)
+- **selections**: organizer_id, organizer_logo, products[{customization_status, custom_images}], status
+- **registrations**: emergency_contact (requis), emergency_phone (requis)
