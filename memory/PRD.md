@@ -23,66 +23,36 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 
 ## Ce qui est implemente
 
-### Mars 2026 - Session 12 (P3 - Finalisation 7 fonctionnalites)
+### Mars 2026 - Session 12 (P3 + Audit Pre-Production)
 
-**4 features prioritaires (batch 1) — COMPLETE et TESTEES:**
-- Facturation avancee : PDF avec branding organisateur (company name, SIRET, address), infos evenement, statut colore, boite infos paiement
-- RFID Admin : Onglet RFID dans admin dashboard avec CRUD equipements, stats (5 KPIs), gestion demandes de location (confirmer/refuser/retourner)
-- Check-in Jour J : Page /checkin avec selection evenement, barre de progression animee, scan rapide dossard, annulation check-in, liste participants
-- SMS Templates : 6 modeles predenis, compteur destinataires par evenement, notice Twilio, historique envois
+**7 fonctionnalites P3 finalisees et testees:**
+- Facturation avancee (PDF branding organisateur)
+- RFID Admin (CRUD equipements + gestion locations)
+- Check-in Jour J (barre progression + UX mobile)
+- SMS Templates (6 modeles + compteur destinataires)
+- Statistiques avancees (filtres date + 3 graphiques recharts)
+- Gestion communautaire (pagination + UX)
+- Remboursements admin (filtres statut + notes admin)
 
-**3 features restantes (batch 2) — COMPLETE et TESTEES:**
-- Statistiques avancees : 6 KPIs, filtre par periode (Tout/30j/3m/1an), graphiques recharts (LineChart tendance mensuelle, PieChart repartition inscriptions, BarChart revenus par evenement), tableau detail par evenement
-- Gestion communautaire : Pagination (page/limit, bouton 'Charger plus'), compteur messages, raccourci Ctrl+Entree, avatar auteur
-- Remboursements admin : 4 cartes resume (en attente, approuves, refuses, montant), filtres par statut, note admin lors du refus
+**Audit pre-production COMPLET:**
+- Securite: pas de secrets hardcodes, pas de fuite _id, auth protegee, CORS OK
+- Backend: 100% endpoints fonctionnels (auth, events, admin, organizer, participant, provider, checkin, community, invoices, rfid, sms)
+- Frontend: 100% regression (4 roles testes, tous dashboards, toutes pages)
+- Seul warning non-critique: Recharts dimensions dans conteneurs collapses
 
-### Mars 2026 - Session 11 (Validation Refactorisation)
-- Refactorisation OrganizerDashboard validee a 100% (16 sous-composants)
-- 2 bugs corriges: import BoutiqueSection, SectionHeader BookingsSection
+### Sessions precedentes
+- Session 11: Refactorisation OrganizerDashboard validee (16 sous-composants)
+- Session 10: Refactorisation ProviderDashboard
+- Session 9: Scaffolding 7 fonctionnalites P2
+- Sessions 6-8: Gestion evenements, import catalogues, commissions admin
 
-### Sessions precedentes (6-10)
-- Gestion evenements, participants, inscriptions
-- Import catalogues TopTex/XDConnects
-- Commission Admin 1EUR/produit
-- Refactorisation ProviderDashboard et OrganizerDashboard
-- Homepage, page evenements
+## Statut Production
+- **PRET POUR DEPLOIEMENT** (audit pre-production passe le 14 mars 2026)
+- **Twilio SMS MOCKED** : notifications sauvegardees en base, envoi reel en attente de configuration cles API
 
-## Backlog Priorise
-
-### P3 — COMPLETE
-- [x] Facturation avancee (PDF branding)
-- [x] Location RFID (Admin CRUD + gestion locations)
-- [x] Check-in Jour J (barre progression + UX mobile)
-- [x] Notifications SMS (templates + destinataires)
-- [x] Statistiques avancees (filtres date + graphiques recharts)
-- [x] Gestion communautaire (pagination + UX)
-- [x] Remboursements admin (filtres statut + notes admin)
-
-### Backlog restant
-- [ ] Ameliorer onglet Commissions admin avec graphiques visuels (courbe mensuelle)
+## Backlog restant
+- [ ] Ameliorer onglet Commissions admin avec graphiques visuels
 - [ ] Configurer cles Twilio pour envoi reel de SMS
-- [ ] Gestion admin RFID avancee (historique locations, stats par organisateur)
 - [ ] Export CSV des statistiques organisateur
-- [ ] Paiement en ligne pour les locations RFID
-- [ ] Refactorisation supplementaire de ProviderDashboard.js
-
-## Integrations MOCKED
-- **Twilio SMS** : Notifications sauvegardees en base de donnees mais non envoyees par SMS. En attente de configuration des cles API par l'utilisateur.
-
-## Code Architecture
-```
-/app/frontend/src/components/
-|-- organizer/ (16 components connectes)
-|-- provider/ (4 components extraits)
-|-- EventCommunity.js (pagination)
-
-/app/backend/routers/
-|-- admin.py, analytics.py (period filter), checkin.py
-|-- community.py (pagination), events.py, invoices.py (PDF branding)
-|-- notifications.py, organizer.py, provider.py
-|-- provider_products.py, refunds.py (status filter + stats)
-|-- rfid.py (admin stats), selections.py, shop.py
-|-- sms.py (templates + recipients-count), timing.py
-|-- toptex_importer.py, uploads.py, users.py
-|-- xdconnects_import.py
-```
+- [ ] Paiement en ligne locations RFID
+- [ ] Refactorisation supplementaire ProviderDashboard.js
