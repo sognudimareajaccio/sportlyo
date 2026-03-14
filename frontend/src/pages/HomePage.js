@@ -198,6 +198,139 @@ const HomePage = () => {
         </div>
       </section>
 
+      {/* Featured Events Section - À la une */}
+      <section className="section-padding" data-testid="featured-events-section">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-end justify-between mb-12">
+            <div>
+              <span className="text-brand font-heading font-bold uppercase tracking-widest text-sm">
+                A la une
+              </span>
+              <h2 className="font-heading text-4xl md:text-5xl font-bold tracking-tight uppercase mt-2">
+                Evenements populaires
+              </h2>
+            </div>
+            <Link to="/events" className="hidden md:flex items-center space-x-2 text-brand font-bold uppercase tracking-wider hover:underline">
+              <span>Voir tous</span>
+              <ChevronRight className="w-5 h-5" />
+            </Link>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="loader" />
+            </div>
+          ) : featuredEvents.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredEvents.map((event, idx) => (
+                <motion.div
+                  key={event.event_id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: idx * 0.05 }}
+                  viewport={{ once: true }}
+                >
+                  <EventCard event={event} />
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-slate-500">Aucun evenement disponible pour le moment.</p>
+              <Link to="/events" className="text-brand font-bold mt-4 inline-block hover:underline">
+                Explorer tous les evenements
+              </Link>
+            </div>
+          )}
+
+          <div className="mt-12 text-center md:hidden">
+            <Link to="/events">
+              <Button className="btn-secondary">
+                Voir tous les evenements
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* SportLyo est partout - Destinations Section */}
+      <section className="relative overflow-hidden" data-testid="destinations-section">
+        {/* Background */}
+        <div className="absolute inset-0 bg-asphalt" />
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
+          {/* Header */}
+          <motion.div
+            className="text-center mb-14"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+          >
+            <span className="text-brand font-heading font-bold uppercase tracking-widest text-sm">
+              SportLyo est partout !
+            </span>
+            <h2 className="font-heading text-4xl md:text-5xl font-bold tracking-tight uppercase mt-3 text-white">
+              Les destinations a l'honneur
+            </h2>
+            <p className="text-slate-400 mt-4 max-w-2xl mx-auto text-base md:text-lg leading-relaxed">
+              SportLyo vous permet de voyager grace a votre passion dans les regions et villes qui font la beaute de notre pays. Explorez les territoires ou il fait bon courir !
+            </p>
+          </motion.div>
+
+          {/* Destinations Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {[
+              { name: 'Lyon', region: 'Auvergne-Rhone-Alpes', events: 12, img: 'https://images.unsplash.com/photo-1524484485831-a92ffc0de03f?w=400&q=80' },
+              { name: 'Marseille', region: 'Provence-Alpes-Cote d\'Azur', events: 8, img: 'https://images.unsplash.com/photo-1767717746224-c57f85738584?w=400&q=80' },
+              { name: 'Chamonix', region: 'Haute-Savoie', events: 5, img: 'https://images.unsplash.com/photo-1600807497639-3b5d8e74a232?w=400&q=80' },
+              { name: 'Annecy', region: 'Haute-Savoie', events: 4, img: 'https://images.unsplash.com/photo-1720538907730-b1e2da51438d?w=400&q=80' },
+              { name: 'Bordeaux', region: 'Nouvelle-Aquitaine', events: 3, img: 'https://images.unsplash.com/photo-1729166576437-c162a2152f4d?w=400&q=80' },
+              { name: 'Paris', region: 'Ile-de-France', events: 6, img: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&q=80' },
+            ].map((dest, idx) => (
+              <motion.div
+                key={dest.name}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: idx * 0.06 }}
+                viewport={{ once: true }}
+              >
+                <Link
+                  to={`/events?location=${encodeURIComponent(dest.name)}`}
+                  className="group relative block aspect-square overflow-hidden"
+                  data-testid={`dest-${dest.name.toLowerCase()}`}
+                >
+                  <img
+                    src={dest.img}
+                    alt={dest.name}
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent group-hover:from-brand/80 transition-all duration-500" />
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <h3 className="font-heading font-bold text-white text-lg uppercase tracking-wider">{dest.name}</h3>
+                    <p className="text-white/60 text-[10px] font-heading uppercase tracking-wider mt-0.5">{dest.region}</p>
+                    <span className="inline-block mt-2 text-[10px] font-heading font-bold text-brand bg-white/90 px-2 py-0.5 uppercase tracking-wider">
+                      {dest.events} evenements
+                    </span>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="text-center mt-10">
+            <Link to="/events">
+              <Button className="bg-transparent border-2 border-white/30 text-white hover:bg-white hover:text-asphalt font-heading font-bold uppercase tracking-wider px-8 h-12 transition-all duration-300">
+                Toutes les destinations <MapPin className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Défis Sportifs Section */}
       <section className="section-padding" data-testid="themes-section">
         <div className="max-w-7xl mx-auto">
@@ -467,62 +600,6 @@ const HomePage = () => {
                 </motion.div>
               </div>
             </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Events Section */}
-      <section className="section-padding" data-testid="featured-events-section">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-end justify-between mb-12">
-            <div>
-              <span className="text-brand font-heading font-bold uppercase tracking-widest text-sm">
-                À la une
-              </span>
-              <h2 className="font-heading text-4xl md:text-5xl font-bold tracking-tight uppercase mt-2">
-                Événements populaires
-              </h2>
-            </div>
-            <Link to="/events" className="hidden md:flex items-center space-x-2 text-brand font-bold uppercase tracking-wider hover:underline">
-              <span>Voir tous</span>
-              <ChevronRight className="w-5 h-5" />
-            </Link>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="loader" />
-            </div>
-          ) : featuredEvents.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredEvents.map((event, idx) => (
-                <motion.div
-                  key={event.event_id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: idx * 0.1 }}
-                  viewport={{ once: true }}
-                >
-                  <EventCard event={event} />
-                </motion.div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-slate-500">Aucun événement disponible pour le moment.</p>
-              <Link to="/events" className="text-brand font-bold mt-4 inline-block hover:underline">
-                Explorer tous les événements
-              </Link>
-            </div>
-          )}
-
-          <div className="mt-12 text-center md:hidden">
-            <Link to="/events">
-              <Button className="btn-secondary">
-                Voir tous les événements
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-            </Link>
           </div>
         </div>
       </section>

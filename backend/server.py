@@ -105,6 +105,9 @@ async def seed_default_accounts():
         {"$set": {"name": "Moreati", "company_name": "Moreati"}}
     )
 
+    # Cleanup test events
+    await db.events.delete_many({"title": {"$regex": "^TEST_"}})
+
     # Fix corrupted notifications (message stored as dict or swapped fields)
     async for n in db.notifications.find({}):
         ntype = str(n.get("type", ""))
