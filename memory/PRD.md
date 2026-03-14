@@ -31,8 +31,12 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 ## Ce qui est implémenté
 
 ### Mars 2026 - Session 4
-- **Fix Bug P0: Upload PDF TopTex** : Implémentation d'un traitement en arrière-plan (background task) avec streaming par chunks (512KB). Upload retourne un `task_id`, le client poll `/api/provider/import/pdf-status/{task_id}` pour obtenir les résultats. Supporte fichiers jusqu'à 100MB.
-- **Fix Bug P0: Image manquante lookup TopTex** : Extraction de l'image depuis la balise `og:image` de la page produit TopTex au lieu de deviner l'URL. Couleurs extraites depuis les stickers (source fiable) avec traduction FR.
+- **Fix Bug P0: Upload PDF TopTex** : Traitement en arrière-plan avec streaming par chunks (512KB), polling status
+- **Fix Bug P0: Image manquante lookup TopTex** : Extraction image depuis `og:image` meta tag, couleurs depuis stickers
+- **Partage d'événement modernisé** : Modal animé (framer-motion) avec icônes Facebook, X, WhatsApp, Email et bouton copier le lien avec feedback visuel
+- **Commission prestataire non modifiable** : Le champ commission est en lecture seule pour l'organisateur (imposé par le prestataire)
+- **Suppression "Devenir Organisateur"** : Les non-organisateurs voient "Accès réservé" avec redirection vers /dashboard
+- **Produits prestataire verrouillés** : Les produits source='provider' ne sont plus modifiables par l'organisateur (badge "Prestataire" + icône Lock)
 
 ### Mars 2026 - Session 3
 - **Intégration SumUp réelle** : Checkout API + Payment Widget
@@ -52,8 +56,12 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 ## Backlog Priorisé
 
 ### P0 (Haute priorité)
-- [x] Fix upload PDF TopTex (background task + streaming)
-- [x] Fix image manquante lookup TopTex (og:image extraction)
+- [x] Fix upload PDF TopTex
+- [x] Fix image manquante lookup TopTex
+- [x] Partage d'événement moderne
+- [x] Commission non modifiable par organisateur
+- [x] Supprimer "Devenir Organisateur" pour non-organisateurs
+- [x] Produits prestataire non modifiables par organisateur
 
 ### P1 (Moyenne priorité)
 - [ ] Système de facturation avancé (interface dédiée, téléchargement PDF)
@@ -77,10 +85,3 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 | recharts | Intégré (graphiques) |
 | fpdf2 | Intégré (factures PDF) |
 | TopTex | INTÉGRÉ (import catalogue via PDF ou recherche par référence) |
-
-## Endpoints Clés Import TopTex
-- `POST /api/provider/import/parse-pdf` → retourne `{task_id}` (traitement en arrière-plan)
-- `GET /api/provider/import/pdf-status/{task_id}` → retourne `{status, products, total}`
-- `GET /api/provider/import/lookup/{ref}` → retourne `{product}` avec image extraite de og:image
-- `POST /api/provider/import/add-single` → ajoute un produit au catalogue
-- `POST /api/provider/import/confirm` → importe plusieurs produits sélectionnés
