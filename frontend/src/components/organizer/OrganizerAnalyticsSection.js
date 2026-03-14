@@ -85,7 +85,7 @@ const OrganizerAnalyticsSection = () => {
         {monthly_trend.length > 0 && (
           <div className="bg-white border border-slate-200 p-4" data-testid="analytics-monthly-chart">
             <h3 className="font-heading font-bold text-sm uppercase mb-4">Tendance mensuelle</h3>
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={220} minHeight={220}>
               <LineChart data={monthly_trend}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="month" tickFormatter={v => v.slice(5)} tick={{ fontSize: 10 }} />
@@ -103,7 +103,7 @@ const OrganizerAnalyticsSection = () => {
         {pieData.length > 0 && (
           <div className="bg-white border border-slate-200 p-4" data-testid="analytics-pie-chart">
             <h3 className="font-heading font-bold text-sm uppercase mb-4">Repartition inscriptions</h3>
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={220} minHeight={220}>
               <PieChart>
                 <Pie data={pieData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={{ strokeWidth: 1 }}>
                   {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
@@ -119,7 +119,7 @@ const OrganizerAnalyticsSection = () => {
       {barData.length > 0 && (
         <div className="bg-white border border-slate-200 p-4" data-testid="analytics-bar-chart">
           <h3 className="font-heading font-bold text-sm uppercase mb-4">Revenus par evenement</h3>
-          <ResponsiveContainer width="100%" height={Math.max(200, barData.length * 40)}>
+          <ResponsiveContainer width="100%" height={Math.max(200, barData.length * 40)} minHeight={200}>
             <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis type="number" tick={{ fontSize: 10 }} />

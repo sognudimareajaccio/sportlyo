@@ -23,98 +23,66 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 
 ## Ce qui est implemente
 
+### Mars 2026 - Session 12 (P3 - Finalisation 7 fonctionnalites)
+
+**4 features prioritaires (batch 1) — COMPLETE et TESTEES:**
+- Facturation avancee : PDF avec branding organisateur (company name, SIRET, address), infos evenement, statut colore, boite infos paiement
+- RFID Admin : Onglet RFID dans admin dashboard avec CRUD equipements, stats (5 KPIs), gestion demandes de location (confirmer/refuser/retourner)
+- Check-in Jour J : Page /checkin avec selection evenement, barre de progression animee, scan rapide dossard, annulation check-in, liste participants
+- SMS Templates : 6 modeles predenis, compteur destinataires par evenement, notice Twilio, historique envois
+
+**3 features restantes (batch 2) — COMPLETE et TESTEES:**
+- Statistiques avancees : 6 KPIs, filtre par periode (Tout/30j/3m/1an), graphiques recharts (LineChart tendance mensuelle, PieChart repartition inscriptions, BarChart revenus par evenement), tableau detail par evenement
+- Gestion communautaire : Pagination (page/limit, bouton 'Charger plus'), compteur messages, raccourci Ctrl+Entree, avatar auteur
+- Remboursements admin : 4 cartes resume (en attente, approuves, refuses, montant), filtres par statut, note admin lors du refus
+
 ### Mars 2026 - Session 11 (Validation Refactorisation)
+- Refactorisation OrganizerDashboard validee a 100% (16 sous-composants)
+- 2 bugs corriges: import BoutiqueSection, SectionHeader BookingsSection
 
-**Refactorisation OrganizerDashboard COMPLETE et VALIDEE:**
-- Fichier monolithique ~2800 lignes decompose en 16 sous-composants modulaires
-- OrganizerDashboard.js reduit a ~955 lignes (orchestrateur)
-- Tous les composants connectes et fonctionnels (HubSection, EventsSection, ParticipantsSection, GaugesSection, CheckinSection, FinancesSection, BoutiqueSection, CorrespondancesSection, ShareSection, ChronometrageSection, ResultsSection, PartnersSection, SponsorsSection, BookingsSection)
-- 2 bugs corriges: import manquant BoutiqueSection, SectionHeader manquant BookingsSection
-- Testing agent: 100% pass rate sur les 16 sections
-
-### Mars 2026 - Session 10 (P1 Refactorisation)
-
-**Refactorisation ProviderDashboard:**
-- 1191 -> 891 lignes (-25%)
-- Composants extraits: ProviderCatalogue, ProviderFinances, ProviderSales, ProviderMessages
-- Repertoire: `components/provider/`
-
-### Mars 2026 - Session 9 (P2 Features)
-- Facturation avancee (PDF)
-- Gestion communautaire
-- Demandes de remboursement
-- Location materiel RFID
-- Check-in mobile
-- Statistiques avancees organisateurs
-- Notifications SMS (Twilio - mode queue)
-
-### Mars 2026 - Session 8
-- Phase C : Commission Admin 1EUR/produit
-- Bug fix : Images XD Connects
-
-### Sessions precedentes (6-7)
-- Phase A & B (evenements, participant)
-- Import XDConnects/Playwright
-- Ameliorations homepage
+### Sessions precedentes (6-10)
+- Gestion evenements, participants, inscriptions
+- Import catalogues TopTex/XDConnects
+- Commission Admin 1EUR/produit
+- Refactorisation ProviderDashboard et OrganizerDashboard
+- Homepage, page evenements
 
 ## Backlog Priorise
 
-### P1 -- Refactorisation -- COMPLETE
-- [x] Extraire ProviderCatalogue, ProviderFinances, ProviderSales, ProviderMessages
-- [x] Extraire OrganizerAnalyticsSection, OrganizerSmsSection
-- [x] Connecter tous les composants (HubSection, EventsSection, ParticipantsSection, GaugesSection, CheckinSection, FinancesSection, BoutiqueSection, CorrespondancesSection, ShareSection, ChronometrageSection, ResultsSection, PartnersSection, SponsorsSection, BookingsSection)
-- [x] Reduire OrganizerDashboard.js sous 1000 lignes (955 lignes actuellement)
+### P3 — COMPLETE
+- [x] Facturation avancee (PDF branding)
+- [x] Location RFID (Admin CRUD + gestion locations)
+- [x] Check-in Jour J (barre progression + UX mobile)
+- [x] Notifications SMS (templates + destinataires)
+- [x] Statistiques avancees (filtres date + graphiques recharts)
+- [x] Gestion communautaire (pagination + UX)
+- [x] Remboursements admin (filtres statut + notes admin)
 
-### P3 -- Finaliser 7 fonctionnalites ebauchees
-- [ ] Facturation avancee : Ameliorer les PDF de factures (branding, plus de details)
-- [ ] Gestion communautaire : Polir l'interface du fil d'actualite, ajouter la pagination
-- [ ] Demandes de remboursement : Ameliorer l'UI et ajouter des notifications
-- [ ] Location materiel RFID : Interface de gestion de stock organisateurs et location participants
-- [ ] Application de check-in : Interface fonctionnelle pour le jour de l'evenement
-- [ ] Statistiques avancees : Ajouter des filtres (par date) et plus de graphiques
-- [ ] Notifications SMS (Twilio) : Configuration cles API et activation
-
-### Backlog
-- [ ] Ameliorer l'onglet Commissions admin avec graphiques visuels
-- [ ] Refactorisation de ProviderDashboard.js (peut encore etre decompose)
+### Backlog restant
+- [ ] Ameliorer onglet Commissions admin avec graphiques visuels (courbe mensuelle)
 - [ ] Configurer cles Twilio pour envoi reel de SMS
-- [ ] Gestion admin RFID (ajout/modification equipements)
+- [ ] Gestion admin RFID avancee (historique locations, stats par organisateur)
 - [ ] Export CSV des statistiques organisateur
 - [ ] Paiement en ligne pour les locations RFID
+- [ ] Refactorisation supplementaire de ProviderDashboard.js
+
+## Integrations MOCKED
+- **Twilio SMS** : Notifications sauvegardees en base de donnees mais non envoyees par SMS. En attente de configuration des cles API par l'utilisateur.
 
 ## Code Architecture
 ```
 /app/frontend/src/components/
-|-- organizer/
-|   |-- OrganizerAnalyticsSection.js  # EXTRACTED + CONNECTED
-|   |-- OrganizerSmsSection.js        # EXTRACTED + CONNECTED
-|   |-- HubSection.js                 # CONNECTED
-|   |-- EventsSection.js              # CONNECTED
-|   |-- ParticipantsSection.js        # CONNECTED
-|   |-- GaugesSection.js              # CONNECTED
-|   |-- CheckinSection.js             # CONNECTED
-|   |-- FinancesSection.js            # CONNECTED
-|   |-- BoutiqueSection.js            # CONNECTED
-|   |-- CorrespondancesSection.js     # CONNECTED
-|   |-- ShareSection.js               # CONNECTED
-|   |-- ChronometrageSection.js       # CONNECTED
-|   |-- ResultsSection.js             # CONNECTED
-|   |-- PartnersSection.js            # CONNECTED
-|   |-- SponsorsSection.js            # CONNECTED
-|   |-- BookingsSection.js            # CONNECTED
-|   |-- index.js                      # Barrel exports
-|-- provider/
-|   |-- ProviderCatalogue.js          # EXTRACTED
-|   |-- ProviderFinances.js           # EXTRACTED
-|   |-- ProviderSales.js              # EXTRACTED
-|   |-- ProviderMessages.js           # EXTRACTED
-|-- EventCommunity.js                 # Community component
+|-- organizer/ (16 components connectes)
+|-- provider/ (4 components extraits)
+|-- EventCommunity.js (pagination)
 
 /app/backend/routers/
-|-- admin.py, analytics.py, checkin.py, community.py
-|-- events.py, invoices.py, notifications.py, organizer.py
-|-- provider.py, provider_products.py, refunds.py, rfid.py
-|-- selections.py, shop.py, sms.py
+|-- admin.py, analytics.py (period filter), checkin.py
+|-- community.py (pagination), events.py, invoices.py (PDF branding)
+|-- notifications.py, organizer.py, provider.py
+|-- provider_products.py, refunds.py (status filter + stats)
+|-- rfid.py (admin stats), selections.py, shop.py
+|-- sms.py (templates + recipients-count), timing.py
 |-- toptex_importer.py, uploads.py, users.py
 |-- xdconnects_import.py
 ```
