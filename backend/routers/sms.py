@@ -120,3 +120,33 @@ async def get_sms_config(current_user: dict = Depends(get_current_user)):
         "has_from": bool(TWILIO_FROM),
         "phone_number": TWILIO_FROM[:6] + "..." if TWILIO_FROM else None
     }
+
+
+@router.get("/sms/templates")
+async def get_sms_templates(current_user: dict = Depends(get_current_user)):
+    """Get predefined SMS templates."""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    templates = [
+        {"id": "rappel_veille", "name": "Rappel J-1", "message": "Rappel: votre evenement {event} a lieu demain! Pensez a recuperer votre dossard. Bonne course!"},
+        {"id": "depart_modifie", "name": "Horaire modifie", "message": "IMPORTANT: L'horaire de depart de {event} a ete modifie. Consultez le site pour les details."},
+        {"id": "resultats_dispo", "name": "Resultats disponibles", "message": "Les resultats de {event} sont en ligne! Retrouvez votre classement sur SportLyo."},
+        {"id": "merci", "name": "Remerciement", "message": "Merci pour votre participation a {event}! Nous esperons vous revoir bientot. L'equipe organisatrice."},
+        {"id": "meteo", "name": "Alerte meteo", "message": "Attention: conditions meteo speciales pour {event}. Adaptez votre equipement. Details sur le site."},
+        {"id": "retrait_dossard", "name": "Retrait dossard", "message": "N'oubliez pas de retirer votre dossard pour {event}. Horaires et lieu de retrait sur le site."},
+    ]
+    return {"templates": templates}
+
+
+@router.get("/sms/recipients-count/{event_id}")
+async def get_recipients_count(event_id: str, race: str = None, current_user: dict = Depends(get_current_user)):
+    """Get count of SMS-reachable participants for an event."""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    query = {"event_id": event_id}
+    if race:
+        query["selected_race"] = race
+    regs = await db.registrations.find(query, {"_id": 0, "user_id": 1}).to_list(5000)
+    user_ids = [r["user_id"] for r in regs if r.get("user_id")]
+    with_phone = await db.users.count_documents({"user_id": {"$in": user_ids}, "phone": {"$exists": True, "$ne": ""}})
+    return {"total": len(regs), "with_phone": with_phone}

@@ -150,6 +150,28 @@ async def get_all_rentals(current_user: dict = Depends(get_current_user)):
     return {"rentals": rentals}
 
 
+@router.get("/admin/rfid/stats")
+async def get_rfid_stats(current_user: dict = Depends(get_current_user)):
+    """Admin: get RFID equipment and rental statistics."""
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin only")
+    total_equipment = await db.rfid_equipment.count_documents({})
+    total_rentals = await db.rfid_rentals.count_documents({})
+    pending_rentals = await db.rfid_rentals.count_documents({"status": "pending"})
+    confirmed_rentals = await db.rfid_rentals.count_documents({"status": "confirmed"})
+    total_revenue = 0
+    confirmed = await db.rfid_rentals.find({"status": {"$in": ["confirmed", "returned"]}}, {"_id": 0, "total": 1}).to_list(500)
+    for r in confirmed:
+        total_revenue += r.get("total", 0)
+    return {
+        "total_equipment": total_equipment,
+        "total_rentals": total_rentals,
+        "pending_rentals": pending_rentals,
+        "confirmed_rentals": confirmed_rentals,
+        "total_revenue": round(total_revenue, 2)
+    }
+
+
 @router.put("/admin/rfid/rentals/{rental_id}/process")
 async def process_rental(rental_id: str, request: Request, current_user: dict = Depends(get_current_user)):
     """Admin: approve or reject a rental request."""

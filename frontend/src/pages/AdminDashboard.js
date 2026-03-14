@@ -5,7 +5,7 @@ import { fr } from 'date-fns/locale';
 import {
   Users, Calendar, Euro, TrendingUp, BarChart3,
   Settings, Search, ChevronLeft, ChevronRight, Download, FileText, MessageSquare, ShoppingBag, Check, X,
-  CheckCircle, XCircle
+  CheckCircle, XCircle, Radio, Plus, Trash2, Edit, Package, Loader2
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -38,6 +38,13 @@ const AdminDashboard = () => {
   const [allInvoices, setAllInvoices] = useState([]);
   const [invoiceTotals, setInvoiceTotals] = useState({ total_count: 0, total_amount: 0 });
   const [refundRequests, setRefundRequests] = useState([]);
+  const [rfidEquipment, setRfidEquipment] = useState([]);
+  const [rfidRentals, setRfidRentals] = useState([]);
+  const [rfidStats, setRfidStats] = useState(null);
+  const [showRfidDialog, setShowRfidDialog] = useState(false);
+  const [editingEquipment, setEditingEquipment] = useState(null);
+  const [rfidForm, setRfidForm] = useState({ name: '', description: '', category: 'chronometrage', daily_rate: '', quantity_total: 1, image_url: '' });
+  const [rfidSaving, setRfidSaving] = useState(false);
 
   useEffect(() => {
     if (user?.role !== 'admin') {
@@ -77,6 +84,52 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchRfidData = async () => {
+    try {
+      const [eqRes, rentRes, statsRes] = await Promise.all([
+        api.get('/rfid/equipment'),
+        api.get('/admin/rfid/rentals'),
+        api.get('/admin/rfid/stats')
+      ]);
+      setRfidEquipment(eqRes.data.equipment || []);
+      setRfidRentals(rentRes.data.rentals || []);
+      setRfidStats(statsRes.data);
+    } catch {}
+  };
+
+  const handleSaveEquipment = async () => {
+    if (!rfidForm.name || !rfidForm.daily_rate) { toast.error('Nom et tarif requis'); return; }
+    setRfidSaving(true);
+    const payload = { ...rfidForm, daily_rate: parseFloat(rfidForm.daily_rate), quantity_total: parseInt(rfidForm.quantity_total) };
+    try {
+      if (editingEquipment) {
+        await api.put(`/rfid/equipment/${editingEquipment.equipment_id}`, payload);
+        toast.success('Equipement mis a jour');
+      } else {
+        await api.post('/rfid/equipment', payload);
+        toast.success('Equipement ajoute');
+      }
+      setShowRfidDialog(false); setEditingEquipment(null);
+      setRfidForm({ name: '', description: '', category: 'chronometrage', daily_rate: '', quantity_total: 1, image_url: '' });
+      fetchRfidData();
+    } catch (err) { toast.error(err.response?.data?.detail || 'Erreur'); }
+    finally { setRfidSaving(false); }
+  };
+
+  const handleDeleteEquipment = async (id) => {
+    if (!window.confirm('Supprimer cet equipement ?')) return;
+    try { await api.delete(`/rfid/equipment/${id}`); toast.success('Supprime'); fetchRfidData(); }
+    catch { toast.error('Erreur'); }
+  };
+
+  const handleRentalAction = async (rentalId, status) => {
+    try {
+      await api.put(`/admin/rfid/rentals/${rentalId}/process`, { status });
+      toast.success(`Location ${status === 'confirmed' ? 'confirmee' : status === 'rejected' ? 'refusee' : 'retournee'}`);
+      fetchRfidData();
+    } catch { toast.error('Erreur'); }
   };
 
   // Auto-refresh events every 15s for real-time fill rates
@@ -188,16 +241,16 @@ const AdminDashboard = () => {
               <h1 className="font-heading text-2xl font-bold">Administration</h1>
               <p className="text-slate-400">Gérez la plateforme SportLyo</p>
             </div>
-            <div className="flex gap-2">
-              {['overview', 'users', 'payments', 'commissions', 'invoices', 'refunds', 'providers', 'messages'].map(tab => (
+            <div className="flex gap-2 flex-wrap">
+              {['overview', 'users', 'payments', 'commissions', 'invoices', 'refunds', 'providers', 'rfid', 'messages'].map(tab => (
                 <Button
                   key={tab}
                   variant={activeTab === tab ? 'default' : 'outline'}
                   className={activeTab === tab ? 'bg-brand' : 'border-white text-white'}
-                  onClick={() => setActiveTab(tab)}
+                  onClick={() => { setActiveTab(tab); if (tab === 'rfid') fetchRfidData(); }}
                   data-testid={`tab-${tab}`}
                 >
-                  {tab === 'overview' ? 'Vue d\'ensemble' : tab === 'users' ? 'Utilisateurs' : tab === 'payments' ? 'Paiements' : tab === 'commissions' ? 'Commissions' : tab === 'invoices' ? 'Factures' : tab === 'refunds' ? 'Remboursements' : tab === 'providers' ? `Prestataires${providers.filter(p => p.status === 'pending').length > 0 ? ` (${providers.filter(p => p.status === 'pending').length})` : ''}` : 'Messages'}
+                  {tab === 'overview' ? 'Vue d\'ensemble' : tab === 'users' ? 'Utilisateurs' : tab === 'payments' ? 'Paiements' : tab === 'commissions' ? 'Commissions' : tab === 'invoices' ? 'Factures' : tab === 'refunds' ? 'Remboursements' : tab === 'providers' ? `Prestataires${providers.filter(p => p.status === 'pending').length > 0 ? ` (${providers.filter(p => p.status === 'pending').length})` : ''}` : tab === 'rfid' ? 'RFID' : 'Messages'}
                 </Button>
               ))}
             </div>
@@ -922,6 +975,155 @@ const AdminDashboard = () => {
               </div>
             ) : (
               <div className="bg-white border border-slate-200 p-8 text-center text-slate-400">Aucun prestataire inscrit</div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'rfid' && (
+          <div className="space-y-6" data-testid="rfid-tab">
+            {/* Stats */}
+            {rfidStats && (
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {[
+                  { label: 'Equipements', value: rfidStats.total_equipment, color: 'text-brand' },
+                  { label: 'Locations totales', value: rfidStats.total_rentals, color: 'text-slate-800' },
+                  { label: 'En attente', value: rfidStats.pending_rentals, color: 'text-orange-600' },
+                  { label: 'Confirmees', value: rfidStats.confirmed_rentals, color: 'text-green-600' },
+                  { label: 'Revenus', value: `${rfidStats.total_revenue}€`, color: 'text-brand' },
+                ].map((s, i) => (
+                  <div key={i} className="bg-white border border-slate-200 p-4 text-center">
+                    <p className={`font-heading font-black text-2xl ${s.color}`}>{s.value}</p>
+                    <p className="text-[10px] text-slate-400 uppercase">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Equipment Management */}
+            <div className="bg-white border border-slate-200" data-testid="rfid-equipment-list">
+              <div className="p-4 border-b flex items-center justify-between">
+                <h3 className="font-heading font-bold uppercase">Catalogue equipements RFID</h3>
+                <Button size="sm" className="bg-brand text-white gap-1" onClick={() => { setEditingEquipment(null); setRfidForm({ name: '', description: '', category: 'chronometrage', daily_rate: '', quantity_total: 1, image_url: '' }); setShowRfidDialog(true); }} data-testid="rfid-add-equipment-btn">
+                  <Plus className="w-3 h-3" /> Ajouter
+                </Button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="text-left p-3 font-heading text-xs font-bold uppercase">Nom</th>
+                      <th className="text-left p-3 font-heading text-xs font-bold uppercase">Categorie</th>
+                      <th className="text-right p-3 font-heading text-xs font-bold uppercase">Tarif/jour</th>
+                      <th className="text-center p-3 font-heading text-xs font-bold uppercase">Stock</th>
+                      <th className="text-center p-3 font-heading text-xs font-bold uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rfidEquipment.map(eq => (
+                      <tr key={eq.equipment_id} className="border-b hover:bg-slate-50" data-testid={`rfid-eq-${eq.equipment_id}`}>
+                        <td className="p-3">
+                          <p className="font-medium">{eq.name}</p>
+                          <p className="text-xs text-slate-400 line-clamp-1">{eq.description}</p>
+                        </td>
+                        <td className="p-3"><span className="px-2 py-0.5 bg-slate-100 text-xs font-bold uppercase">{eq.category}</span></td>
+                        <td className="p-3 text-right font-heading font-bold text-brand">{eq.daily_rate}€</td>
+                        <td className="p-3 text-center">{eq.quantity_available}/{eq.quantity_total}</td>
+                        <td className="p-3 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => {
+                              setEditingEquipment(eq);
+                              setRfidForm({ name: eq.name, description: eq.description, category: eq.category, daily_rate: eq.daily_rate, quantity_total: eq.quantity_total, image_url: eq.image_url || '' });
+                              setShowRfidDialog(true);
+                            }} data-testid={`rfid-edit-${eq.equipment_id}`}><Edit className="w-3.5 h-3.5" /></Button>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500" onClick={() => handleDeleteEquipment(eq.equipment_id)} data-testid={`rfid-delete-${eq.equipment_id}`}><Trash2 className="w-3.5 h-3.5" /></Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {rfidEquipment.length === 0 && <tr><td colSpan="5" className="p-8 text-center text-slate-400">Aucun equipement</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Rental Requests */}
+            <div className="bg-white border border-slate-200" data-testid="rfid-rentals-list">
+              <div className="p-4 border-b"><h3 className="font-heading font-bold uppercase">Demandes de location</h3></div>
+              <div className="divide-y">
+                {rfidRentals.map(r => (
+                  <div key={r.rental_id} className="p-4" data-testid={`rfid-rental-${r.rental_id}`}>
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className="font-heading font-bold text-sm">{r.organizer_name}</p>
+                        <p className="text-xs text-slate-500">{r.event_title} — {r.start_date} au {r.end_date}</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {r.items?.map((item, i) => (
+                            <span key={i} className="px-2 py-0.5 bg-slate-100 text-[10px] font-bold">{item.name} x{item.quantity} ({item.days}j)</span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-heading font-bold text-lg">{r.total?.toFixed(2)}€</p>
+                        <span className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase ${r.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : r.status === 'confirmed' ? 'bg-green-100 text-green-700' : r.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'}`}>
+                          {r.status === 'pending' ? 'En attente' : r.status === 'confirmed' ? 'Confirmee' : r.status === 'rejected' ? 'Refusee' : 'Retournee'}
+                        </span>
+                      </div>
+                    </div>
+                    {r.status === 'pending' && (
+                      <div className="flex gap-2 mt-2">
+                        <Button size="sm" className="bg-green-600 text-white text-xs gap-1" onClick={() => handleRentalAction(r.rental_id, 'confirmed')} data-testid={`rfid-confirm-${r.rental_id}`}><Check className="w-3 h-3" /> Confirmer</Button>
+                        <Button size="sm" variant="outline" className="text-red-600 text-xs gap-1" onClick={() => handleRentalAction(r.rental_id, 'rejected')} data-testid={`rfid-reject-${r.rental_id}`}><X className="w-3 h-3" /> Refuser</Button>
+                      </div>
+                    )}
+                    {r.status === 'confirmed' && (
+                      <Button size="sm" variant="outline" className="text-xs gap-1 mt-2" onClick={() => handleRentalAction(r.rental_id, 'returned')} data-testid={`rfid-return-${r.rental_id}`}><Package className="w-3 h-3" /> Marquer retourne</Button>
+                    )}
+                  </div>
+                ))}
+                {rfidRentals.length === 0 && <div className="p-8 text-center text-slate-400 text-sm">Aucune demande de location</div>}
+              </div>
+            </div>
+
+            {/* Add/Edit Equipment Dialog */}
+            {showRfidDialog && (
+              <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowRfidDialog(false)}>
+                <div className="bg-white w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()} data-testid="rfid-equipment-dialog">
+                  <h3 className="font-heading font-bold text-lg uppercase">{editingEquipment ? 'Modifier' : 'Nouvel equipement'}</h3>
+                  <div>
+                    <label className="text-xs font-heading uppercase text-slate-500 mb-1 block">Nom *</label>
+                    <Input value={rfidForm.name} onChange={(e) => setRfidForm(p => ({ ...p, name: e.target.value }))} placeholder="Portique lecteur RFID" data-testid="rfid-name-input" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-heading uppercase text-slate-500 mb-1 block">Description</label>
+                    <Input value={rfidForm.description} onChange={(e) => setRfidForm(p => ({ ...p, description: e.target.value }))} placeholder="Description..." />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-heading uppercase text-slate-500 mb-1 block">Categorie</label>
+                      <select className="w-full border border-slate-200 rounded p-2 text-sm" value={rfidForm.category} onChange={(e) => setRfidForm(p => ({ ...p, category: e.target.value }))}>
+                        <option value="chronometrage">Chronometrage</option>
+                        <option value="accessoire">Accessoire</option>
+                        <option value="logiciel">Logiciel</option>
+                        <option value="affichage">Affichage</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-heading uppercase text-slate-500 mb-1 block">Tarif/jour (€) *</label>
+                      <Input type="number" value={rfidForm.daily_rate} onChange={(e) => setRfidForm(p => ({ ...p, daily_rate: e.target.value }))} data-testid="rfid-rate-input" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-heading uppercase text-slate-500 mb-1 block">Stock total</label>
+                    <Input type="number" value={rfidForm.quantity_total} onChange={(e) => setRfidForm(p => ({ ...p, quantity_total: e.target.value }))} />
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" className="flex-1" onClick={() => setShowRfidDialog(false)}>Annuler</Button>
+                    <Button className="flex-1 bg-brand text-white" onClick={handleSaveEquipment} disabled={rfidSaving} data-testid="rfid-save-btn">
+                      {rfidSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : editingEquipment ? 'Enregistrer' : 'Ajouter'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         )}

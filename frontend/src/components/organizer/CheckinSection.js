@@ -1,7 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { QrCode, Clock, CheckCircle, Package, Loader2, Download, Search } from 'lucide-react';
+import { QrCode, Clock, CheckCircle, Package, Loader2, Download, Search, Zap, ExternalLink } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -9,11 +9,25 @@ import { toast } from 'sonner';
 
 export const CheckinSection = ({ events, filteredCheckin, checkinFilter, checkinSearch, checkinLoading, onFilterChange, onSearchChange, onMarkCollected }) => (
   <div>
+    {/* Quick access to dedicated check-in page */}
+    <a href="/checkin" className="block mb-4 bg-brand/5 border-2 border-brand/20 hover:border-brand/40 p-4 transition-colors group" data-testid="checkin-dedicated-link">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-brand flex items-center justify-center"><Zap className="w-5 h-5 text-white" /></div>
+          <div>
+            <p className="font-heading font-bold text-sm group-hover:text-brand transition-colors">Mode Check-in Jour J</p>
+            <p className="text-xs text-slate-500">Interface optimisee pour le scan rapide des dossards le jour de l'evenement</p>
+          </div>
+        </div>
+        <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-brand" />
+      </div>
+    </a>
+
     <div className="flex justify-end gap-2 mb-4">
       <Select value={checkinFilter} onValueChange={onFilterChange}>
-        <SelectTrigger className="w-52" data-testid="checkin-event-filter"><SelectValue placeholder="Tous les événements" /></SelectTrigger>
+        <SelectTrigger className="w-52" data-testid="checkin-event-filter"><SelectValue placeholder="Tous les evenements" /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Tous les événements</SelectItem>
+          <SelectItem value="all">Tous les evenements</SelectItem>
           {events.map(e => <SelectItem key={e.event_id} value={e.event_id}>{e.title}</SelectItem>)}
         </SelectContent>
       </Select>
