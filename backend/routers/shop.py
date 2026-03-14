@@ -191,6 +191,16 @@ async def create_shop_order(request: Request, current_user: dict = Depends(get_c
     }
     await db.invoices.insert_one(invoice)
 
+    # Send notifications to providers
+    from routers.notifications import create_notification
+    for pid in provider_ids:
+        await create_notification(
+            pid, "order",
+            f"Nouvelle commande de {current_user['name']}",
+            f"Commande {order_id} — {grand_total:.2f}€",
+            "/provider"
+        )
+
     return {"order": order, "invoice_id": invoice.get("invoice_id"), "checkout_url": checkout_url,
             "message": f"Commande {order['order_id']} confirmee - {grand_total:.2f}EUR"}
 

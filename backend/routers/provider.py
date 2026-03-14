@@ -102,6 +102,88 @@ async def get_provider_stats(current_user: dict = Depends(get_current_user)):
         "net_revenue": total_sales - total_commission_given
     }
 
+
+@router.get("/provider/financial-breakdown")
+async def get_provider_financial_breakdown(current_user: dict = Depends(get_current_user)):
+    if current_user['role'] != 'provider':
+        raise HTTPException(status_code=403, detail="Prestataire requis")
+    orders = await db.orders.find(
+        {"$or": [{"provider_id": current_user['user_id']}, {"provider_ids": current_user['user_id']}]},
+        {"_id": 0}
+    ).to_list(5000)
+
+    by_organizer = {}
+    for o in orders:
+        org_id = o.get("organizer_id", "unknown")
+        if org_id not in by_organizer:
+            by_organizer[org_id] = {"organizer_id": org_id, "name": "", "orders_count": 0, "total_sales": 0, "total_commission": 0}
+        by_organizer[org_id]["orders_count"] += 1
+        by_organizer[org_id]["total_sales"] += o.get("total", 0)
+        by_organizer[org_id]["total_commission"] += o.get("organizer_commission_total", 0)
+
+    for org_id, info in by_organizer.items():
+        org = await db.users.find_one({"user_id": org_id}, {"_id": 0, "name": 1, "company_name": 1})
+        if org:
+            info["name"] = org.get("company_name") or org.get("name", "")
+        info["net_revenue"] = round(info["total_sales"] - info["total_commission"], 2)
+        info["total_sales"] = round(info["total_sales"], 2)
+        info["total_commission"] = round(info["total_commission"], 2)
+
+    total_sales = sum(v["total_sales"] for v in by_organizer.values())
+    total_commission = sum(v["total_commission"] for v in by_organizer.values())
+
+    return {
+        "by_organizer": list(by_organizer.values()),
+        "total_sales": round(total_sales, 2),
+        "total_commission": round(total_commission, 2),
+        "net_revenue": round(total_sales - total_commission, 2)
+    }
+
+
+@router.get("/provider/sales-breakdown")
+async def get_provider_sales_breakdown(current_user: dict = Depends(get_current_user)):
+    if current_user['role'] != 'provider':
+        raise HTTPException(status_code=403, detail="Prestataire requis")
+    orders = await db.orders.find(
+        {"$or": [{"provider_id": current_user['user_id']}, {"provider_ids": current_user['user_id']}]},
+        {"_id": 0}
+    ).to_list(5000)
+
+    by_product = {}
+    by_category = {}
+    by_size = {}
+    for o in orders:
+        for item in o.get("items", []):
+            pid = item.get("product_id", "unknown")
+            pname = item.get("product_name", "Produit")
+            qty = item.get("quantity", 1)
+            revenue = item.get("line_total", 0)
+
+            if pid not in by_product:
+                by_product[pid] = {"product_id": pid, "name": pname, "quantity": 0, "revenue": 0}
+            by_product[pid]["quantity"] += qty
+            by_product[pid]["revenue"] += revenue
+
+            cat = "Autre"
+            pp = await db.products.find_one({"product_id": pid}, {"_id": 0, "category": 1})
+            if pp:
+                cat = pp.get("category", "Autre")
+            by_category[cat] = by_category.get(cat, 0) + qty
+
+            size = item.get("size", "")
+            if size:
+                by_size[size] = by_size.get(size, 0) + qty
+
+    top_products = sorted(by_product.values(), key=lambda x: x["quantity"], reverse=True)[:10]
+    for p in top_products:
+        p["revenue"] = round(p["revenue"], 2)
+
+    return {
+        "top_products": top_products,
+        "by_category": [{"name": k, "value": v} for k, v in sorted(by_category.items(), key=lambda x: x[1], reverse=True)],
+        "by_size": [{"name": k, "value": v} for k, v in sorted(by_size.items(), key=lambda x: x[1], reverse=True)]
+    }
+
 @router.get("/providers/catalog")
 async def browse_provider_catalogs(current_user: dict = Depends(get_current_user)):
     if current_user['role'] not in ['organizer', 'admin']:
@@ -157,6 +239,7 @@ async def add_provider_product_to_event(request: Request, current_user: dict = D
 
 @router.post("/provider/messages")
 async def send_provider_message(request: Request, current_user: dict = Depends(get_current_user)):
+    from routers.notifications import create_notification
     data = await request.json()
     recipient_id = data.get("recipient_id")
     content = data.get("content")
@@ -174,6 +257,13 @@ async def send_provider_message(request: Request, current_user: dict = Depends(g
     }
     await db.provider_messages.insert_one(msg)
     del msg["_id"]
+    sender_name = current_user.get('company_name') or current_user['name']
+    await create_notification(
+        recipient_id, "message",
+        f"Nouveau message de {sender_name}",
+        content[:100],
+        "/dashboard" if current_user['role'] == 'provider' else "/provider"
+    )
     return {"message": msg}
 
 @router.get("/provider/messages/{other_id}")

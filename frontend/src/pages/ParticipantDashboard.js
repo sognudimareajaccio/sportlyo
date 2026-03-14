@@ -17,6 +17,7 @@ import { useAuth } from '../context/AuthContext';
 import { registrationsApi, recommendationsApi } from '../services/api';
 import api from '../services/api';
 import { toast } from 'sonner';
+import NotificationBell from '../components/NotificationBell';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 
 const CHART_COLORS = ['#ff4500', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
@@ -214,11 +215,14 @@ const ParticipantDashboard = () => {
                 </div>
               </div>
             </div>
-            <Link to="/events">
-              <Button className="btn-primary gap-2" data-testid="explore-events-btn">
-                <Calendar className="w-4 h-4" /> Explorer les événements
-              </Button>
-            </Link>
+            <div className="flex items-center gap-3">
+              <NotificationBell onNavigate={handleSectionChange} />
+              <Link to="/events">
+                <Button className="btn-primary gap-2" data-testid="explore-events-btn">
+                  <Calendar className="w-4 h-4" /> Explorer les événements
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   ShoppingBag, Package, Euro, TrendingUp, FileText, Plus, Edit, Trash2,
-  MessageSquare, Send, Loader2, X, ChevronRight
+  MessageSquare, Send, Loader2, X, ChevronRight, PieChart as PieChartIcon, BarChart3, Users, ArrowDownRight
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -14,6 +14,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { toast } from 'sonner';
+import NotificationBell from '../components/NotificationBell';
+import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
+
+const CHART_COLORS = ['#ff4500', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
 const ProviderDashboard = () => {
   const { user } = useAuth();
@@ -31,18 +35,22 @@ const ProviderDashboard = () => {
   const [newMsg, setNewMsg] = useState('');
   const [organizerLogos, setOrganizerLogos] = useState([]);
   const [organizersList, setOrganizersList] = useState([]);
+  const [financialData, setFinancialData] = useState(null);
+  const [salesData, setSalesData] = useState(null);
 
   const categories = ['Textile', 'Accessoire', 'Gourde', 'Sac', 'Nutrition', 'Équipement'];
 
   const fetchData = useCallback(async () => {
     try {
-      const [catRes, ordRes, statsRes, convRes, logosRes, orgRes] = await Promise.all([
+      const [catRes, ordRes, statsRes, convRes, logosRes, orgRes, finRes, salesRes] = await Promise.all([
         api.get('/provider/catalog'),
         api.get('/provider/orders'),
         api.get('/provider/stats'),
         api.get('/provider/conversations'),
         api.get('/provider/organizer-logos'),
-        api.get('/provider/organizers')
+        api.get('/provider/organizers'),
+        api.get('/provider/financial-breakdown'),
+        api.get('/provider/sales-breakdown')
       ]);
       setProducts(catRes.data.products || []);
       setOrders(ordRes.data.orders || []);
@@ -50,6 +58,8 @@ const ProviderDashboard = () => {
       setConversations(convRes.data.conversations || []);
       setOrganizerLogos(logosRes.data.organizers || []);
       setOrganizersList(orgRes.data.organizers || []);
+      setFinancialData(finRes.data || null);
+      setSalesData(salesRes.data || null);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, []);
@@ -104,7 +114,9 @@ const ProviderDashboard = () => {
 
   const navItems = [
     { id: 'catalogue', label: 'Catalogue', icon: ShoppingBag },
-    { id: 'logos', label: 'Logos organisateurs', icon: FileText, badge: organizerLogos.length },
+    { id: 'finances', label: 'Finances', icon: Euro },
+    { id: 'ventes', label: 'Ventes', icon: BarChart3 },
+    { id: 'logos', label: 'Logos', icon: FileText, badge: organizerLogos.length },
     { id: 'commandes', label: 'Commandes', icon: FileText },
     { id: 'messages', label: 'Messages', icon: MessageSquare, badge: conversations.reduce((a, c) => a + (c.unread || 0), 0) },
   ];
@@ -123,6 +135,7 @@ const ProviderDashboard = () => {
           <Button className="bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase text-xs gap-2" onClick={() => { setEditingProduct(null); setProductForm({ name: '', description: '', category: 'Textile', price: '', suggested_commission: 5, image_url: '', sizes: [], colors: [], stock: 100 }); setShowProductDialog(true); }} data-testid="add-provider-product-btn">
             <Plus className="w-4 h-4" /> Nouveau produit
           </Button>
+          <NotificationBell onNavigate={setActiveSection} />
         </div>
       </div>
 
@@ -182,6 +195,192 @@ const ProviderDashboard = () => {
             )}
           </div>
         )}
+
+
+        {/* ===== FINANCES ===== */}
+        {activeSection === 'finances' && financialData && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} data-testid="provider-finances-section">
+            <h3 className="font-heading font-bold text-base uppercase mb-4">Bilan Financier & Commissions</h3>
+
+            {/* Summary cards */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="bg-white border border-slate-200 p-5 text-center">
+                <Euro className="w-6 h-6 text-green-600 mx-auto mb-2" />
+                <p className="font-heading font-black text-3xl">{financialData.total_sales.toFixed(0)}€</p>
+                <p className="text-xs text-slate-500 font-heading uppercase mt-1">Ventes totales</p>
+              </div>
+              <div className="bg-white border border-red-200 p-5 text-center">
+                <ArrowDownRight className="w-6 h-6 text-red-500 mx-auto mb-2" />
+                <p className="font-heading font-black text-3xl text-red-600">{financialData.total_commission.toFixed(0)}€</p>
+                <p className="text-xs text-slate-500 font-heading uppercase mt-1">Commissions dues</p>
+              </div>
+              <div className="bg-white border border-brand/30 p-5 text-center">
+                <TrendingUp className="w-6 h-6 text-brand mx-auto mb-2" />
+                <p className="font-heading font-black text-3xl text-brand">{financialData.net_revenue.toFixed(0)}€</p>
+                <p className="text-xs text-slate-500 font-heading uppercase mt-1">Revenu net</p>
+              </div>
+            </div>
+
+            {/* Commission breakdown by organizer */}
+            <div className="bg-white border border-slate-200">
+              <div className="p-4 border-b flex items-center justify-between">
+                <h4 className="font-heading font-bold uppercase text-sm">Commissions par organisateur</h4>
+                <Users className="w-4 h-4 text-slate-400" />
+              </div>
+              {financialData.by_organizer.length > 0 ? (
+                <div className="divide-y">
+                  {financialData.by_organizer.map(org => (
+                    <div key={org.organizer_id} className="p-4 hover:bg-slate-50 transition-colors" data-testid={`finance-org-${org.organizer_id}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="font-heading font-bold text-sm">{org.name || 'Organisateur'}</p>
+                          <p className="text-xs text-slate-400">{org.orders_count} commande{org.orders_count > 1 ? 's' : ''}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-heading font-bold text-lg">{org.total_sales.toFixed(2)}€</p>
+                          <p className="text-[10px] text-slate-400">ventes</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-4">
+                        <div className="flex-1 bg-slate-50 p-2">
+                          <p className="text-[10px] text-slate-400 font-heading uppercase">Commission à reverser</p>
+                          <p className="font-heading font-bold text-red-600">{org.total_commission.toFixed(2)}€</p>
+                        </div>
+                        <div className="flex-1 bg-slate-50 p-2">
+                          <p className="text-[10px] text-slate-400 font-heading uppercase">Revenu net</p>
+                          <p className="font-heading font-bold text-green-600">{org.net_revenue.toFixed(2)}€</p>
+                        </div>
+                      </div>
+                      {/* Progress bar: commission/total */}
+                      <div className="mt-2 h-2 bg-slate-100 overflow-hidden">
+                        <div className="h-full bg-brand" style={{ width: `${org.total_sales > 0 ? ((org.net_revenue / org.total_sales) * 100) : 0}%` }} />
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1">{org.total_sales > 0 ? ((org.net_revenue / org.total_sales) * 100).toFixed(1) : 0}% de marge nette</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-slate-400 text-xs">Aucune commission pour le moment</div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ===== VENTES ===== */}
+        {activeSection === 'ventes' && salesData && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} data-testid="provider-sales-section">
+            <h3 className="font-heading font-bold text-base uppercase mb-4">Répartition des Ventes</h3>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Top products bar chart */}
+              <div className="bg-white border border-slate-200 p-6">
+                <h4 className="font-heading font-bold uppercase text-xs mb-4">Top produits vendus</h4>
+                {salesData.top_products.length > 0 ? (
+                  <div className="h-56">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={salesData.top_products} layout="vertical" margin={{ left: 0, right: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                        <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 10, fill: '#475569' }} tickLine={false} axisLine={false} />
+                        <Tooltip contentStyle={{ fontFamily: 'var(--font-heading)', fontSize: 12, border: '1px solid #e2e8f0', borderRadius: 0 }}
+                          formatter={(v, name) => [name === 'quantity' ? `${v} unités` : `${v}€`, name === 'quantity' ? 'Quantité' : 'Chiffre d\'affaires']} />
+                        <Bar dataKey="quantity" fill="#ff4500" radius={[0, 3, 3, 0]} name="quantity" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-56 flex items-center justify-center text-slate-400 text-xs">Pas de données</div>
+                )}
+              </div>
+
+              {/* Category breakdown pie chart */}
+              <div className="bg-white border border-slate-200 p-6">
+                <h4 className="font-heading font-bold uppercase text-xs mb-4">Ventes par catégorie</h4>
+                {salesData.by_category.length > 0 ? (
+                  <div className="flex items-center gap-4 h-56">
+                    <div className="w-1/2 h-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={salesData.by_category} cx="50%" cy="50%" innerRadius={40} outerRadius={75}
+                            paddingAngle={3} dataKey="value" strokeWidth={0}>
+                            {salesData.by_category.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                          </Pie>
+                          <Tooltip formatter={(v) => [`${v} unités`, 'Vendu']} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="w-1/2 space-y-2">
+                      {salesData.by_category.map((c, i) => (
+                        <div key={c.name} className="flex items-center gap-2 text-xs">
+                          <div className="w-3 h-3 flex-shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
+                          <span className="flex-1 font-medium truncate">{c.name}</span>
+                          <span className="font-heading font-bold">{c.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-56 flex items-center justify-center text-slate-400 text-xs">Pas de données</div>
+                )}
+              </div>
+            </div>
+
+            {/* Size distribution */}
+            {salesData.by_size.length > 0 && (
+              <div className="bg-white border border-slate-200 p-6">
+                <h4 className="font-heading font-bold uppercase text-xs mb-4">Distribution par taille</h4>
+                <div className="flex gap-3 flex-wrap">
+                  {salesData.by_size.map((s, i) => {
+                    const max = Math.max(...salesData.by_size.map(x => x.value));
+                    const pct = max > 0 ? (s.value / max) * 100 : 0;
+                    return (
+                      <div key={s.name} className="flex flex-col items-center" data-testid={`size-${s.name}`}>
+                        <div className="w-14 bg-slate-100 relative flex items-end justify-center" style={{ height: '80px' }}>
+                          <div className="w-full bg-brand absolute bottom-0" style={{ height: `${pct}%` }} />
+                        </div>
+                        <p className="font-heading font-bold text-xs mt-2">{s.name}</p>
+                        <p className="text-[10px] text-slate-400">{s.value} unités</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Revenue table */}
+            {salesData.top_products.length > 0 && (
+              <div className="bg-white border border-slate-200 mt-6">
+                <div className="p-4 border-b"><h4 className="font-heading font-bold uppercase text-xs">Détail chiffre d'affaires</h4></div>
+                <table className="w-full">
+                  <thead className="bg-slate-50 text-[10px] font-heading uppercase text-slate-400">
+                    <tr>
+                      <th className="text-left p-3">Produit</th>
+                      <th className="text-right p-3">Quantité</th>
+                      <th className="text-right p-3">CA</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y text-sm">
+                    {salesData.top_products.map(p => (
+                      <tr key={p.product_id} className="hover:bg-slate-50">
+                        <td className="p-3 font-medium">{p.name}</td>
+                        <td className="p-3 text-right font-heading font-bold">{p.quantity}</td>
+                        <td className="p-3 text-right font-heading font-bold text-brand">{p.revenue.toFixed(2)}€</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-slate-50 font-heading font-bold text-sm">
+                    <tr>
+                      <td className="p-3">Total</td>
+                      <td className="p-3 text-right">{salesData.top_products.reduce((a, p) => a + p.quantity, 0)}</td>
+                      <td className="p-3 text-right text-brand">{salesData.top_products.reduce((a, p) => a + p.revenue, 0).toFixed(2)}€</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+          </motion.div>
+        )}
+
 
         {/* Logos organisateurs */}
         {activeSection === 'logos' && (
