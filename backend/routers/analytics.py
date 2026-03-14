@@ -6,8 +6,8 @@ router = APIRouter(prefix="/api")
 
 
 @router.get("/organizer/analytics")
-async def get_organizer_analytics(current_user: dict = Depends(get_current_user)):
-    """Get advanced analytics for organizer."""
+async def get_organizer_analytics(current_user: dict = Depends(get_current_user), period: str = "all"):
+    """Get advanced analytics for organizer. period: all, 30d, 90d, 365d"""
     if current_user['role'] not in ['organizer', 'admin']:
         raise HTTPException(status_code=403, detail="Organisateur requis")
 
@@ -19,6 +19,14 @@ async def get_organizer_analytics(current_user: dict = Depends(get_current_user)
     all_regs = await db.registrations.find(
         {"event_id": {"$in": event_ids}}, {"_id": 0}
     ).to_list(10000)
+
+    # Filter by period
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    period_map = {"30d": 30, "90d": 90, "365d": 365}
+    if period in period_map:
+        cutoff = (now - timedelta(days=period_map[period])).isoformat()
+        all_regs = [r for r in all_regs if r.get("created_at", "") >= cutoff]
 
     total_registrations = len(all_regs)
     total_revenue = sum(r.get("amount_paid", 0) for r in all_regs)

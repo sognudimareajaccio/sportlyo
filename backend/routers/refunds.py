@@ -83,12 +83,22 @@ async def get_my_refund_requests(current_user: dict = Depends(get_current_user))
 
 
 @router.get("/admin/refunds/all")
-async def get_all_refund_requests(current_user: dict = Depends(get_current_user)):
-    """Admin: get all refund requests with details."""
+async def get_all_refund_requests(current_user: dict = Depends(get_current_user), status: str = None):
+    """Admin: get all refund requests with details. Optional filter by status."""
     if current_user['role'] != 'admin':
         raise HTTPException(status_code=403, detail="Admin only")
-    refunds = await db.refund_requests.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
-    return {"refunds": refunds}
+    query = {}
+    if status and status in ["pending", "approved", "rejected"]:
+        query["status"] = status
+    refunds = await db.refund_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    stats = {
+        "total": len(refunds) if not status else await db.refund_requests.count_documents({}),
+        "pending": await db.refund_requests.count_documents({"status": "pending"}),
+        "approved": await db.refund_requests.count_documents({"status": "approved"}),
+        "rejected": await db.refund_requests.count_documents({"status": "rejected"}),
+        "total_refunded": sum(r.get("amount", 0) for r in (await db.refund_requests.find({"status": "approved"}, {"_id": 0, "amount": 1}).to_list(500)))
+    }
+    return {"refunds": refunds, "stats": stats}
 
 
 @router.put("/admin/refunds/{refund_id}/process")

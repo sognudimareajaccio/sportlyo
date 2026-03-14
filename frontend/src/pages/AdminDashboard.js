@@ -45,6 +45,9 @@ const AdminDashboard = () => {
   const [editingEquipment, setEditingEquipment] = useState(null);
   const [rfidForm, setRfidForm] = useState({ name: '', description: '', category: 'chronometrage', daily_rate: '', quantity_total: 1, image_url: '' });
   const [rfidSaving, setRfidSaving] = useState(false);
+  const [refundFilter, setRefundFilter] = useState('all');
+
+  const filteredRefunds = refundFilter === 'all' ? refundRequests : refundRequests.filter(r => r.status === refundFilter);
 
   useEffect(() => {
     if (user?.role !== 'admin') {
@@ -681,7 +684,7 @@ const AdminDashboard = () => {
         {activeTab === 'refunds' && (
           <div className="space-y-6" data-testid="refunds-tab">
             {/* Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-asphalt text-white p-6 border-l-4 border-brand">
                 <p className="text-xs font-heading uppercase text-slate-400 mb-1">Demandes en attente</p>
                 <p className="text-3xl font-heading font-extrabold text-brand" data-testid="refunds-pending-count">{refundRequests.filter(r => r.status === 'pending').length}</p>
@@ -691,9 +694,23 @@ const AdminDashboard = () => {
                 <p className="text-3xl font-heading font-extrabold text-green-600">{refundRequests.filter(r => r.status === 'approved').length}</p>
               </div>
               <div className="bg-white border border-slate-200 p-6">
+                <p className="text-xs font-heading uppercase text-slate-500 mb-1">Refuses</p>
+                <p className="text-3xl font-heading font-extrabold text-red-600">{refundRequests.filter(r => r.status === 'rejected').length}</p>
+              </div>
+              <div className="bg-white border border-slate-200 p-6">
                 <p className="text-xs font-heading uppercase text-slate-500 mb-1">Montant rembourse</p>
                 <p className="text-3xl font-heading font-extrabold text-slate-800">{refundRequests.filter(r => r.status === 'approved').reduce((s, r) => s + (r.amount || 0), 0).toFixed(2)}€</p>
               </div>
+            </div>
+
+            {/* Filter buttons */}
+            <div className="flex items-center gap-2" data-testid="refund-filters">
+              <span className="text-xs font-heading uppercase text-slate-500">Filtrer :</span>
+              {[{ val: 'all', label: 'Tous' }, { val: 'pending', label: 'En attente' }, { val: 'approved', label: 'Approuves' }, { val: 'rejected', label: 'Refuses' }].map(f => (
+                <Button key={f.val} size="sm" variant={refundFilter === f.val ? 'default' : 'outline'} className={`text-xs h-7 ${refundFilter === f.val ? 'bg-brand' : ''}`}
+                  onClick={() => setRefundFilter(f.val)} data-testid={`refund-filter-${f.val}`}>{f.label}
+                </Button>
+              ))}
             </div>
 
             {/* Refund requests table */}
@@ -702,13 +719,14 @@ const AdminDashboard = () => {
                 <h3 className="font-heading font-bold uppercase">Demandes de remboursement</h3>
               </div>
               <div className="divide-y">
-                {refundRequests.length > 0 ? refundRequests.map(ref => (
+                {filteredRefunds.length > 0 ? filteredRefunds.map(ref => (
                   <div key={ref.refund_id} className="p-4 hover:bg-slate-50 transition-colors" data-testid={`refund-row-${ref.refund_id}`}>
                     <div className="flex items-start justify-between mb-2">
                       <div>
                         <p className="font-heading font-bold text-sm">{ref.user_name} <span className="text-slate-400 font-normal text-xs">({ref.user_email})</span></p>
                         <p className="text-xs text-slate-500">{ref.event_title}</p>
                         <p className="text-xs text-slate-500 mt-1">Motif : <span className="italic text-slate-600">{ref.reason}</span></p>
+                        {ref.admin_note && <p className="text-xs text-blue-600 mt-1">Note admin : {ref.admin_note}</p>}
                       </div>
                       <div className="text-right">
                         <p className="font-heading font-bold text-lg">{ref.amount?.toFixed(2)}€</p>
@@ -721,7 +739,7 @@ const AdminDashboard = () => {
                       </div>
                     </div>
                     {ref.status === 'pending' && (
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex gap-2 mt-2 items-center">
                         <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white text-xs gap-1"
                           data-testid={`approve-refund-${ref.refund_id}`}
                           onClick={async () => {
@@ -736,9 +754,10 @@ const AdminDashboard = () => {
                         <Button size="sm" variant="outline" className="text-xs gap-1 text-red-600 border-red-200"
                           data-testid={`reject-refund-${ref.refund_id}`}
                           onClick={async () => {
+                            const note = window.prompt('Motif du refus (optionnel) :');
                             try {
-                              await api.put(`/admin/refunds/${ref.refund_id}/process`, { status: 'rejected', admin_note: 'Refuse par admin' });
-                              setRefundRequests(prev => prev.map(r => r.refund_id === ref.refund_id ? { ...r, status: 'rejected' } : r));
+                              await api.put(`/admin/refunds/${ref.refund_id}/process`, { status: 'rejected', admin_note: note || 'Refuse par admin' });
+                              setRefundRequests(prev => prev.map(r => r.refund_id === ref.refund_id ? { ...r, status: 'rejected', admin_note: note || 'Refuse par admin' } : r));
                               toast.success('Remboursement refuse');
                             } catch { toast.error('Erreur'); }
                           }}>
