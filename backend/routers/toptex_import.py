@@ -5,8 +5,12 @@ import re
 import uuid
 import tempfile
 import os
+import httpx
+import logging
 from datetime import datetime, timezone
+from bs4 import BeautifulSoup
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 TOPTEX_IMG = "https://cdn.toptex.com/pictures"
@@ -214,3 +218,218 @@ async def import_toptex_products(request: Request, current_user: dict = Depends(
         "skipped": skipped,
         "message": f"{imported} produit(s) importé(s), {skipped} déjà existant(s)"
     }
+
+
+
+@router.get("/provider/import/lookup/{ref}")
+async def lookup_toptex_reference(ref: str, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] != 'provider':
+        raise HTTPException(status_code=403, detail="Prestataire requis")
+
+    ref = ref.upper().strip()
+    if not re.match(r'^(PA|K|KP|KI|NS|WK)\d{3,5}$', ref):
+        raise HTTPException(status_code=400, detail="Reference invalide. Format attendu: PA4045, K356, KP111...")
+
+    # Check if already imported
+    existing = await db.provider_products.find_one({"provider_id": current_user['user_id'], "toptex_ref": ref})
+    if existing:
+        raise HTTPException(status_code=409, detail=f"Le produit {ref} est deja dans votre catalogue")
+
+    try:
+        # Step 1: Search on TopTex to find the product URL
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+            search_res = await client.get(
+                f"https://www.toptex.fr/catalogsearch/result/",
+                params={"q": ref},
+                headers={"User-Agent": "Mozilla/5.0"}
+            )
+
+        soup = BeautifulSoup(search_res.text, 'html.parser')
+
+        # Find product link from search results
+        product_url = None
+        for a in soup.find_all('a', href=True):
+            href = a['href']
+            if ref.lower() in href.lower() and href.startswith('https://www.toptex.fr/') and href.endswith('.html'):
+                product_url = href
+                break
+
+        if not product_url:
+            raise HTTPException(status_code=404, detail=f"Reference {ref} non trouvee sur TopTex")
+
+        # Step 2: Scrape the product page
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+            prod_res = await client.get(product_url, headers={"User-Agent": "Mozilla/5.0"})
+
+        soup = BeautifulSoup(prod_res.text, 'html.parser')
+
+        # Extract product name
+        name = ""
+        h1 = soup.find('h1')
+        if h1:
+            name = h1.get_text(strip=True)
+            # Remove the ref prefix if present
+            name = re.sub(r'^' + ref + r'\s*-?\s*', '', name, flags=re.IGNORECASE).strip()
+
+        # Extract brand
+        brand = ""
+        brand_img = soup.find('img', alt=True, src=lambda x: x and 'logos' in x)
+        if brand_img:
+            brand = brand_img.get('alt', '').replace('®', '').strip()
+
+        # Extract price
+        price = 0
+        price_cells = soup.find_all('td')
+        for cell in price_cells:
+            text = cell.get_text(strip=True)
+            match = re.search(r'(\d+[,\.]\d{2})\s*€', text)
+            if match:
+                price = float(match.group(1).replace(',', '.'))
+                break
+
+        # Extract colors
+        colors = []
+        # Look for color swatches/labels
+        for el in soup.find_all(['span', 'div', 'li', 'img']):
+            alt = el.get('alt', '')
+            title = el.get('title', '')
+            for candidate in [alt, title]:
+                if candidate and any(c in candidate.lower() for c in ['black', 'white', 'navy', 'red', 'blue', 'green', 'grey', 'orange', 'yellow', 'pink']):
+                    clean = candidate.strip()
+                    if clean and clean not in colors and len(clean) < 50:
+                        colors.append(clean)
+
+        # Also look for color names in text between "couleur" markers
+        color_section = re.findall(r'(?:Black|White|Navy|Sporty\s+\w+|Dark\s+\w+|Light\s+\w+|Fluorescent\s+\w+|Sky\s+\w+)(?:\s*/\s*(?:Black|White|Navy|Sporty\s+\w+|Dark\s+\w+|Light\s+\w+|Fluorescent\s+\w+|Sky\s+\w+))*', prod_res.text)
+        for c in color_section:
+            c = c.strip()
+            if c and c not in colors:
+                colors.append(c)
+        colors = list(dict.fromkeys(colors))[:12]  # dedupe, max 12
+
+        # Translate colors
+        translated_colors = []
+        for c in colors:
+            translated = COLOR_MAP.get(c.upper(), c)
+            if translated not in translated_colors:
+                translated_colors.append(translated)
+
+        # Extract sizes
+        sizes = []
+        size_pattern = re.findall(r'\b(XXS|XS|S|M|L|XL|XXL|3XL|4XL|5XL)\b', prod_res.text)
+        sizes = list(dict.fromkeys(size_pattern))
+
+        # Extract description
+        description = ""
+        desc_parts = []
+        # Weight/composition
+        weight_match = re.search(r'(\d+\s*g/m[2²])', prod_res.text)
+        if weight_match:
+            desc_parts.append(weight_match.group(1))
+
+        # Composition
+        comp_match = re.search(r'(\d+%\s*(?:polyester|coton|cotton|elasthanne|nylon|viscose)[^.]*\.)', prod_res.text, re.IGNORECASE)
+        if comp_match:
+            desc_parts.append(comp_match.group(1))
+
+        # Bullet points from page
+        for li in soup.find_all('li'):
+            txt = li.get_text(strip=True)
+            if txt and len(txt) > 10 and len(txt) < 100 and any(w in txt.lower() for w in ['léger', 'rapide', 'confort', 'respirant', 'stretch', 'coupe', 'maille', 'lavable', 'traitement']):
+                desc_parts.append(txt)
+                if len(desc_parts) >= 5:
+                    break
+
+        description = ' — '.join(desc_parts) if desc_parts else name
+
+        # Image URL
+        image_url = f"https://cdn.toptex.com/pictures/{ref}_2026.jpg?w=660"
+        # Check if 2026 image exists, fallback to 2025
+        try:
+            async with httpx.AsyncClient(timeout=5) as client:
+                img_check = await client.head(image_url)
+                if img_check.status_code != 200:
+                    image_url = f"https://cdn.toptex.com/pictures/{ref}_2025.jpg?w=660"
+        except:
+            pass
+
+        # Determine category
+        category = "Sport"
+        name_lower = name.lower()
+        if any(w in name_lower for w in ['maillot', 't-shirt', 'tee-shirt']):
+            category = "Maillot"
+        elif any(w in name_lower for w in ['short']):
+            category = "Short"
+        elif any(w in name_lower for w in ['pantalon', 'jogging', 'legging', 'surv']):
+            category = "Pantalon"
+        elif any(w in name_lower for w in ['veste', 'coupe-vent', 'parka', 'doudoune', 'gilet', 'softshell']):
+            category = "Veste"
+        elif any(w in name_lower for w in ['sweat', 'hoodie', 'capuche']):
+            category = "Sweat"
+        elif any(w in name_lower for w in ['polo']):
+            category = "Polo"
+        elif any(w in name_lower for w in ['sac', 'bag', 'bagagerie']):
+            category = "Sac"
+        elif any(w in name_lower for w in ['casquette', 'bonnet', 'bandana', 'tour de cou']):
+            category = "Accessoire"
+        elif any(w in name_lower for w in ['chaussette', 'socquette']):
+            category = "Chaussettes"
+        elif any(w in name_lower for w in ['débardeur', 'brassière', 'body']):
+            category = "Textile"
+
+        result = {
+            "ref": ref,
+            "name": f"{brand + ' — ' if brand else ''}{name}" if name else ref,
+            "description": description,
+            "price": price,
+            "sizes": sizes,
+            "colors": translated_colors if translated_colors else colors,
+            "category": category,
+            "image_url": image_url,
+            "source_url": product_url,
+            "brand": brand
+        }
+
+        return {"product": result}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"TopTex lookup error for {ref}: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la recherche: {str(e)}")
+
+
+@router.post("/provider/import/add-single")
+async def import_single_toptex_product(request: Request, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] != 'provider':
+        raise HTTPException(status_code=403, detail="Prestataire requis")
+
+    data = await request.json()
+    p = data.get("product", {})
+    ref = p.get("ref", "")
+
+    existing = await db.provider_products.find_one({"provider_id": current_user['user_id'], "toptex_ref": ref})
+    if existing:
+        raise HTTPException(status_code=409, detail=f"Le produit {ref} est deja dans votre catalogue")
+
+    product = {
+        "product_id": f"pprod_{uuid.uuid4().hex[:12]}",
+        "provider_id": current_user['user_id'],
+        "toptex_ref": ref,
+        "name": p.get("name", ref),
+        "description": p.get("description", ""),
+        "category": p.get("category", "Sport"),
+        "price": float(p.get("price", 0)),
+        "sizes": p.get("sizes", []),
+        "colors": p.get("colors", []),
+        "stock": 100,
+        "sold": 0,
+        "image_url": p.get("image_url", ""),
+        "suggested_commission": 5,
+        "source": "toptex",
+        "source_url": p.get("source_url", ""),
+        "brand": p.get("brand", ""),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.provider_products.insert_one(product)
+    return {"message": f"Produit {ref} importé avec succès", "product_id": product["product_id"]}

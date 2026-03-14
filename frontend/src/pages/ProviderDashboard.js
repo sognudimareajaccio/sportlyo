@@ -43,6 +43,10 @@ const ProviderDashboard = () => {
   const [importing, setImporting] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [importFilter, setImportFilter] = useState('');
+  // TopTex lookup by ref
+  const [lookupRef, setLookupRef] = useState('');
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupResult, setLookupResult] = useState(null);
 
   const categories = ['Textile', 'Accessoire', 'Gourde', 'Sac', 'Nutrition', 'Équipement'];
 
@@ -163,6 +167,31 @@ const ProviderDashboard = () => {
     p.category.toLowerCase().includes(importFilter.toLowerCase())
   );
 
+  const handleLookup = async () => {
+    if (!lookupRef.trim()) { toast.error('Entrez une reference TopTex'); return; }
+    setLookupLoading(true);
+    setLookupResult(null);
+    try {
+      const res = await api.get(`/provider/import/lookup/${lookupRef.trim()}`);
+      setLookupResult(res.data.product);
+      toast.success('Produit trouve !');
+    } catch (e) {
+      const msg = e.response?.data?.detail || 'Erreur recherche';
+      toast.error(msg);
+    } finally { setLookupLoading(false); }
+  };
+
+  const handleAddSingle = async () => {
+    if (!lookupResult) return;
+    try {
+      await api.post('/provider/import/add-single', { product: lookupResult });
+      toast.success(`${lookupResult.ref} ajouté au catalogue !`);
+      setLookupResult(null);
+      setLookupRef('');
+      fetchData();
+    } catch (e) { toast.error(e.response?.data?.detail || 'Erreur import'); }
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="loader" /></div>;
 
   const statCards = [
@@ -265,15 +294,77 @@ const ProviderDashboard = () => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} data-testid="provider-import-section">
             <h3 className="font-heading font-bold text-base uppercase mb-4">Import Catalogue TopTex</h3>
 
+            {/* ---- LOOKUP BY REFERENCE ---- */}
+            <div className="bg-white border border-slate-200 p-6 mb-6">
+              <h4 className="font-heading font-bold uppercase text-xs mb-3">Recherche par reference</h4>
+              <p className="text-xs text-slate-500 mb-4">Tapez une reference TopTex et le systeme recupere automatiquement toutes les infos du produit.</p>
+              <div className="flex gap-3 items-end">
+                <div className="flex-1 max-w-xs">
+                  <Label className="text-[10px] font-heading uppercase text-slate-400">Reference TopTex</Label>
+                  <Input value={lookupRef} onChange={(e) => setLookupRef(e.target.value.toUpperCase())} placeholder="Ex: PA4045, K356, KP111..."
+                    onKeyDown={(e) => e.key === 'Enter' && handleLookup()} className="font-mono text-sm h-10" data-testid="lookup-ref-input" />
+                </div>
+                <Button className="bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase text-xs gap-2 h-10" onClick={handleLookup} disabled={lookupLoading} data-testid="lookup-btn">
+                  {lookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  {lookupLoading ? 'Recherche...' : 'Rechercher'}
+                </Button>
+              </div>
+
+              {/* Lookup result */}
+              {lookupResult && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 border border-brand/30 bg-brand/5 p-4" data-testid="lookup-result">
+                  <div className="flex gap-4">
+                    <div className="w-32 h-32 bg-white border overflow-hidden flex-shrink-0">
+                      <img src={lookupResult.image_url} alt={lookupResult.name} className="w-full h-full object-contain" onError={(e) => { e.target.style.display='none'; }} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <span className="font-mono text-xs font-bold text-brand bg-brand/10 px-2 py-0.5">{lookupResult.ref}</span>
+                          {lookupResult.brand && <span className="ml-2 text-xs font-bold text-slate-500">{lookupResult.brand}</span>}
+                        </div>
+                        <span className="font-heading font-black text-xl text-brand">{lookupResult.price > 0 ? `${lookupResult.price.toFixed(2)}€` : 'Prix sur demande'}</span>
+                      </div>
+                      <h4 className="font-heading font-bold text-sm mt-1">{lookupResult.name}</h4>
+                      <p className="text-xs text-slate-400 mt-1 line-clamp-2">{lookupResult.description}</p>
+                      {lookupResult.sizes.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          <span className="text-[10px] text-slate-400">Tailles:</span>
+                          {lookupResult.sizes.map(s => <span key={s} className="bg-white px-1.5 py-0.5 text-[10px] font-bold border">{s}</span>)}
+                        </div>
+                      )}
+                      {lookupResult.colors.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          <span className="text-[10px] text-slate-400">Couleurs:</span>
+                          {lookupResult.colors.map(c => <span key={c} className="bg-white px-1.5 py-0.5 text-[10px] font-bold border">{c}</span>)}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3 mt-3">
+                        <Button className="bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase text-xs gap-2" onClick={handleAddSingle} data-testid="add-single-btn">
+                          <Plus className="w-3 h-3" /> Ajouter au catalogue
+                        </Button>
+                        <Button variant="outline" size="sm" className="text-xs" onClick={() => setLookupResult(null)}>Annuler</Button>
+                        {lookupResult.source_url && (
+                          <a href={lookupResult.source_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-brand hover:underline">Voir sur TopTex</a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+
+            {/* ---- PDF IMPORT ---- */}
+
             {importProducts.length === 0 ? (
               <div className="bg-white border border-slate-200 p-8">
                 <div className="text-center max-w-md mx-auto">
                   <div className="w-20 h-20 bg-brand/10 flex items-center justify-center mx-auto mb-4">
                     <Upload className="w-10 h-10 text-brand" />
                   </div>
-                  <h4 className="font-heading font-bold text-lg uppercase mb-2">Importer depuis un PDF TopTex</h4>
+                  <h4 className="font-heading font-bold text-lg uppercase mb-2">Import en masse depuis un PDF</h4>
                   <p className="text-sm text-slate-500 mb-6">
-                    Uploadez votre catalogue TopTex au format PDF. Le système analysera automatiquement toutes les références produits, prix, tailles et couleurs.
+                    Uploadez votre catalogue TopTex au format PDF. Le systeme analysera automatiquement toutes les references produits, prix, tailles et couleurs.
                   </p>
                   <label className="cursor-pointer">
                     <input type="file" accept=".pdf" className="hidden" onChange={(e) => handlePdfUpload(e.target.files[0])} disabled={parsing} data-testid="toptex-pdf-input" />
