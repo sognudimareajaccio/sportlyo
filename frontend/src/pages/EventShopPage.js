@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ShoppingBag, Package, ChevronRight, Minus, Plus, Truck, MapPin, Check, Loader2, X } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, Package, ChevronRight, Minus, Plus, Truck, MapPin, Check, Loader2, X, CreditCard } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -220,6 +220,9 @@ const OrderDialog = ({ product, eventId, eventTitle, onClose, onSuccess }) => {
   const [address, setAddress] = useState({ street: '', city: '', postal: '', phone: '' });
   const [submitting, setSubmitting] = useState(false);
   const [orderDone, setOrderDone] = useState(null);
+  const [paymentStep, setPaymentStep] = useState(null); // null | 'widget' | 'verifying'
+  const [pendingOrder, setPendingOrder] = useState(null);
+  const sumupRef = useRef(null);
 
   const hasSizes = product.sizes?.length > 0 && product.sizes[0] !== 'Unique';
   const hasColors = product.colors?.length > 0;
@@ -232,6 +235,69 @@ const OrderDialog = ({ product, eventId, eventTitle, onClose, onSuccess }) => {
     if (delivery === 'home' && (!address.street || !address.city || !address.postal || !address.phone)) return false;
     return true;
   };
+
+  const mountSumUpWidget = useCallback((checkoutId) => {
+    if (!checkoutId || !window.SumUpCard) return;
+    // Unmount previous widget if any
+    if (sumupRef.current) {
+      try { sumupRef.current.unmount(); } catch {}
+    }
+    setTimeout(() => {
+      const el = document.getElementById('sumup-card');
+      if (!el) return;
+      sumupRef.current = window.SumUpCard.mount({
+        id: 'sumup-card',
+        checkoutId: checkoutId,
+        locale: 'fr-FR',
+        country: 'FR',
+        currency: 'EUR',
+        amount: grandTotal.toFixed(2),
+        showEmail: true,
+        onResponse: async (type, body) => {
+          if (type === 'success') {
+            setPaymentStep('verifying');
+            try {
+              const verifyRes = await api.post(`/shop/verify-payment/${pendingOrder?.order_id || ''}`);
+              if (verifyRes.data.status === 'completed') {
+                setOrderDone(pendingOrder);
+                onSuccess({ product_id: product.product_id, qty: quantity });
+                toast.success('Paiement confirmé !');
+              } else {
+                toast.info('Paiement en cours de vérification...');
+                setOrderDone(pendingOrder);
+                onSuccess({ product_id: product.product_id, qty: quantity });
+              }
+            } catch {
+              setOrderDone(pendingOrder);
+              onSuccess({ product_id: product.product_id, qty: quantity });
+            }
+          } else if (type === 'error' || type === 'fail') {
+            toast.error('Le paiement a échoué. Veuillez réessayer.');
+            setPaymentStep(null);
+            setPendingOrder(null);
+          }
+        }
+      });
+    }, 300);
+  }, [grandTotal, pendingOrder, onSuccess, product.product_id, quantity]);
+
+  // Load SumUp SDK script
+  useEffect(() => {
+    if (!document.getElementById('sumup-sdk')) {
+      const script = document.createElement('script');
+      script.id = 'sumup-sdk';
+      script.src = 'https://gateway.sumup.com/gateway/ecom/card/v2/sdk.js';
+      script.async = true;
+      document.head.appendChild(script);
+    }
+  }, []);
+
+  // Mount widget when payment step changes
+  useEffect(() => {
+    if (paymentStep === 'widget' && pendingOrder?.sumup_checkout_id) {
+      mountSumUpWidget(pendingOrder.sumup_checkout_id);
+    }
+  }, [paymentStep, pendingOrder, mountSumUpWidget]);
 
   const handleSubmit = async () => {
     if (!canSubmit()) { toast.error('Remplissez tous les champs obligatoires'); return; }
@@ -251,9 +317,19 @@ const OrderDialog = ({ product, eventId, eventTitle, onClose, onSuccess }) => {
         delivery_fee: deliveryFee
       };
       const res = await api.post('/shop/order', payload);
-      setOrderDone({ ...res.data.order, invoice_id: res.data.invoice_id });
-      onSuccess({ product_id: product.product_id, qty: quantity });
-      toast.success('Commande confirmée !');
+      const order = res.data.order;
+      const checkoutId = res.data.sumup_checkout_id;
+
+      if (checkoutId) {
+        // Real SumUp payment — show payment widget
+        setPendingOrder({ ...order, sumup_checkout_id: checkoutId, invoice_id: res.data.invoice_id });
+        setPaymentStep('widget');
+      } else {
+        // Simulated payment — show success
+        setOrderDone({ ...order, invoice_id: res.data.invoice_id });
+        onSuccess({ product_id: product.product_id, qty: quantity });
+        toast.success('Commande confirmée !');
+      }
     } catch (e) {
       toast.error(e.response?.data?.detail || 'Erreur lors de la commande');
     } finally {
@@ -262,7 +338,7 @@ const OrderDialog = ({ product, eventId, eventTitle, onClose, onSuccess }) => {
   };
 
   return (
-    <Dialog open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog open={true} onOpenChange={(open) => { if (!open) { if (sumupRef.current) try { sumupRef.current.unmount(); } catch {} onClose(); } }}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0" data-testid="order-dialog">
         {orderDone ? (
           /* Success state */
@@ -281,6 +357,38 @@ const OrderDialog = ({ product, eventId, eventTitle, onClose, onSuccess }) => {
             <Button className="bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase w-full" onClick={onClose} data-testid="order-done-close">
               Fermer
             </Button>
+          </div>
+        ) : paymentStep === 'widget' ? (
+          /* SumUp Payment Widget */
+          <div className="p-6" data-testid="sumup-payment-step">
+            <div className="flex items-center gap-3 mb-4">
+              <CreditCard className="w-6 h-6 text-brand" />
+              <div>
+                <h3 className="font-heading font-bold text-lg uppercase">Paiement sécurisé</h3>
+                <p className="text-xs text-slate-500">Montant : <span className="font-bold text-brand">{grandTotal.toFixed(2)}€</span></p>
+              </div>
+            </div>
+            <div className="bg-slate-50 border border-slate-200 p-1 mb-4">
+              <div className="flex items-center justify-between text-xs text-slate-500 px-3 py-2">
+                <span>{product.name} x{quantity}</span>
+                <span className="font-bold">{total.toFixed(2)}€</span>
+              </div>
+              {deliveryFee > 0 && (
+                <div className="flex items-center justify-between text-xs text-slate-500 px-3 py-1">
+                  <span>Livraison</span>
+                  <span className="font-bold">{deliveryFee.toFixed(2)}€</span>
+                </div>
+              )}
+            </div>
+            <div id="sumup-card" className="min-h-[200px]" data-testid="sumup-card-widget" />
+            <p className="text-[10px] text-slate-400 text-center mt-3">Paiement sécurisé par SumUp — Vos données bancaires ne sont jamais stockées</p>
+          </div>
+        ) : paymentStep === 'verifying' ? (
+          /* Verifying payment */
+          <div className="p-8 text-center">
+            <Loader2 className="w-10 h-10 text-brand animate-spin mx-auto mb-4" />
+            <h3 className="font-heading font-bold text-lg uppercase mb-2">Vérification du paiement...</h3>
+            <p className="text-sm text-slate-500">Veuillez patienter quelques instants</p>
           </div>
         ) : (
           /* Order form */
@@ -446,15 +554,18 @@ const OrderDialog = ({ product, eventId, eventTitle, onClose, onSuccess }) => {
 
               {/* Submit */}
               <Button
-                className="w-full bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase tracking-wider h-12"
+                className="w-full bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase tracking-wider h-12 gap-2"
                 onClick={handleSubmit}
                 disabled={submitting || !canSubmit()}
                 data-testid="confirm-order-btn"
               >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                {submitting ? 'Traitement...' : `Confirmer — ${grandTotal.toFixed(2)}€`}
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                {submitting ? 'Traitement...' : `Payer — ${grandTotal.toFixed(2)}€`}
               </Button>
-              <p className="text-[10px] text-slate-400 text-center">Paiement simulé — Intégration SumUp à venir</p>
+              <p className="text-[10px] text-slate-400 text-center flex items-center justify-center gap-1">
+                <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Paiement sécurisé par SumUp
+              </p>
             </div>
           </>
         )}

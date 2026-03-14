@@ -133,14 +133,15 @@ async def create_shop_order(request: Request, current_user: dict = Depends(get_c
                     json={
                         "checkout_reference": order_id, "amount": grand_total,
                         "currency": "EUR", "merchant_code": sumup_merchant,
-                        "description": f"Commande {order_id}",
-                        "return_url": f"{os.environ.get('FRONTEND_URL', '')}/events/{data.get('event_id', '')}/shop?order={order_id}&status=success"
+                        "description": f"Commande SportLyo {order_id}"
                     }
                 )
-                if checkout_res.status_code == 201:
+                if checkout_res.status_code in (200, 201):
                     checkout_data = checkout_res.json()
-                    checkout_url = f"https://api.sumup.com/v0.1/checkouts/{checkout_data.get('id')}"
+                    sumup_checkout_id = checkout_data.get("id", "")
+                    checkout_url = sumup_checkout_id
                     payment_status = "pending"
+                    logger.info(f"SumUp checkout created: {sumup_checkout_id}")
                 else:
                     logger.warning(f"SumUp checkout failed: {checkout_res.status_code} {checkout_res.text}")
         except Exception as e:
@@ -157,10 +158,12 @@ async def create_shop_order(request: Request, current_user: dict = Depends(get_c
         "payment_status": payment_status,
         "payment_method": "SumUp" if sumup_key else "Simulation",
         "checkout_url": checkout_url,
+        "sumup_checkout_id": checkout_url if payment_status == "pending" else None,
         "delivery_method": data.get("delivery_method", "Retrait sur place"),
         "shipping_address": data.get("shipping_address", ""),
         "phone": data.get("phone", ""), "notes": data.get("notes", ""),
-        "status": "confirmee", "created_at": datetime.now(timezone.utc).isoformat()
+        "status": "en_attente" if payment_status == "pending" else "confirmee",
+        "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.orders.insert_one(order)
     del order["_id"]
@@ -202,7 +205,56 @@ async def create_shop_order(request: Request, current_user: dict = Depends(get_c
         )
 
     return {"order": order, "invoice_id": invoice.get("invoice_id"), "checkout_url": checkout_url,
-            "message": f"Commande {order['order_id']} confirmee - {grand_total:.2f}EUR"}
+            "sumup_checkout_id": checkout_url if payment_status == "pending" else None,
+            "message": f"Commande {order['order_id']} créée - {grand_total:.2f}EUR"}
+
+
+@router.post("/shop/verify-payment/{order_id}")
+async def verify_sumup_payment(order_id: str, current_user: dict = Depends(get_current_user)):
+    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Commande non trouvée")
+
+    sumup_checkout_id = order.get("sumup_checkout_id")
+    if not sumup_checkout_id:
+        return {"status": order.get("payment_status", "simulated"), "order": order}
+
+    sumup_key = os.environ.get("SUMUP_API_KEY", "")
+    if not sumup_key:
+        raise HTTPException(status_code=500, detail="SumUp non configuré")
+
+    try:
+        async with httpx.AsyncClient() as client_http:
+            res = await client_http.get(
+                f"https://api.sumup.com/v0.1/checkouts/{sumup_checkout_id}",
+                headers={"Authorization": f"Bearer {sumup_key}"}
+            )
+            if res.status_code == 200:
+                checkout = res.json()
+                sumup_status = checkout.get("status", "PENDING")
+
+                if sumup_status == "PAID":
+                    await db.orders.update_one({"order_id": order_id}, {"$set": {
+                        "payment_status": "completed",
+                        "status": "confirmee",
+                        "paid_at": datetime.now(timezone.utc).isoformat(),
+                        "sumup_transaction_code": checkout.get("transaction_code", ""),
+                        "sumup_transaction_id": checkout.get("transaction_id", "")
+                    }})
+                    return {"status": "completed", "message": "Paiement confirmé"}
+                elif sumup_status == "FAILED":
+                    await db.orders.update_one({"order_id": order_id}, {"$set": {
+                        "payment_status": "failed", "status": "annulee"
+                    }})
+                    return {"status": "failed", "message": "Paiement échoué"}
+                else:
+                    return {"status": "pending", "sumup_status": sumup_status}
+            else:
+                logger.warning(f"SumUp verify failed: {res.status_code} {res.text}")
+                return {"status": "error", "message": "Impossible de vérifier le paiement"}
+    except Exception as e:
+        logger.error(f"SumUp verify error: {e}")
+        raise HTTPException(status_code=500, detail="Erreur vérification paiement")
 
 
 @router.get("/organizer/orders")

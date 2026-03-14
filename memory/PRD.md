@@ -8,7 +8,7 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 - **Backend:** FastAPI avec routeurs modulaires
 - **Database:** MongoDB
 - **Auth:** JWT
-- **Paiements:** Square (liens de paiement), SumUp (SIMULÉ)
+- **Paiements:** Square (liens de paiement pour entreprises), SumUp (paiement boutique en ligne - INTÉGRÉ)
 - **Email:** Resend
 - **PDF:** fpdf2
 
@@ -28,62 +28,24 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 | Participant | pierre@test.com | test1234 |
 | Prestataire | boutique@sportlyo.fr | boutique123 |
 
-## Structure Code
-```
-/app/
-├── backend/
-│   ├── routers/
-│   │   ├── admin.py
-│   │   ├── auth.py
-│   │   ├── chat.py
-│   │   ├── events.py
-│   │   ├── messaging.py
-│   │   ├── notifications.py   # NEW - Système de notifications
-│   │   ├── organizer.py
-│   │   ├── participant.py     # NEW - Endpoints participant
-│   │   ├── payments.py
-│   │   ├── provider.py        # UPDATED - Finances + Ventes
-│   │   ├── registrations.py
-│   │   ├── shop.py            # UPDATED - Notifications sur commandes
-│   │   ├── timing.py
-│   │   └── uploads.py
-│   ├── models.py
-│   ├── deps.py
-│   └── server.py
-├── frontend/
-│   └── src/
-│       ├── components/
-│       │   ├── NotificationBell.js  # NEW - Cloche notifications
-│       │   ├── organizer/
-│       │   └── ui/
-│       ├── pages/
-│       │   ├── ParticipantDashboard.js  # REFAIT - Hub + 7 sections + notifications
-│       │   ├── ProviderDashboard.js     # UPDATED - 6 onglets + Finances + Ventes
-│       │   ├── OrganizerDashboard.js    # En cours de refactorisation
-│       │   └── ...
-│       └── ...
-```
-
 ## Ce qui est implémenté
 
+### Mars 2026 - Session 3
+- **Intégration SumUp réelle** : Checkout API + Payment Widget
+  - Backend crée des checkouts via `POST https://api.sumup.com/v0.1/checkouts`
+  - Frontend charge le SDK SumUp et monte le widget de paiement par carte
+  - Endpoint de vérification `POST /api/shop/verify-payment/{order_id}` valide le statut PAID/FAILED
+  - Statut commande: en_attente → confirmée (après paiement)
+  - Credentials SumUp: Merchant Code MMS8TC4Q, API Key dans backend/.env
+
 ### Mars 2026 - Session 2
-- **Système de notifications en temps réel** : cloche dans le header (participant + prestataire)
-  - Notifications créées automatiquement sur message et commande
-  - Polling toutes les 15 secondes, panel avec badge compteur
-  - Endpoints: GET /api/notifications, POST /api/notifications/read, GET /api/notifications/unread-count
-- **Widget Financier Prestataire** (onglet Finances) :
-  - 3 cartes résumé : Ventes totales, Commissions dues, Revenu net
-  - Tableau de commissions par organisateur avec barre de marge nette
-- **Widget Répartition des Ventes** (onglet Ventes) :
-  - Graphique barres horizontales : top produits vendus
-  - Camembert : ventes par catégorie
-  - Distribution par taille (barres verticales)
-  - Tableau détaillé chiffre d'affaires avec totaux
+- **Notifications en temps réel** : cloche dans le header (participant + prestataire)
+- **Widget Financier Prestataire** : Ventes totales, Commissions dues, Revenu net par organisateur
+- **Widget Répartition des Ventes** : Top produits, catégories, tailles, tableau CA
 
 ### Mars 2026 - Session 1
 - Refactorisation massive du backend (server.py -> routeurs modulaires)
 - Dashboard Participant redesigné avec hub à widgets (7 sections)
-- Backend endpoints participant (profile, orders, stats, upcoming, results, providers)
 - Correction flux commandes : prestataires reçoivent les commandes
 - Messagerie participant-prestataire
 
@@ -93,7 +55,6 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 - [ ] Achever la refactorisation du frontend OrganizerDashboard.js
 
 ### P1 (Moyenne priorité)
-- [ ] Intégration SumUp (paiement boutique réel) - BLOQUÉ
 - [ ] Système de facturation avancé (interface dédiée, téléchargement PDF)
 
 ### P2 (Future)
@@ -108,8 +69,8 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 ## Intégrations Tierces
 | Service | Statut |
 |---------|--------|
-| Square | Intégré (liens de paiement) |
+| Square | Intégré (liens de paiement entreprises) |
+| SumUp | INTÉGRÉ (paiement boutique en ligne) |
 | Resend | Intégré (emails) |
 | recharts | Intégré (graphiques) |
 | fpdf2 | Intégré (factures PDF) |
-| SumUp | SIMULÉ (bloqué) |
