@@ -8,7 +8,7 @@ import {
   Heart, CheckCircle, AlertCircle, Loader2, QrCode, Clock, Timer,
   Route, FileText, Navigation, ExternalLink, ChevronDown, ChevronUp,
   ArrowRight, Check, Phone, Mail, User, Globe, Shirt, Facebook, Instagram, Youtube, Twitter,
-  CreditCard, Lock, ShoppingBag, Package, ChevronRight
+  CreditCard, Lock, ShoppingBag, Package, ChevronRight, Copy, X, Link
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -78,6 +78,8 @@ const EventDetailPage = () => {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [pendingRegistration, setPendingRegistration] = useState(null);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const getMapUrl = (address) => {
     if (!address) return null;
@@ -314,25 +316,9 @@ const EventDetailPage = () => {
           <button className="bg-white/90 backdrop-blur p-2 rounded-sm hover:bg-white transition-colors">
             <Heart className="w-5 h-5" />
           </button>
-          <div className="relative group">
-            <button className="bg-white/90 backdrop-blur p-2 rounded-sm hover:bg-white transition-colors" data-testid="share-btn">
-              <Share2 className="w-5 h-5" />
-            </button>
-            <div className="absolute right-0 top-full mt-2 bg-white shadow-lg border border-slate-200 rounded-sm p-2 hidden group-hover:block z-50 min-w-[180px]">
-              <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, '_blank', 'width=600,height=400')} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2" data-testid="share-facebook">
-                <span className="w-4 h-4 bg-[#1877F2] rounded-full inline-block" /> Facebook
-              </button>
-              <button onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(event.title)}`, '_blank', 'width=600,height=400')} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2" data-testid="share-twitter">
-                <span className="w-4 h-4 bg-[#1DA1F2] rounded-full inline-block" /> Twitter / X
-              </button>
-              <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(event.title + ' ' + window.location.href)}`, '_blank')} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2" data-testid="share-whatsapp">
-                <span className="w-4 h-4 bg-[#25D366] rounded-full inline-block" /> WhatsApp
-              </button>
-              <button onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success('Lien copié !'); }} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2" data-testid="share-copy">
-                <span className="w-4 h-4 bg-slate-400 rounded-full inline-block" /> Copier le lien
-              </button>
-            </div>
-          </div>
+          <button className="bg-white/90 backdrop-blur p-2 rounded-sm hover:bg-white transition-colors" onClick={() => setShowShareModal(true)} data-testid="share-btn">
+            <Share2 className="w-5 h-5" />
+          </button>
         </div>
 
         <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12 text-white">
@@ -1346,6 +1332,95 @@ const EventDetailPage = () => {
         )}
       </DialogContent>
     </Dialog>
+
+    {/* Modern Share Modal */}
+    <AnimatePresence>
+      {showShareModal && (
+        <motion.div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowShareModal(false)} />
+          <motion.div
+            className="relative w-full max-w-md bg-white sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl"
+            initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-heading font-bold text-lg uppercase tracking-wide">Partager</h3>
+              <button onClick={() => setShowShareModal(false)} className="p-1.5 hover:bg-slate-100 rounded-full transition-colors" data-testid="share-close">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            {event && (
+              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl mb-6">
+                {event.image_url && <img src={event.image_url} alt="" className="w-14 h-14 rounded-lg object-cover" />}
+                <div className="flex-1 min-w-0">
+                  <p className="font-heading font-bold text-sm truncate">{event.title}</p>
+                  <p className="text-xs text-slate-500">{event.location} — {event.date ? format(new Date(event.date), 'd MMM yyyy', { locale: fr }) : ''}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-4 gap-3 mb-6">
+              <button
+                onClick={() => { window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, '_blank', 'width=600,height=400'); }}
+                className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-slate-50 transition-colors group"
+                data-testid="share-facebook"
+              >
+                <div className="w-12 h-12 rounded-full bg-[#1877F2] flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                </div>
+                <span className="text-[11px] font-medium text-slate-600">Facebook</span>
+              </button>
+
+              <button
+                onClick={() => { window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(event?.title || '')}`, '_blank', 'width=600,height=400'); }}
+                className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-slate-50 transition-colors group"
+                data-testid="share-twitter"
+              >
+                <div className="w-12 h-12 rounded-full bg-black flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </div>
+                <span className="text-[11px] font-medium text-slate-600">X</span>
+              </button>
+
+              <button
+                onClick={() => { window.open(`https://wa.me/?text=${encodeURIComponent((event?.title || '') + ' ' + window.location.href)}`, '_blank'); }}
+                className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-slate-50 transition-colors group"
+                data-testid="share-whatsapp"
+              >
+                <div className="w-12 h-12 rounded-full bg-[#25D366] flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                </div>
+                <span className="text-[11px] font-medium text-slate-600">WhatsApp</span>
+              </button>
+
+              <button
+                onClick={() => { window.open(`mailto:?subject=${encodeURIComponent(event?.title || '')}&body=${encodeURIComponent(window.location.href)}`, '_self'); }}
+                className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-slate-50 transition-colors group"
+                data-testid="share-email"
+              >
+                <div className="w-12 h-12 rounded-full bg-brand flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Mail className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-[11px] font-medium text-slate-600">Email</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl">
+              <Link className="w-4 h-4 text-slate-400 shrink-0" />
+              <span className="text-xs text-slate-500 truncate flex-1">{typeof window !== 'undefined' ? window.location.href : ''}</span>
+              <button
+                onClick={() => { navigator.clipboard.writeText(window.location.href); setLinkCopied(true); toast.success('Lien copie !'); setTimeout(() => setLinkCopied(false), 2000); }}
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${linkCopied ? 'bg-green-500 text-white' : 'bg-brand text-white hover:bg-brand/90'}`}
+                data-testid="share-copy"
+              >
+                {linkCopied ? <span className="flex items-center gap-1"><Check className="w-3 h-3" /> Copie</span> : <span className="flex items-center gap-1"><Copy className="w-3 h-3" /> Copier</span>}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
     </>
   );
 };

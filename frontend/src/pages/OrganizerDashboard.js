@@ -12,7 +12,7 @@ import {
   Target, Wind, Flag, CircleDot, Dumbbell, Swords, BarChart3,
   Search, Share2, MessageSquare, Mail, Shield, Send, Filter,
   CheckCircle, Package, Shirt, ArrowUp, Home, Trophy, ExternalLink,
-  Handshake, Phone, MapPinned, Heart, Star, Award, Globe2,
+  Handshake, Phone, MapPinned, Heart, Star, Award, Globe2, Lock,
   ShoppingBag, Palette, Tag as TagIcon
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -650,26 +650,15 @@ const OrganizerDashboard = () => {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="loader" /></div>;
 
-  // Show upgrade prompt if not organizer
+  // Redirect non-organizers to their appropriate dashboard
   if (!isOrganizer) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4" data-testid="organizer-upgrade">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4" data-testid="organizer-redirect">
         <motion.div className="max-w-md w-full bg-white border border-slate-200 p-8 text-center" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <Building2 className="w-16 h-16 text-brand mx-auto mb-6" />
-          <h1 className="font-heading text-2xl font-bold uppercase mb-4">Devenir Organisateur</h1>
-          <p className="text-slate-500 mb-6">Créez vos propres événements sportifs et gérez les inscriptions.</p>
-          <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
-            <DialogTrigger asChild><Button className="w-full btn-primary" data-testid="upgrade-btn">Devenir Organisateur</Button></DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle className="font-heading text-xl uppercase">Informations organisateur</DialogTitle></DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div><Label>Nom de l'organisation *</Label><Input placeholder="Mon Club Sportif" value={upgradeData.company_name} onChange={(e) => setUpgradeData(p => ({ ...p, company_name: e.target.value }))} /></div>
-                <div><Label>Description</Label><Textarea placeholder="Décrivez votre organisation..." value={upgradeData.description} onChange={(e) => setUpgradeData(p => ({ ...p, description: e.target.value }))} /></div>
-                <div><Label>IBAN</Label><Input placeholder="FR76 XXXX..." value={upgradeData.iban} onChange={(e) => setUpgradeData(p => ({ ...p, iban: e.target.value }))} /></div>
-                <Button onClick={handleUpgradeToOrganizer} className="w-full btn-primary">Confirmer</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Shield className="w-16 h-16 text-slate-300 mx-auto mb-6" />
+          <h1 className="font-heading text-2xl font-bold uppercase mb-4">Acces reserve</h1>
+          <p className="text-slate-500 mb-6">Cet espace est reserve aux organisateurs.</p>
+          <Button className="w-full btn-primary" onClick={() => navigate('/dashboard')}>Retour a mon espace</Button>
         </motion.div>
       </div>
     );
@@ -2069,6 +2058,7 @@ ${JSON.stringify({
                           )}
                           <div className="absolute top-3 left-3 flex gap-1">
                             <span className="bg-violet-600 text-white px-2 py-0.5 text-[10px] font-bold uppercase">{p.category}</span>
+                            {p.source === 'provider' && <span className="bg-blue-500 text-white px-2 py-0.5 text-[10px] font-bold uppercase">Prestataire</span>}
                             {!p.active && <span className="bg-red-500 text-white px-2 py-0.5 text-[10px] font-bold uppercase">Inactif</span>}
                           </div>
                           <div className="absolute top-3 right-3">
@@ -2088,10 +2078,17 @@ ${JSON.stringify({
                             <span>Vendus: <strong className="text-brand">{p.sold || 0}</strong></span>
                             <span>Commission: <strong className="text-green-600">{p.organizer_commission}€</strong>/unité</span>
                           </div>
-                          <div className="flex gap-1">
-                            <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1" onClick={() => { setEditingProduct(p); setProductForm({ name: p.name, description: p.description, category: p.category, price: p.price, organizer_commission: p.organizer_commission, image_url: p.image_url, sizes: p.sizes || [], colors: p.colors || [], stock: p.stock, event_id: p.event_id || '', active: p.active }); setShowProductDialog(true); }}><Edit className="w-3 h-3" /> Modifier</Button>
-                            <Button variant="outline" size="sm" className="h-8 text-red-500" onClick={() => handleDeleteProduct(p.product_id)}><Trash2 className="w-3.5 h-3.5" /></Button>
-                          </div>
+                          {p.source === 'provider' ? (
+                            <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-50 px-3 py-2 rounded">
+                              <Lock className="w-3 h-3" />
+                              <span>Produit prestataire — non modifiable</span>
+                            </div>
+                          ) : (
+                            <div className="flex gap-1">
+                              <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1" onClick={() => { setEditingProduct(p); setProductForm({ name: p.name, description: p.description, category: p.category, price: p.price, organizer_commission: p.organizer_commission, image_url: p.image_url, sizes: p.sizes || [], colors: p.colors || [], stock: p.stock, event_id: p.event_id || '', active: p.active }); setShowProductDialog(true); }}><Edit className="w-3 h-3" /> Modifier</Button>
+                              <Button variant="outline" size="sm" className="h-8 text-red-500" onClick={() => handleDeleteProduct(p.product_id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                            </div>
+                          )}
                         </div>
                       </motion.div>
                     ))}
@@ -2190,8 +2187,8 @@ ${JSON.stringify({
                                 </Select>
                               </div>
                               <div>
-                                <Label className="text-[10px] font-heading uppercase text-slate-400">Votre commission (€)</Label>
-                                <Input type="number" className="h-8 text-xs" value={providerCommission} onChange={(e) => setProviderCommission(parseFloat(e.target.value) || 0)} />
+                                <Label className="text-[10px] font-heading uppercase text-slate-400">Commission prestataire (€)</Label>
+                                <Input type="number" className="h-8 text-xs bg-slate-100 cursor-not-allowed" value={providerCommission} readOnly disabled />
                               </div>
                               <div className="flex gap-1">
                                 <Button size="sm" className="flex-1 h-8 text-xs bg-brand hover:bg-brand/90 text-white" onClick={() => handleAddProviderProduct(pp)} data-testid={`confirm-add-${pp.product_id}`}>Confirmer</Button>
