@@ -42,7 +42,7 @@ const NotificationBell = ({ onNavigate }) => {
     setOpen(false);
   };
 
-  const iconMap = { message: MessageSquare, order: ShoppingBag };
+  const iconMap = { message: MessageSquare, order: ShoppingBag, new_selection: ShoppingBag, selection_ready: Check, selection_in_progress: Bell, new_event: Bell };
 
   return (
     <div className="relative">
@@ -81,9 +81,9 @@ const NotificationBell = ({ onNavigate }) => {
                       <Icon className="w-4 h-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-xs font-heading ${!n.read ? 'font-bold text-asphalt' : 'text-slate-500'}`}>{n.title}</p>
-                      <p className="text-[10px] text-slate-400 truncate mt-0.5">{n.message}</p>
-                      <p className="text-[10px] text-slate-300 mt-1">{n.created_at && format(new Date(n.created_at), 'd MMM HH:mm', { locale: fr })}</p>
+                      <p className={`text-xs font-heading ${!n.read ? 'font-bold text-asphalt' : 'text-slate-500'}`}>{typeof n.title === 'string' ? n.title : ''}</p>
+                      <p className="text-[10px] text-slate-400 truncate mt-0.5">{typeof n.message === 'string' ? n.message : ''}</p>
+                      <p className="text-[10px] text-slate-300 mt-1">{n.created_at ? (() => { try { return format(new Date(n.created_at), 'd MMM HH:mm', { locale: fr }); } catch { return ''; } })() : ''}</p>
                     </div>
                     {!n.read && <div className="w-2 h-2 bg-brand rounded-full flex-shrink-0 mt-1" />}
                   </button>

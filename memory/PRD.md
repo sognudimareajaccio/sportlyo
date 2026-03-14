@@ -29,7 +29,13 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 - Recherche par référence (T9101, P706.33, V43009...) via scraping Playwright
 - Affichage fiche produit complète (nom, prix, marque, catégorie, tailles, couleurs, matière, USPs)
 - Ajout au catalogue en un clic avec détection de doublons
-- Lien externe vers la page produit sur XDConnects
+
+**Bug fix — Cloche notifications ✅:**
+- Cause: arguments inversés dans create_notification (type↔title) + message dict au lieu de string → crash React
+- Corrigé dans provider.py et selections.py + NotificationBell robustifié
+
+**Changement nom prestataire**: SportWear Lyon → Moreati ✅
+**Image réduite** dans le résultat de recherche XD Connects ✅
 
 ### Mars 2026 - Session 6 (Phases A & B)
 

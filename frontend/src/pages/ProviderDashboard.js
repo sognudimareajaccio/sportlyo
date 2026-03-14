@@ -736,7 +736,7 @@ const ProviderDashboard = () => {
               {xdLookupResult && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 border border-brand/30 bg-brand/5 p-4" data-testid="xd-lookup-result">
                   <div className="flex gap-4">
-                    <div className="w-32 h-32 bg-white border overflow-hidden flex-shrink-0">
+                    <div className="w-24 h-24 bg-white border overflow-hidden flex-shrink-0">
                       <img src={xdLookupResult.image_url} alt={xdLookupResult.name} className="w-full h-full object-contain" onError={(e) => { e.target.style.display='none'; }} />
                     </div>
                     <div className="flex-1">

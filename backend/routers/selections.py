@@ -113,9 +113,9 @@ async def customize_selection_product(selection_id: str, product_index: int, req
         from routers.notifications import create_notification
         await create_notification(
             sel["organizer_id"],
-            f"Vos produits ont ete personnalises par {current_user.get('company_name') or current_user['name']} ! Ils sont prets a publier.",
             "selection_ready",
-            {"selection_id": selection_id}
+            "Produits personnalises",
+            f"Vos produits ont ete personnalises par {current_user.get('company_name') or current_user['name']} ! Ils sont prets a publier."
         )
 
     return {"message": "Produit personnalise", "product": product_entry, "all_customized": all_customized}
@@ -149,9 +149,9 @@ async def update_selection_status(selection_id: str, request: Request, current_u
         from routers.notifications import create_notification
         await create_notification(
             sel["organizer_id"],
-            f"Le prestataire {current_user.get('company_name') or current_user['name']} a commence la personnalisation de votre selection.",
             "selection_in_progress",
-            {"selection_id": selection_id}
+            "Personnalisation en cours",
+            f"Le prestataire {current_user.get('company_name') or current_user['name']} a commence la personnalisation de votre selection."
         )
 
     return {"message": f"Statut mis a jour: {new_status}"}

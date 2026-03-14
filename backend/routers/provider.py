@@ -288,9 +288,9 @@ async def add_provider_product_to_event(request: Request, current_user: dict = D
     from routers.notifications import create_notification
     await create_notification(
         pp["provider_id"],
-        f"Nouvelle selection : {org_user.get('company_name') or org_user.get('name', '')} a selectionne \"{pp['name']}\" pour son evenement.",
         "new_selection",
-        {"organizer_id": current_user['user_id'], "product_name": pp["name"]}
+        "Nouvelle selection",
+        f"{org_user.get('company_name') or org_user.get('name', '')} a selectionne \"{pp['name']}\" pour son evenement."
     )
 
     return {"product": product}
