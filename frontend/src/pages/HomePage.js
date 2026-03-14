@@ -346,7 +346,7 @@ const HomePage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Running */}
             <motion.div
-              className="border border-slate-200 overflow-hidden"
+              className="border border-slate-200 overflow-hidden hover:border-brand/40 transition-colors duration-300"
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }} viewport={{ once: true }}
             >
@@ -366,9 +366,9 @@ const HomePage = () => {
                   { id: 'Course sur sable / beach run', icon: Sun, color: 'text-yellow-600' },
                 ].map((item) => (
                   <Link key={item.id} to={`/events?search=${encodeURIComponent(item.id)}`}
-                    className="flex items-center gap-2 p-2 hover:bg-orange-50 transition-colors group" data-testid={`theme-${item.id}`}>
-                    <item.icon className={`w-4 h-4 flex-shrink-0 ${item.color}`} />
-                    <span className="font-heading font-bold uppercase tracking-wider text-[10px] leading-tight">{item.id}</span>
+                    className="flex items-center gap-2 p-2 hover:bg-asphalt/[0.05] transition-all duration-200 group" data-testid={`theme-${item.id}`}>
+                    <item.icon className={`w-4 h-4 flex-shrink-0 ${item.color} group-hover:text-brand transition-colors duration-200`} />
+                    <span className="font-heading font-bold uppercase tracking-wider text-[10px] leading-tight group-hover:text-asphalt transition-colors duration-200">{item.id}</span>
                   </Link>
                 ))}
               </div>
@@ -376,7 +376,7 @@ const HomePage = () => {
 
             {/* Autres défis course à pied */}
             <motion.div
-              className="border border-slate-200 overflow-hidden"
+              className="border border-slate-200 overflow-hidden hover:border-brand/40 transition-colors duration-300"
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.05 }} viewport={{ once: true }}
             >
@@ -395,9 +395,9 @@ const HomePage = () => {
                   { id: 'Canicross', icon: Heart, color: 'text-amber-600' },
                 ].map((item) => (
                   <Link key={item.id} to={`/events?search=${encodeURIComponent(item.id)}`}
-                    className="flex items-center gap-2 p-2 hover:bg-amber-50 transition-colors group" data-testid={`theme-${item.id}`}>
-                    <item.icon className={`w-4 h-4 flex-shrink-0 ${item.color}`} />
-                    <span className="font-heading font-bold uppercase tracking-wider text-[10px] leading-tight">{item.id}</span>
+                    className="flex items-center gap-2 p-2 hover:bg-asphalt/[0.05] transition-all duration-200 group" data-testid={`theme-${item.id}`}>
+                    <item.icon className={`w-4 h-4 flex-shrink-0 ${item.color} group-hover:text-brand transition-colors duration-200`} />
+                    <span className="font-heading font-bold uppercase tracking-wider text-[10px] leading-tight group-hover:text-asphalt transition-colors duration-200">{item.id}</span>
                   </Link>
                 ))}
               </div>
@@ -405,7 +405,7 @@ const HomePage = () => {
 
             {/* Multisport & Fun */}
             <motion.div
-              className="border border-slate-200 overflow-hidden"
+              className="border border-slate-200 overflow-hidden hover:border-brand/40 transition-colors duration-300"
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.1 }} viewport={{ once: true }}
             >
@@ -422,9 +422,9 @@ const HomePage = () => {
                   { id: 'Course en costume / fun run', icon: Sparkles, color: 'text-pink-500' },
                 ].map((item) => (
                   <Link key={item.id} to={`/events?search=${encodeURIComponent(item.id)}`}
-                    className="flex items-center gap-2 p-2 hover:bg-pink-50 transition-colors group" data-testid={`theme-${item.id}`}>
-                    <item.icon className={`w-4 h-4 flex-shrink-0 ${item.color}`} />
-                    <span className="font-heading font-bold uppercase tracking-wider text-[10px] leading-tight">{item.id}</span>
+                    className="flex items-center gap-2 p-2 hover:bg-asphalt/[0.05] transition-all duration-200 group" data-testid={`theme-${item.id}`}>
+                    <item.icon className={`w-4 h-4 flex-shrink-0 ${item.color} group-hover:text-brand transition-colors duration-200`} />
+                    <span className="font-heading font-bold uppercase tracking-wider text-[10px] leading-tight group-hover:text-asphalt transition-colors duration-200">{item.id}</span>
                   </Link>
                 ))}
               </div>
@@ -432,7 +432,7 @@ const HomePage = () => {
 
             {/* Défis hivernaux & extrêmes */}
             <motion.div
-              className="border border-slate-200 overflow-hidden"
+              className="border border-slate-200 overflow-hidden hover:border-brand/40 transition-colors duration-300"
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.15 }} viewport={{ once: true }}
             >
@@ -447,9 +447,9 @@ const HomePage = () => {
                   { id: 'Ice swim challenge', icon: Waves, color: 'text-sky-600' },
                 ].map((item) => (
                   <Link key={item.id} to={`/events?search=${encodeURIComponent(item.id)}`}
-                    className="flex items-center gap-2 p-2 hover:bg-cyan-50 transition-colors group" data-testid={`theme-${item.id}`}>
-                    <item.icon className={`w-4 h-4 flex-shrink-0 ${item.color}`} />
-                    <span className="font-heading font-bold uppercase tracking-wider text-[10px] leading-tight">{item.id}</span>
+                    className="flex items-center gap-2 p-2 hover:bg-asphalt/[0.05] transition-all duration-200 group" data-testid={`theme-${item.id}`}>
+                    <item.icon className={`w-4 h-4 flex-shrink-0 ${item.color} group-hover:text-brand transition-colors duration-200`} />
+                    <span className="font-heading font-bold uppercase tracking-wider text-[10px] leading-tight group-hover:text-asphalt transition-colors duration-200">{item.id}</span>
                   </Link>
                 ))}
               </div>
@@ -457,7 +457,7 @@ const HomePage = () => {
 
             {/* Obstacles & Fitness */}
             <motion.div
-              className="border border-slate-200 overflow-hidden"
+              className="border border-slate-200 overflow-hidden hover:border-brand/40 transition-colors duration-300"
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.2 }} viewport={{ once: true }}
             >
@@ -476,9 +476,9 @@ const HomePage = () => {
                   { id: 'Hyrox', icon: Flame, color: 'text-orange-600' },
                 ].map((item) => (
                   <Link key={item.id} to={`/events?search=${encodeURIComponent(item.id)}`}
-                    className="flex items-center gap-2 p-2 hover:bg-rose-50 transition-colors group" data-testid={`theme-${item.id}`}>
-                    <item.icon className={`w-4 h-4 flex-shrink-0 ${item.color}`} />
-                    <span className="font-heading font-bold uppercase tracking-wider text-[10px] leading-tight">{item.id}</span>
+                    className="flex items-center gap-2 p-2 hover:bg-asphalt/[0.05] transition-all duration-200 group" data-testid={`theme-${item.id}`}>
+                    <item.icon className={`w-4 h-4 flex-shrink-0 ${item.color} group-hover:text-brand transition-colors duration-200`} />
+                    <span className="font-heading font-bold uppercase tracking-wider text-[10px] leading-tight group-hover:text-asphalt transition-colors duration-200">{item.id}</span>
                   </Link>
                 ))}
               </div>
@@ -486,7 +486,7 @@ const HomePage = () => {
 
             {/* Défis Vélo */}
             <motion.div
-              className="border border-slate-200 overflow-hidden"
+              className="border border-slate-200 overflow-hidden hover:border-brand/40 transition-colors duration-300"
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.25 }} viewport={{ once: true }}
             >
@@ -505,9 +505,9 @@ const HomePage = () => {
                   { id: 'Ultra-cyclisme', icon: Bike, color: 'text-emerald-800' },
                 ].map((item) => (
                   <Link key={item.id} to={`/events?search=${encodeURIComponent(item.id)}`}
-                    className="flex items-center gap-2 p-2 hover:bg-emerald-50 transition-colors group" data-testid={`theme-${item.id}`}>
-                    <item.icon className={`w-4 h-4 flex-shrink-0 ${item.color}`} />
-                    <span className="font-heading font-bold uppercase tracking-wider text-[10px] leading-tight">{item.id}</span>
+                    className="flex items-center gap-2 p-2 hover:bg-asphalt/[0.05] transition-all duration-200 group" data-testid={`theme-${item.id}`}>
+                    <item.icon className={`w-4 h-4 flex-shrink-0 ${item.color} group-hover:text-brand transition-colors duration-200`} />
+                    <span className="font-heading font-bold uppercase tracking-wider text-[10px] leading-tight group-hover:text-asphalt transition-colors duration-200">{item.id}</span>
                   </Link>
                 ))}
               </div>
@@ -515,7 +515,7 @@ const HomePage = () => {
 
             {/* Endurance Outdoor */}
             <motion.div
-              className="border border-slate-200 overflow-hidden"
+              className="border border-slate-200 overflow-hidden hover:border-brand/40 transition-colors duration-300"
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.3 }} viewport={{ once: true }}
             >
@@ -534,9 +534,9 @@ const HomePage = () => {
                   { id: 'Swimrun', icon: Waves, color: 'text-blue-600' },
                 ].map((item) => (
                   <Link key={item.id} to={`/events?search=${encodeURIComponent(item.id)}`}
-                    className="flex items-center gap-2 p-2 hover:bg-sky-50 transition-colors group" data-testid={`theme-${item.id}`}>
-                    <item.icon className={`w-4 h-4 flex-shrink-0 ${item.color}`} />
-                    <span className="font-heading font-bold uppercase tracking-wider text-[10px] leading-tight">{item.id}</span>
+                    className="flex items-center gap-2 p-2 hover:bg-asphalt/[0.05] transition-all duration-200 group" data-testid={`theme-${item.id}`}>
+                    <item.icon className={`w-4 h-4 flex-shrink-0 ${item.color} group-hover:text-brand transition-colors duration-200`} />
+                    <span className="font-heading font-bold uppercase tracking-wider text-[10px] leading-tight group-hover:text-asphalt transition-colors duration-200">{item.id}</span>
                   </Link>
                 ))}
               </div>
