@@ -70,6 +70,30 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+async def seed_default_accounts():
+    from deps import db, hash_password
+    from datetime import datetime, timezone
+    defaults = [
+        {"user_id": "user_admin_001", "email": "admin@sportsconnect.fr", "name": "Admin SportLyo", "password": "admin123", "role": "admin", "status": "active", "company_name": ""},
+        {"user_id": "user_org_001", "email": "club@paris-sport.fr", "name": "Club Sportif Paris", "password": "club123", "role": "organizer", "status": "active", "company_name": "Club Sportif Paris"},
+        {"user_id": "user_part_001", "email": "pierre@test.com", "name": "Pierre Dupont", "password": "test1234", "role": "participant", "status": "active", "company_name": ""},
+        {"user_id": "user_provider_001", "email": "boutique@sportlyo.fr", "name": "SportWear Lyon", "password": "boutique123", "role": "provider", "status": "active", "company_name": "SportWear Lyon"},
+    ]
+    for d in defaults:
+        existing = await db.users.find_one({"email": d["email"]})
+        if not existing:
+            await db.users.insert_one({
+                **{k: v for k, v in d.items() if k != "password"},
+                "password": hash_password(d["password"]),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "phone": None, "iban": None, "picture": None,
+                "birth_date": None, "gender": None,
+                "pps_number": None, "pps_valid_until": None
+            })
+            logger.info(f"Seed: created {d['role']} account {d['email']}")
+
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     from deps import client
