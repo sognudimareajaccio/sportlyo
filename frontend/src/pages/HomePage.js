@@ -544,7 +544,7 @@ const HomePage = () => {
 
             {/* CTA Organisateur */}
             <motion.div
-              className="relative overflow-hidden flex flex-col items-center justify-center text-center p-8"
+              className="relative overflow-hidden flex flex-col items-center justify-center text-center p-8 group cursor-pointer"
               initial={{ opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, delay: 0.35, type: 'spring', stiffness: 120 }}
@@ -558,30 +558,31 @@ const HomePage = () => {
                   key={idx}
                   src={img}
                   alt=""
-                  className="absolute inset-0 w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: currentHeroImage === idx ? 1 : 0 }}
                   transition={{ duration: 1.5 }}
                 />
               ))}
-              {/* Dark overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-asphalt via-asphalt/85 to-asphalt/70 z-[1]" />
-              {/* Brand accent line */}
-              <div className="absolute top-0 left-0 right-0 h-1 bg-brand z-[3]" />
-              {/* Animated circles overlay */}
-              <div className="absolute inset-0 z-[2] opacity-15">
+              {/* Dark overlay - transitions to orange on hover */}
+              <div className="absolute inset-0 bg-gradient-to-t from-asphalt via-asphalt/85 to-asphalt/70 z-[1] transition-opacity duration-500 group-hover:opacity-0" />
+              <div className="absolute inset-0 bg-gradient-to-t from-brand via-brand/85 to-brand/70 z-[1] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+              {/* Brand accent line - grows on hover */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-brand z-[3] transition-all duration-500 group-hover:h-2" />
+              {/* Animated circles overlay - become brighter on hover */}
+              <div className="absolute inset-0 z-[2] opacity-15 group-hover:opacity-30 transition-opacity duration-500">
                 <motion.div
-                  className="absolute -top-10 -right-10 w-40 h-40 border-[3px] border-brand rounded-full"
+                  className="absolute -top-10 -right-10 w-40 h-40 border-[3px] border-white rounded-full"
                   animate={{ rotate: 360 }}
                   transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
                 />
                 <motion.div
-                  className="absolute -bottom-8 -left-8 w-32 h-32 border-[3px] border-brand rounded-full"
+                  className="absolute -bottom-8 -left-8 w-32 h-32 border-[3px] border-white rounded-full"
                   animate={{ rotate: -360 }}
                   transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
                 />
                 <motion.div
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 border border-white/30 rounded-full"
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 border border-white/40 rounded-full"
                   animate={{ scale: [1, 1.15, 1] }}
                   transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                 />
@@ -593,11 +594,11 @@ const HomePage = () => {
                   transition={{ duration: 0.4, delay: 0.5 }}
                   viewport={{ once: true }}
                 >
-                  <Zap className="w-10 h-10 text-brand mx-auto mb-4" />
+                  <Zap className="w-10 h-10 text-brand group-hover:text-white mx-auto mb-4 transition-colors duration-500" />
                   <h3 className="font-heading text-xl md:text-2xl font-bold uppercase text-white leading-tight mb-2">
                     Votre défi n'est pas dans la liste ?
                   </h3>
-                  <p className="text-white/80 text-sm mb-6 max-w-xs mx-auto">
+                  <p className="text-white/80 group-hover:text-white text-sm mb-6 max-w-xs mx-auto transition-colors duration-500">
                     Il est peut-être temps de le créer.
                   </p>
                 </motion.div>
