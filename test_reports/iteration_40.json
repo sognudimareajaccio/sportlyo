@@ -1,0 +1,91 @@
+{
+  "summary": "Pre-production regression test PASSED. Complete E2E smoke test across all 4 user roles (Admin, Organizer, Participant, Provider) and all major pages. All dashboards load correctly, navigation works, no critical console errors, no broken UI.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "console_warnings": [
+      {
+        "component": "Recharts",
+        "issue": "Non-critical chart dimension warnings when charts render in collapsed containers",
+        "priority": "LOW"
+      }
+    ]
+  },
+  "test_results": {
+    "public_pages": {
+      "home_page": "PASS - Hero visible, featured events displayed, navigation works",
+      "events_page": "PASS - 29 events listed, pagination working",
+      "event_detail": "PASS - Detail page, races section, register button, community section all visible"
+    },
+    "admin_dashboard": {
+      "login": "PASS - Redirects to /admin",
+      "overview_tab": "PASS",
+      "users_tab": "PASS",
+      "payments_tab": "PASS",
+      "commissions_tab": "PASS",
+      "invoices_tab": "PASS",
+      "refunds_tab": "PASS",
+      "providers_tab": "PASS",
+      "rfid_tab": "PASS",
+      "messages_tab": "PASS"
+    },
+    "organizer_dashboard": {
+      "login": "PASS - Redirects to /organizer",
+      "hub_stats": "PASS - Stats displayed",
+      "create_event_dialog": "PASS - Dialog opens, form fields visible",
+      "events_section": "PASS",
+      "participants_section": "PASS",
+      "finances_section": "PASS",
+      "checkin_section": "PASS",
+      "sms_section": "PASS",
+      "analytics_section": "PASS"
+    },
+    "participant_dashboard": {
+      "login": "PASS - Redirects to /dashboard",
+      "hub_grid": "PASS",
+      "nouveau_defi_banner": "PASS",
+      "inscriptions_section": "PASS"
+    },
+    "provider_dashboard": {
+      "login": "PASS - Redirects to /provider",
+      "stats": "PASS",
+      "catalogue_tab": "PASS",
+      "messages_tab": "PASS"
+    },
+    "protected_pages": {
+      "checkin_page": "PASS - Event list visible, progress stats, scan zone working",
+      "rfid_page": "PASS - Catalog with 6 equipment items, cart button visible"
+    },
+    "api_tests": {
+      "invoice_pdf": "PASS - 200 status, PDF returned (2357 bytes)"
+    }
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_40.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (skipped per request)",
+    "frontend": "100%"
+  },
+  "test_credentials": {
+    "admin": "admin@sportsconnect.fr / admin123",
+    "organizer": "club@paris-sport.fr / club123",
+    "participant": "pierre@test.com / test1234",
+    "provider": "boutique@sportlyo.fr / boutique123"
+  },
+  "seed_data_creation": "None - using existing data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Pre-production regression test complete. All 4 roles tested, all dashboards functional, all protected pages accessible. Only non-critical console warnings are from Recharts chart dimension warnings in collapsed containers. Invoice PDF generation verified working. App is production-ready.",
+  "mocked_apis": {
+    "Twilio SMS": "MOCKED - saves to queue only, not actually sent"
+  }
+}
