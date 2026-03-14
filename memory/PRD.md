@@ -1,77 +1,106 @@
 # SportLyo - PRD (Product Requirements Document)
 
 ## Problème Original
-Plateforme de vente de tickets en ligne pour événements sportifs (marathon, trail, vélo, MMA, etc.).
+Plateforme de vente de tickets en ligne pour des événements sportifs (marathon, trail, vélo, etc.), nommée SportLyo.
 
 ## Architecture
-- **Frontend:** React + TailwindCSS + Shadcn UI + framer-motion + recharts
-- **Backend:** FastAPI (Python) — refactorisé avec APIRouter modulaires
-  - `server.py` — Routes principales (auth, events, registrations, payments, shop, invoices, bookings, logo, payment links)
-  - `routers/provider.py` — Routes prestataire (catalogue, commandes, messagerie, logos)
-  - `deps.py` — Dépendances partagées (db, auth, JWT)
+- **Frontend:** React, TailwindCSS, Shadcn UI, framer-motion, recharts
+- **Backend:** FastAPI avec routeurs modulaires
 - **Database:** MongoDB
-- **Auth:** JWT (4 rôles : admin, organizer, participant, provider)
-- **Paiement:** Square (intégré, liens de paiement), SumUp (intégré, mode simulation)
+- **Auth:** JWT
+- **Paiements:** Square (liens de paiement), SumUp (SIMULÉ)
 - **Email:** Resend
+- **PDF:** fpdf2
 
 ## Rôles
-- **Organisateurs:** Événements, participants, boutique, sponsors, partenaires, réservations entreprises, messagerie prestataire
-- **Participants:** Inscription, documents PPS, boutique, factures
-- **Admin:** Supervision, validation prestataires, finances
-- **Prestataire:** Catalogue produits, logos organisateurs, commandes, messagerie
+| Rôle | Description |
+|------|-------------|
+| Admin | Supervise la plateforme, valide inscriptions organisateurs et prestataires |
+| Organisateur | Crée et gère événements, participants, promotions, boutique |
+| Participant | S'inscrit aux courses, gère documents, achète produits dérivés |
+| Prestataire | Fournisseur de produits, gère catalogue, voit commandes |
 
-## Ce qui est implémenté
-
-### Hub Organisateur
-- Grille de navigation : Événements, Participants, Jauges, Check-in, Finances, Correspondances, Chronométrage, Partenaires, **Réservation Entreprises**, Sponsors, Boutique Produits
-
-### Boutique — Flux logo + personnalisation
-- Étape 1 : Upload logo HD (PNG/SVG/PDF) obligatoire
-- Logo transmis au prestataire via son dashboard
-- Catalogue prestataire browsable + ajout par événement
-- Messagerie prestataire avec liste complète des prestataires (même sans historique)
-
-### Réservation Entreprises (NOUVEAU)
-- CRUD complet : nom entreprise, contact, email, nombre d'équipes, membres/équipe, prix/équipe
-- Total automatique calculé
-- Génération de **liens de paiement Square** par réservation
-- Bouton "Copier lien" pour envoi direct
-
-### Sponsors & Donateurs — Liens de paiement
-- Bouton "Lien paiement" Square sur chaque sponsor ayant un montant
-- Lien copiable en un clic
-- Paiements comptabilisés dans la collection payment_transactions
-
-### Dashboard Prestataire
-- Catalogue produits (CRUD), commandes, statistiques
-- **Logos organisateurs** : visualisation + téléchargement HD
-- Messagerie avec organisateurs
-
-### Facturation automatique
-- Facture auto-générée à chaque commande boutique
-- Section "Mes factures" dans le dashboard participant
-
-### Landing page organisateur
-- Features : Boutique personnalisée, Chronométrage, PPS, etc.
-- Écosystème : Boutique intégrée zéro stock
-
-## Backlog Priorisé
-
-### P0
-- Poursuivre refactorisation server.py (extraire auth, events, admin)
-
-### P1
-- Activer SumUp en production (clés API)
-- Factures PDF téléchargeables
-- Factures sur inscriptions événements
-
-### P2
-- Gestion communautaire, RFID, app mobile check-in, stats avancées, Twilio SMS
-
-## Credentials Test
+## Credentials de test
 | Rôle | Email | Mot de passe |
-|---|---|---|
+|------|-------|-------------|
 | Admin | admin@sportsconnect.fr | admin123 |
 | Organisateur | club@paris-sport.fr | club123 |
 | Participant | pierre@test.com | test1234 |
 | Prestataire | boutique@sportlyo.fr | boutique123 |
+
+## Structure Code
+```
+/app/
+├── backend/
+│   ├── routers/
+│   │   ├── admin.py
+│   │   ├── auth.py
+│   │   ├── chat.py
+│   │   ├── events.py
+│   │   ├── messaging.py
+│   │   ├── organizer.py
+│   │   ├── participant.py    # NEW
+│   │   ├── payments.py
+│   │   ├── provider.py
+│   │   ├── registrations.py
+│   │   ├── shop.py
+│   │   ├── timing.py
+│   │   └── uploads.py
+│   ├── models.py
+│   ├── deps.py
+│   └── server.py
+├── frontend/
+│   └── src/
+│       ├── components/
+│       │   ├── organizer/     # Composants extraits du dashboard organisateur
+│       │   └── ui/            # Shadcn components
+│       ├── pages/
+│       │   ├── ParticipantDashboard.js  # REFAIT - Hub + 7 sections
+│       │   ├── OrganizerDashboard.js    # En cours de refactorisation
+│       │   └── ...
+│       └── ...
+```
+
+## Ce qui est implémenté
+
+### Mars 2026
+- Refactorisation massive du backend (server.py monolithique -> routeurs modulaires)
+- Création de composants organizer/ pour le dashboard organisateur
+- **Dashboard Participant redesigné** avec hub à widgets :
+  - Mon Profil (vue + édition)
+  - Mes Inscriptions (liste + factures)
+  - Courses à Venir
+  - Mes Résultats (stats par événement)
+  - Bilan Sportif Annuel (charts, stats km/dénivelé/dépenses)
+  - Mes Commandes Boutique
+  - Messagerie Prestataire
+- Backend endpoints participant: GET/PUT /api/participant/profile, GET /api/participant/orders, stats, upcoming, results, providers
+- Correction flux commandes : les prestataires reçoivent les commandes (provider_ids array)
+- Messagerie participant-prestataire via /api/provider/messages
+
+## Backlog Priorisé
+
+### P0 (Haute priorité)
+- [ ] Achever la refactorisation du frontend OrganizerDashboard.js (composants non encore intégrés)
+
+### P1 (Moyenne priorité)
+- [ ] Intégration SumUp (paiement boutique réel) - BLOQUÉ
+- [ ] Système de facturation avancé (interface dédiée, téléchargement PDF)
+
+### P2 (Future)
+- [ ] Gestion communautaire
+- [ ] Contact direct remboursements
+- [ ] Location matériel RFID
+- [ ] Fermeture auto inscriptions
+- [ ] App mobile check-in
+- [ ] Statistiques avancées organisateurs
+- [ ] Notifications SMS (Twilio)
+
+## Intégrations Tierces
+| Service | Statut |
+|---------|--------|
+| Square | Intégré (liens de paiement) |
+| Resend | Intégré (emails) |
+| recharts | Intégré (graphiques) |
+| fpdf2 | Intégré (factures PDF) |
+| SumUp | SIMULÉ (bloqué) |
