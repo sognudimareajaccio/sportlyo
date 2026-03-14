@@ -544,21 +544,39 @@ const HomePage = () => {
 
             {/* CTA Organisateur */}
             <motion.div
-              className="relative overflow-hidden bg-brand flex flex-col items-center justify-center text-center p-8"
+              className="relative overflow-hidden flex flex-col items-center justify-center text-center p-8"
               initial={{ opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, delay: 0.35, type: 'spring', stiffness: 120 }}
               viewport={{ once: true }}
               whileHover={{ scale: 1.02 }}
+              style={{ minHeight: '100%' }}
             >
-              <div className="absolute inset-0 opacity-20">
+              {/* Animated background images (same as hero) */}
+              {heroImages.map((img, idx) => (
+                <motion.img
+                  key={idx}
+                  src={img}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: currentHeroImage === idx ? 1 : 0 }}
+                  transition={{ duration: 1.5 }}
+                />
+              ))}
+              {/* Dark overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-asphalt via-asphalt/85 to-asphalt/70 z-[1]" />
+              {/* Brand accent line */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-brand z-[3]" />
+              {/* Animated circles overlay */}
+              <div className="absolute inset-0 z-[2] opacity-15">
                 <motion.div
-                  className="absolute -top-10 -right-10 w-40 h-40 border-[3px] border-white rounded-full"
+                  className="absolute -top-10 -right-10 w-40 h-40 border-[3px] border-brand rounded-full"
                   animate={{ rotate: 360 }}
                   transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
                 />
                 <motion.div
-                  className="absolute -bottom-8 -left-8 w-32 h-32 border-[3px] border-white rounded-full"
+                  className="absolute -bottom-8 -left-8 w-32 h-32 border-[3px] border-brand rounded-full"
                   animate={{ rotate: -360 }}
                   transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
                 />
@@ -575,7 +593,7 @@ const HomePage = () => {
                   transition={{ duration: 0.4, delay: 0.5 }}
                   viewport={{ once: true }}
                 >
-                  <Zap className="w-10 h-10 text-white mx-auto mb-4" />
+                  <Zap className="w-10 h-10 text-brand mx-auto mb-4" />
                   <h3 className="font-heading text-xl md:text-2xl font-bold uppercase text-white leading-tight mb-2">
                     Votre défi n'est pas dans la liste ?
                   </h3>
