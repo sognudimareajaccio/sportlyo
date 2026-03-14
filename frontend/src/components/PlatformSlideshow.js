@@ -1,10 +1,223 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ChevronLeft, ChevronRight, Calendar, Users, Zap, BarChart3, Pause, Play } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Calendar, Users, Zap, BarChart3, Pause, Play, MapPin, Euro, CheckCircle, Search, Heart, Award, Package, Settings } from 'lucide-react';
 import { Button } from './ui/button';
 
-const slides = [
+/* ─── CSS Mockup Components ─── */
+const MockupFrame = ({ children, url }) => (
+  <div className="relative bg-[#0f172a] border border-white/10 rounded-sm overflow-hidden shadow-2xl">
+    <div className="flex items-center gap-1.5 px-3 py-2 bg-black/50 border-b border-white/5">
+      <div className="w-2 h-2 rounded-full bg-red-400/80" />
+      <div className="w-2 h-2 rounded-full bg-yellow-400/80" />
+      <div className="w-2 h-2 rounded-full bg-green-400/80" />
+      <span className="ml-2 text-[9px] text-white/25 font-mono">{url}</span>
+    </div>
+    <div className="bg-slate-50 overflow-hidden" style={{ maxHeight: '380px' }}>
+      {children}
+    </div>
+  </div>
+);
+
+const MockupCreateEvent = () => (
+  <MockupFrame url="sportlyo.fr/organizer">
+    <div className="bg-asphalt/95 p-6">
+      <div className="bg-white rounded-sm max-w-md mx-auto shadow-xl p-5">
+        <h3 className="font-heading font-bold text-base uppercase mb-1">Creer un evenement</h3>
+        <div className="flex gap-1 mb-4">
+          {['Sport & Lieu', 'Configuration', 'Parcours', 'Epreuves'].map((s, i) => (
+            <div key={i} className={`flex-1 h-0.5 ${i === 0 ? 'bg-brand' : 'bg-slate-200'}`} />
+          ))}
+        </div>
+        <div className="mb-3">
+          <label className="text-[10px] uppercase text-slate-500 font-bold">Nom *</label>
+          <div className="border border-slate-200 rounded px-3 py-2 text-sm text-slate-700 bg-white">Marathon de Lyon 2026</div>
+        </div>
+        <div className="mb-3">
+          <label className="text-[10px] uppercase text-slate-500 font-bold">Type de sport *</label>
+          <div className="grid grid-cols-4 gap-1.5 mt-1">
+            {[
+              { icon: '🚴', label: 'Cyclisme' },
+              { icon: '🏃', label: 'Course', active: true },
+              { icon: '🏊', label: 'Triathlon' },
+              { icon: '🚶', label: 'Marche' },
+            ].map((s, i) => (
+              <div key={i} className={`border rounded p-1.5 text-center text-[9px] ${s.active ? 'border-brand bg-brand/5 text-brand font-bold' : 'border-slate-200 text-slate-500'}`}>
+                <div className="text-base mb-0.5">{s.icon}</div>
+                {s.label}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <div>
+            <label className="text-[10px] uppercase text-slate-500 font-bold">Date *</label>
+            <div className="border rounded px-2 py-1.5 text-xs flex items-center gap-1 text-slate-500"><Calendar className="w-3 h-3" /> 15 juin 2026</div>
+          </div>
+          <div>
+            <label className="text-[10px] uppercase text-slate-500 font-bold">Lieu *</label>
+            <div className="border rounded px-2 py-1.5 text-xs flex items-center gap-1 text-slate-500"><MapPin className="w-3 h-3" /> Lyon, France</div>
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <div className="bg-brand text-white text-xs font-bold px-4 py-2 rounded flex items-center gap-1">Suivant <ArrowRight className="w-3 h-3" /></div>
+        </div>
+      </div>
+    </div>
+  </MockupFrame>
+);
+
+const MockupDashboard = () => (
+  <MockupFrame url="sportlyo.fr/organizer">
+    <div className="bg-asphalt px-4 py-3 flex items-center justify-between">
+      <div>
+        <h3 className="font-heading font-bold text-sm text-white uppercase">Espace Organisateur</h3>
+        <p className="text-[10px] text-slate-400">Gerez vos evenements et suivez vos performances</p>
+      </div>
+      <div className="bg-brand text-white text-[10px] font-bold px-3 py-1.5 rounded flex items-center gap-1">+ Nouvel Evenement</div>
+    </div>
+    <div className="p-4 bg-slate-50">
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        {[
+          { icon: Calendar, value: '19', label: 'Evenements', color: 'text-brand' },
+          { icon: Users, value: '247', label: 'Participants', color: 'text-emerald-600' },
+          { icon: Euro, value: '12 450€', label: 'Revenus', color: 'text-brand' },
+        ].map((s, i) => (
+          <div key={i} className="bg-white border border-slate-200 p-3 flex items-center gap-2">
+            <div className="w-8 h-8 bg-slate-100 rounded flex items-center justify-center"><s.icon className={`w-4 h-4 ${s.color}`} /></div>
+            <div>
+              <p className={`font-heading font-black text-lg leading-none ${s.color}`}>{s.value}</p>
+              <p className="text-[9px] text-slate-400 uppercase">{s.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { icon: Calendar, label: 'Evenements', sub: '19 evenement(s)', color: 'bg-brand' },
+          { icon: Users, label: 'Participants', sub: '247 inscrit(s)', color: 'bg-emerald-500' },
+          { icon: BarChart3, label: 'Jauges', sub: 'Remplissage temps reel', color: 'bg-blue-500' },
+          { icon: Zap, label: 'Check-in', sub: 'Scan QR & dossards', color: 'bg-teal-500' },
+          { icon: Euro, label: 'Finances', sub: '12 450€ de revenus', color: 'bg-brand' },
+          { icon: BarChart3, label: 'Statistiques', sub: 'Graphiques avances', color: 'bg-purple-500' },
+        ].map((c, i) => (
+          <div key={i} className="bg-white border border-slate-200 p-3 hover:border-brand/30 transition-colors">
+            <div className={`w-7 h-7 ${c.color} rounded flex items-center justify-center mb-1.5`}>
+              <c.icon className="w-3.5 h-3.5 text-white" />
+            </div>
+            <p className="font-heading font-bold text-xs uppercase">{c.label}</p>
+            <p className="text-[9px] text-slate-400">{c.sub}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </MockupFrame>
+);
+
+const MockupCheckin = () => (
+  <MockupFrame url="sportlyo.fr/checkin">
+    <div className="bg-asphalt px-4 py-3 flex items-center gap-2">
+      <Zap className="w-4 h-4 text-brand" />
+      <h3 className="font-heading font-bold text-sm text-white">Check-in Jour J</h3>
+      <span className="text-[10px] text-slate-400 ml-auto">Marathon de Lyon 2026</span>
+    </div>
+    <div className="p-4 bg-slate-50 space-y-3">
+      {/* Progress */}
+      <div className="bg-white border border-slate-200 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-heading font-bold text-xs uppercase text-slate-600">Progression</span>
+          <span className="font-heading font-black text-xl text-brand">73%</span>
+        </div>
+        <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+          <div className="h-full bg-green-500 rounded-full" style={{ width: '73%' }} />
+        </div>
+        <div className="grid grid-cols-3 gap-2 mt-2 text-center">
+          <div><p className="font-heading font-black text-lg text-green-600">182</p><p className="text-[9px] text-slate-400 uppercase">Enregistres</p></div>
+          <div><p className="font-heading font-black text-lg text-orange-600">67</p><p className="text-[9px] text-slate-400 uppercase">Restants</p></div>
+          <div><p className="font-heading font-black text-lg">249</p><p className="text-[9px] text-slate-400 uppercase">Total</p></div>
+        </div>
+      </div>
+      {/* Scan input */}
+      <div className="bg-white border-2 border-brand p-3">
+        <p className="font-heading font-bold text-xs uppercase mb-2">Scanner un dossard</p>
+        <div className="flex gap-2">
+          <div className="flex-1 border border-slate-200 rounded px-3 py-2.5 text-sm text-slate-400 flex items-center gap-2">
+            <Search className="w-4 h-4" /> N dossard ou nom...
+          </div>
+          <div className="bg-brand text-white px-4 rounded flex items-center"><Search className="w-4 h-4" /></div>
+        </div>
+      </div>
+      {/* Success */}
+      <div className="bg-green-50 border-2 border-green-400 p-3 flex items-center gap-3">
+        <div className="w-10 h-10 bg-green-500 rounded flex items-center justify-center"><CheckCircle className="w-6 h-6 text-white" /></div>
+        <div>
+          <p className="font-heading font-bold text-sm text-green-800">Pierre Dupont</p>
+          <p className="text-xs text-green-600">Dossard #142 — Marathon 42km</p>
+        </div>
+      </div>
+    </div>
+  </MockupFrame>
+);
+
+const MockupAnalytics = () => (
+  <MockupFrame url="sportlyo.fr/organizer/statistiques">
+    <div className="p-4 bg-slate-50 space-y-3">
+      {/* Period filter */}
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-heading uppercase text-slate-400">Periode</span>
+        <div className="flex gap-1">
+          {['Tout', '30j', '3 mois', '1 an'].map((p, i) => (
+            <span key={i} className={`px-2 py-1 text-[9px] font-bold rounded ${i === 0 ? 'bg-brand text-white' : 'bg-white border text-slate-500'}`}>{p}</span>
+          ))}
+        </div>
+      </div>
+      {/* KPIs */}
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { label: 'Evenements', value: '19', color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Inscriptions', value: '247', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Revenus', value: '12 450€', color: 'text-brand', bg: 'bg-orange-50' },
+        ].map((k, i) => (
+          <div key={i} className={`${k.bg} border border-slate-200 p-2.5`}>
+            <p className={`font-heading font-black text-lg ${k.color}`}>{k.value}</p>
+            <p className="text-[9px] text-slate-500 uppercase">{k.label}</p>
+          </div>
+        ))}
+      </div>
+      {/* Mock chart */}
+      <div className="bg-white border border-slate-200 p-3">
+        <p className="font-heading font-bold text-xs uppercase mb-2">Tendance mensuelle</p>
+        <div className="flex items-end gap-1 h-24">
+          {[35, 52, 41, 68, 45, 72, 58, 85, 63, 78, 92, 88].map((v, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
+              <div className="w-full bg-brand/80 rounded-t" style={{ height: `${v}%` }} />
+              <span className="text-[7px] text-slate-400 mt-0.5">{['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][i]}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-4 mt-2">
+          <span className="text-[9px] text-slate-400 flex items-center gap-1"><span className="w-2 h-2 bg-brand rounded" /> Inscriptions</span>
+          <span className="text-[9px] text-slate-400 flex items-center gap-1"><span className="w-2 h-2 bg-asphalt rounded" /> Revenus</span>
+        </div>
+      </div>
+      {/* Top events */}
+      <div className="bg-white border border-slate-200 p-3">
+        <p className="font-heading font-bold text-xs uppercase mb-2">Top evenements</p>
+        {['Marathon de Lyon', 'Trail des Monts', 'CrossFit Games'].map((e, i) => (
+          <div key={i} className="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-0">
+            <div className="flex items-center gap-2">
+              <span className="w-5 h-5 bg-brand/10 text-brand text-[9px] font-bold rounded flex items-center justify-center">{i + 1}</span>
+              <span className="text-xs font-medium">{e}</span>
+            </div>
+            <span className="text-xs font-heading font-bold text-brand">{[4850, 3200, 2100][i]}€</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </MockupFrame>
+);
+
+const slidesData = [
   {
     id: 'create',
     tag: 'Etape 1',
@@ -12,27 +225,27 @@ const slides = [
     subtitle: 'en quelques clics',
     bullets: [
       'Formulaire intuitif multi-etapes',
-      'Configuration des courses et tarifs',
+      'Plus de 15 types de sports disponibles',
       'Reglement PDF et option T-shirt',
       'Publication instantanee'
     ],
     icon: Calendar,
-    image: 'https://static.prod-images.emergentagent.com/jobs/37f79b87-4a2e-49da-93be-445bf533c4a0/images/8d867ae834c9bdd44c35c9dd0e482cec46bd0802ca3ed1e42697f32dc1f78f3d.png',
+    mockup: MockupCreateEvent,
     accent: '#FF4500'
   },
   {
     id: 'manage',
-    tag: 'Etape 2',
-    title: 'Gerez les inscriptions',
-    subtitle: 'en temps reel',
+    tag: 'Au quotidien',
+    title: 'Votre tableau de bord',
+    subtitle: 'tout en un seul endroit',
     bullets: [
-      'Suivi des participants et dossards',
-      'Jauges de remplissage par course',
-      'Paiement securise integre',
-      'Export et facturation automatique'
+      'Vue d\'ensemble avec 16 modules',
+      'Suivi participants et inscriptions',
+      'Finances, correspondances, partage',
+      'Gestion partenaires et sponsors'
     ],
-    icon: Users,
-    image: 'https://static.prod-images.emergentagent.com/jobs/37f79b87-4a2e-49da-93be-445bf533c4a0/images/b0e40047b331ec4286343b9068ef6447957c0523c282bdad79e4a99a06e295bf.png',
+    icon: Settings,
+    mockup: MockupDashboard,
     accent: '#10b981'
   },
   {
@@ -44,16 +257,16 @@ const slides = [
       'Scan dossard en 1 seconde',
       'Barre de progression en direct',
       'Contact urgence accessible',
-      'Fonctionne sur mobile'
+      'Fonctionne sur mobile et tablette'
     ],
     icon: Zap,
-    image: 'https://static.prod-images.emergentagent.com/jobs/37f79b87-4a2e-49da-93be-445bf533c4a0/images/e4744565d3b0a17ae1cbd6d43d87682f8044895e5ca6d8caab03df9ed85377c3.png',
+    mockup: MockupCheckin,
     accent: '#3b82f6'
   },
   {
     id: 'analytics',
     tag: 'Apres course',
-    title: 'Analysez vos resultats',
+    title: 'Analysez vos performances',
     subtitle: 'avec des graphiques puissants',
     bullets: [
       'Tendance mensuelle des inscriptions',
@@ -62,7 +275,7 @@ const slides = [
       'Filtres par periode personnalisables'
     ],
     icon: BarChart3,
-    image: 'https://static.prod-images.emergentagent.com/jobs/37f79b87-4a2e-49da-93be-445bf533c4a0/images/a1ae304ac0f277b7b5f18c2762ee0f223b9ac9155a1f835a84304cd7eb4505d9.png',
+    mockup: MockupAnalytics,
     accent: '#f59e0b'
   }
 ];
@@ -79,12 +292,12 @@ const PlatformSlideshow = () => {
 
   const next = useCallback(() => {
     setDirection(1);
-    setCurrent(prev => (prev + 1) % slides.length);
+    setCurrent(prev => (prev + 1) % slidesData.length);
   }, []);
 
   const prev = useCallback(() => {
     setDirection(-1);
-    setCurrent(prev => (prev - 1 + slides.length) % slides.length);
+    setCurrent(prev => (prev - 1 + slidesData.length) % slidesData.length);
   }, []);
 
   useEffect(() => {
@@ -93,8 +306,9 @@ const PlatformSlideshow = () => {
     return () => clearInterval(timer);
   }, [paused, next]);
 
-  const slide = slides[current];
+  const slide = slidesData[current];
   const SlideIcon = slide.icon;
+  const MockupComponent = slide.mockup;
 
   const variants = {
     enter: (d) => ({ x: d > 0 ? 300 : -300, opacity: 0 }),
@@ -137,7 +351,7 @@ const PlatformSlideshow = () => {
         />
       </div>
 
-      {/* Color accent glow that changes per slide */}
+      {/* Color accent glow */}
       <motion.div
         className="absolute top-0 right-0 w-1/2 h-full opacity-5 blur-3xl"
         animate={{ backgroundColor: slide.accent }}
@@ -165,7 +379,7 @@ const PlatformSlideshow = () => {
         </motion.div>
 
         {/* Slide Content */}
-        <div className="relative">
+        <div className="relative min-h-[420px]">
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
               key={current}
@@ -209,24 +423,12 @@ const PlatformSlideshow = () => {
                 </ul>
               </div>
 
-              {/* Right: Image mockup */}
+              {/* Right: CSS Mockup */}
               <div className="order-1 lg:order-2">
                 <div className="relative">
-                  {/* Glowing border effect */}
-                  <div className="absolute -inset-1 rounded-sm opacity-30 blur-sm" style={{ backgroundColor: slide.accent }} />
-                  <div className="relative bg-asphalt/80 border border-white/10 rounded-sm overflow-hidden shadow-2xl">
-                    <div className="flex items-center gap-1.5 px-3 py-2 bg-black/40 border-b border-white/5">
-                      <div className="w-2 h-2 rounded-full bg-red-400" />
-                      <div className="w-2 h-2 rounded-full bg-yellow-400" />
-                      <div className="w-2 h-2 rounded-full bg-green-400" />
-                      <span className="ml-2 text-[9px] text-white/30 font-mono">sportlyo.fr/organizer</span>
-                    </div>
-                    <img
-                      src={slide.image}
-                      alt={slide.title}
-                      className="w-full aspect-[3/2] object-cover"
-                      loading="lazy"
-                    />
+                  <div className="absolute -inset-1 rounded-sm opacity-20 blur-sm" style={{ backgroundColor: slide.accent }} />
+                  <div className="relative">
+                    <MockupComponent />
                   </div>
                 </div>
               </div>
@@ -241,7 +443,7 @@ const PlatformSlideshow = () => {
           </button>
 
           <div className="flex items-center gap-3" data-testid="slideshow-dots">
-            {slides.map((s, idx) => (
+            {slidesData.map((s, idx) => (
               <button
                 key={s.id}
                 onClick={() => goTo(idx)}
@@ -274,11 +476,11 @@ const PlatformSlideshow = () => {
         >
           <Link to="/register">
             <Button className="bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase tracking-wider px-10 h-14 text-sm gap-3 shadow-lg shadow-brand/20 transition-all hover:shadow-xl hover:shadow-brand/30" data-testid="slideshow-cta">
-              Commencer gratuitement <ArrowRight className="w-5 h-5" />
+              Creer mon compte organisateur <ArrowRight className="w-5 h-5" />
             </Button>
           </Link>
           <p className="text-slate-500 text-xs mt-3 font-heading uppercase tracking-wider">
-            Aucune carte bancaire requise
+            Gratuit — Aucune carte bancaire requise
           </p>
         </motion.div>
       </div>
