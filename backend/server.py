@@ -84,7 +84,7 @@ async def seed_default_accounts():
         {"user_id": "user_admin_001", "email": "admin@sportsconnect.fr", "name": "Admin SportLyo", "password": "admin123", "role": "admin", "status": "active", "company_name": ""},
         {"user_id": "user_org_001", "email": "club@paris-sport.fr", "name": "Club Sportif Paris", "password": "club123", "role": "organizer", "status": "active", "company_name": "Club Sportif Paris"},
         {"user_id": "user_part_001", "email": "pierre@test.com", "name": "Pierre Dupont", "password": "test1234", "role": "participant", "status": "active", "company_name": ""},
-        {"user_id": "user_provider_001", "email": "boutique@sportlyo.fr", "name": "SportWear Lyon", "password": "boutique123", "role": "provider", "status": "active", "company_name": "SportWear Lyon"},
+        {"user_id": "user_provider_001", "email": "boutique@sportlyo.fr", "name": "Moreati", "password": "boutique123", "role": "provider", "status": "active", "company_name": "Moreati"},
     ]
     for d in defaults:
         existing = await db.users.find_one({"email": d["email"]})
@@ -98,6 +98,26 @@ async def seed_default_accounts():
                 "pps_number": None, "pps_valid_until": None
             })
             logger.info(f"Seed: created {d['role']} account {d['email']}")
+
+    # Migration: rename provider SportWear Lyon -> Moreati
+    await db.users.update_one(
+        {"user_id": "user_provider_001"},
+        {"$set": {"name": "Moreati", "company_name": "Moreati"}}
+    )
+
+    # Fix corrupted notifications (message stored as dict or swapped fields)
+    async for n in db.notifications.find({}):
+        ntype = str(n.get("type", ""))
+        msg = n.get("message")
+        update = {}
+        if len(ntype) > 30:
+            update["type"] = str(n.get("title", "info"))
+            update["title"] = str(n.get("title", "info")).replace("_", " ").title()
+            update["message"] = ntype
+        if isinstance(msg, dict):
+            update["message"] = "Un organisateur a selectionne des produits de votre catalogue."
+        if update:
+            await db.notifications.update_one({"notification_id": n["notification_id"]}, {"$set": update})
 
     # Seed events
     seed_events = [

@@ -29,9 +29,9 @@ const sportIcons = {
 };
 
 const heroImages = [
-  'https://images.unsplash.com/photo-1766970096430-204f27f6e247?w=1920',
-  'https://images.unsplash.com/photo-1753516264455-f7678cb97b7a?w=1920',
-  'https://images.unsplash.com/photo-1747072860311-41889d65570c?w=1920'
+  'https://images.unsplash.com/photo-1766970096430-204f27f6e247?w=1200&q=75',
+  'https://images.unsplash.com/photo-1753516264455-f7678cb97b7a?w=1200&q=75',
+  'https://images.unsplash.com/photo-1747072860311-41889d65570c?w=1200&q=75'
 ];
 
 const HomePage = () => {
@@ -173,9 +173,9 @@ const HomePage = () => {
               return (
                 <motion.div
                   key={category.id}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 10 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: idx * 0.1 }}
+                  transition={{ duration: 0.2, delay: idx * 0.03 }}
                   viewport={{ once: true }}
                 >
                   <Link

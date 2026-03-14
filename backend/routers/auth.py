@@ -97,7 +97,8 @@ async def login(credentials: UserLogin):
             "email": user['email'],
             "name": user['name'],
             "role": user['role'],
-            "picture": user.get('picture')
+            "picture": user.get('picture'),
+            "company_name": user.get('company_name')
         }
     }
 
@@ -115,7 +116,8 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         "birth_date": current_user.get('birth_date'),
         "gender": current_user.get('gender'),
         "pps_number": current_user.get('pps_number'),
-        "pps_valid_until": current_user.get('pps_valid_until')
+        "pps_valid_until": current_user.get('pps_valid_until'),
+        "company_name": current_user.get('company_name')
     }
 
 
