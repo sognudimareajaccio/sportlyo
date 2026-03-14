@@ -283,9 +283,9 @@ const HomePage = () => {
           {/* Destinations Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
-              { name: 'Lyon', region: 'Auvergne-Rhone-Alpes', events: 12, img: 'https://images.unsplash.com/photo-1524484485831-a92ffc0de03f?w=400&q=80' },
+              { name: 'Lyon', region: 'Auvergne-Rhone-Alpes', events: 12, img: 'https://images.unsplash.com/photo-1624540634628-de5f988c8cdb?w=400&q=80' },
               { name: 'Marseille', region: 'Provence-Alpes-Cote d\'Azur', events: 8, img: 'https://images.unsplash.com/photo-1767717746224-c57f85738584?w=400&q=80' },
-              { name: 'Chamonix', region: 'Haute-Savoie', events: 5, img: 'https://images.unsplash.com/photo-1600807497639-3b5d8e74a232?w=400&q=80' },
+              { name: 'Ajaccio', region: 'Corse', events: 3, img: 'https://images.unsplash.com/photo-1662400089180-fca83cc9be9a?w=400&q=80' },
               { name: 'Annecy', region: 'Haute-Savoie', events: 4, img: 'https://images.unsplash.com/photo-1720538907730-b1e2da51438d?w=400&q=80' },
               { name: 'Bordeaux', region: 'Nouvelle-Aquitaine', events: 3, img: 'https://images.unsplash.com/photo-1729166576437-c162a2152f4d?w=400&q=80' },
               { name: 'Paris', region: 'Ile-de-France', events: 6, img: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&q=80' },
