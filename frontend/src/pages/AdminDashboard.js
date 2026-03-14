@@ -33,6 +33,7 @@ const AdminDashboard = () => {
   const [events, setEvents] = useState([]);
   const [eventFilter, setEventFilter] = useState('all');
   const [providers, setProviders] = useState([]);
+  const [commissionData, setCommissionData] = useState(null);
 
   useEffect(() => {
     if (user?.role !== 'admin') {
@@ -45,12 +46,13 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [statsRes, usersRes, paymentsRes, eventsRes, providersRes] = await Promise.all([
+      const [statsRes, usersRes, paymentsRes, eventsRes, providersRes, commissionsRes] = await Promise.all([
         adminApi.getStats(),
         adminApi.getUsers({ page: 1, limit: 20 }),
         adminApi.getPayments({ page: 1, limit: 100 }),
         api.get('/events'),
-        api.get('/admin/providers')
+        api.get('/admin/providers'),
+        api.get('/admin/commissions')
       ]);
       setStats(statsRes.data);
       setUsers(usersRes.data.users);
@@ -59,6 +61,7 @@ const AdminDashboard = () => {
       setPaymentTotals(paymentsRes.data.totals);
       setEvents(eventsRes.data.events || eventsRes.data || []);
       setProviders(providersRes.data.providers || []);
+      setCommissionData(commissionsRes.data);
     } catch (error) {
       console.error('Error fetching admin data:', error);
       toast.error('Erreur lors du chargement des données');
@@ -177,7 +180,7 @@ const AdminDashboard = () => {
               <p className="text-slate-400">Gérez la plateforme SportLyo</p>
             </div>
             <div className="flex gap-2">
-              {['overview', 'users', 'payments', 'providers', 'messages'].map(tab => (
+              {['overview', 'users', 'payments', 'commissions', 'providers', 'messages'].map(tab => (
                 <Button
                   key={tab}
                   variant={activeTab === tab ? 'default' : 'outline'}
@@ -185,7 +188,7 @@ const AdminDashboard = () => {
                   onClick={() => setActiveTab(tab)}
                   data-testid={`tab-${tab}`}
                 >
-                  {tab === 'overview' ? 'Vue d\'ensemble' : tab === 'users' ? 'Utilisateurs' : tab === 'payments' ? 'Paiements' : tab === 'providers' ? `Prestataires${providers.filter(p => p.status === 'pending').length > 0 ? ` (${providers.filter(p => p.status === 'pending').length})` : ''}` : 'Messages'}
+                  {tab === 'overview' ? 'Vue d\'ensemble' : tab === 'users' ? 'Utilisateurs' : tab === 'payments' ? 'Paiements' : tab === 'commissions' ? 'Commissions' : tab === 'providers' ? `Prestataires${providers.filter(p => p.status === 'pending').length > 0 ? ` (${providers.filter(p => p.status === 'pending').length})` : ''}` : 'Messages'}
                 </Button>
               ))}
             </div>
@@ -607,6 +610,102 @@ const AdminDashboard = () => {
                       </tr>
                     </tfoot>
                   )}
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'commissions' && commissionData && (
+          <div className="space-y-6" data-testid="commissions-tab">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-asphalt text-white p-6 border-l-4 border-brand">
+                <p className="text-xs font-heading uppercase text-slate-400 mb-1">Commission admin totale</p>
+                <p className="text-3xl font-heading font-extrabold text-brand" data-testid="total-admin-commission">
+                  {commissionData.total_admin_commission.toFixed(2)}€
+                </p>
+                <p className="text-xs text-slate-500 mt-1">1€ par produit prestataire vendu</p>
+              </div>
+              <div className="bg-white border border-slate-200 p-6">
+                <p className="text-xs font-heading uppercase text-slate-500 mb-1">Produits prestataires vendus</p>
+                <p className="text-3xl font-heading font-extrabold text-slate-800" data-testid="total-provider-items">
+                  {commissionData.total_provider_items_sold}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">articles via prestataires</p>
+              </div>
+              <div className="bg-white border border-slate-200 p-6">
+                <p className="text-xs font-heading uppercase text-slate-500 mb-1">Commandes avec prestataire</p>
+                <p className="text-3xl font-heading font-extrabold text-slate-800" data-testid="total-provider-orders">
+                  {commissionData.total_orders_with_provider}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">commandes concernées</p>
+              </div>
+            </div>
+
+            {/* By Provider Breakdown */}
+            <div className="bg-white border border-slate-200" data-testid="commission-by-provider">
+              <div className="p-4 border-b flex items-center justify-between">
+                <h3 className="font-heading font-bold uppercase">Commissions par prestataire</h3>
+                <ShoppingBag className="w-4 h-4 text-slate-400" />
+              </div>
+              {commissionData.by_provider.length > 0 ? (
+                <div className="divide-y">
+                  {commissionData.by_provider.map(prov => (
+                    <div key={prov.provider_id} className="p-4 hover:bg-slate-50 transition-colors" data-testid={`commission-provider-${prov.provider_id}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="font-heading font-bold text-sm">{prov.name || 'Prestataire'}</p>
+                          <p className="text-xs text-slate-400">{prov.orders_count} commande{prov.orders_count > 1 ? 's' : ''} — {prov.items_sold} article{prov.items_sold > 1 ? 's' : ''}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-heading font-bold text-xl text-brand">{prov.commission.toFixed(2)}€</p>
+                          <p className="text-[10px] text-slate-400">commission admin</p>
+                        </div>
+                      </div>
+                      <div className="h-2 bg-slate-100 overflow-hidden">
+                        <div className="h-full bg-brand transition-all" style={{ width: `${commissionData.total_admin_commission > 0 ? ((prov.commission / commissionData.total_admin_commission) * 100) : 0}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-slate-400 text-sm">Aucune commission pour le moment</div>
+              )}
+            </div>
+
+            {/* Recent Orders with Commission */}
+            <div className="bg-white border border-slate-200" data-testid="commission-recent-orders">
+              <div className="p-4 border-b">
+                <h3 className="font-heading font-bold uppercase">Dernières commandes avec commission</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="text-left p-3 font-heading text-xs font-bold uppercase">Commande</th>
+                      <th className="text-left p-3 font-heading text-xs font-bold uppercase">Client</th>
+                      <th className="text-right p-3 font-heading text-xs font-bold uppercase">Total</th>
+                      <th className="text-right p-3 font-heading text-xs font-bold uppercase">Commission admin</th>
+                      <th className="text-left p-3 font-heading text-xs font-bold uppercase">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {commissionData.recent_orders.map(o => (
+                      <tr key={o.order_id} className="border-b hover:bg-slate-50">
+                        <td className="p-3 font-mono text-xs">{o.order_id?.slice(0, 16)}</td>
+                        <td className="p-3">{o.user_name || '—'}</td>
+                        <td className="p-3 text-right font-heading font-bold">{o.total?.toFixed(2)}€</td>
+                        <td className="p-3 text-right font-heading font-bold text-brand">{o.admin_commission?.toFixed(2)}€</td>
+                        <td className="p-3 text-xs text-slate-500">
+                          {o.created_at && format(new Date(o.created_at), 'd MMM yyyy HH:mm', { locale: fr })}
+                        </td>
+                      </tr>
+                    ))}
+                    {commissionData.recent_orders.length === 0 && (
+                      <tr><td colSpan="5" className="p-8 text-center text-slate-400">Aucune commande avec commission</td></tr>
+                    )}
+                  </tbody>
                 </table>
               </div>
             </div>

@@ -121,6 +121,8 @@ def _scrape_xd_product(ref: str) -> dict:
             image_url = large_img.get_attribute('src') or ''
             if not image_url.startswith('http'):
                 image_url = f'https://www.xdconnects.com{image_url}'
+        # Sanitize URL: encode spaces and special chars
+        image_url = image_url.strip().replace(' ', '%20')
 
         # --- Sizes ---
         sizes = []

@@ -95,12 +95,20 @@ async def get_provider_stats(current_user: dict = Depends(get_current_user)):
     ).to_list(5000)
     total_sales = sum(o.get("total", 0) for o in orders)
     total_commission_given = sum(o.get("organizer_commission_total", 0) for o in orders)
+    total_admin_commission = sum(o.get("admin_commission_total", 0) for o in orders)
+    # Fallback: calculate admin commission from items if not stored
+    if total_admin_commission == 0:
+        for o in orders:
+            for item in o.get("items", []):
+                if item.get("provider_id"):
+                    total_admin_commission += 1.0 * item.get("quantity", 1)
     return {
         "total_products": len(products),
         "total_orders": len(orders),
         "total_sales": total_sales,
         "total_commission_given": total_commission_given,
-        "net_revenue": total_sales - total_commission_given
+        "total_admin_commission": round(total_admin_commission, 2),
+        "net_revenue": total_sales - total_commission_given - total_admin_commission
     }
 
 
@@ -117,27 +125,36 @@ async def get_provider_financial_breakdown(current_user: dict = Depends(get_curr
     for o in orders:
         org_id = o.get("organizer_id", "unknown")
         if org_id not in by_organizer:
-            by_organizer[org_id] = {"organizer_id": org_id, "name": "", "orders_count": 0, "total_sales": 0, "total_commission": 0}
+            by_organizer[org_id] = {"organizer_id": org_id, "name": "", "orders_count": 0, "total_sales": 0, "total_commission": 0, "admin_commission": 0}
         by_organizer[org_id]["orders_count"] += 1
         by_organizer[org_id]["total_sales"] += o.get("total", 0)
         by_organizer[org_id]["total_commission"] += o.get("organizer_commission_total", 0)
+        order_admin = o.get("admin_commission_total", 0)
+        if order_admin == 0:
+            for item in o.get("items", []):
+                if item.get("provider_id"):
+                    order_admin += 1.0 * item.get("quantity", 1)
+        by_organizer[org_id]["admin_commission"] += order_admin
 
     for org_id, info in by_organizer.items():
         org = await db.users.find_one({"user_id": org_id}, {"_id": 0, "name": 1, "company_name": 1})
         if org:
             info["name"] = org.get("company_name") or org.get("name", "")
-        info["net_revenue"] = round(info["total_sales"] - info["total_commission"], 2)
+        info["net_revenue"] = round(info["total_sales"] - info["total_commission"] - info["admin_commission"], 2)
         info["total_sales"] = round(info["total_sales"], 2)
         info["total_commission"] = round(info["total_commission"], 2)
+        info["admin_commission"] = round(info["admin_commission"], 2)
 
     total_sales = sum(v["total_sales"] for v in by_organizer.values())
     total_commission = sum(v["total_commission"] for v in by_organizer.values())
+    total_admin_commission = sum(v["admin_commission"] for v in by_organizer.values())
 
     return {
         "by_organizer": list(by_organizer.values()),
         "total_sales": round(total_sales, 2),
         "total_commission": round(total_commission, 2),
-        "net_revenue": round(total_sales - total_commission, 2)
+        "total_admin_commission": round(total_admin_commission, 2),
+        "net_revenue": round(total_sales - total_commission - total_admin_commission, 2)
     }
 
 

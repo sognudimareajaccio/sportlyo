@@ -268,6 +268,30 @@ async def seed_default_accounts():
             await db.products.insert_one(prod)
             logger.info(f"Seed: created product {prod['name']} for {prod['event_id']}")
 
+    # Migration: backfill admin_commission_total on existing orders with providers
+    async for o in db.orders.find({"provider_ids": {"$exists": True, "$ne": []}, "admin_commission_total": {"$exists": False}}):
+        total_items = sum(item.get("quantity", 1) for item in o.get("items", []))
+        admin_commission = total_items * 1.0
+        await db.orders.update_one(
+            {"order_id": o["order_id"]},
+            {"$set": {"admin_commission_total": admin_commission}}
+        )
+        # Also backfill provider_id on items if missing
+        items = o.get("items", [])
+        provider_id = o.get("provider_id") or (o.get("provider_ids", [None])[0] if o.get("provider_ids") else None)
+        if provider_id:
+            updated_items = []
+            for item in items:
+                if not item.get("provider_id"):
+                    item["provider_id"] = provider_id
+                item["admin_commission"] = 1.0 * item.get("quantity", 1)
+                updated_items.append(item)
+            await db.orders.update_one(
+                {"order_id": o["order_id"]},
+                {"$set": {"items": updated_items}}
+            )
+        logger.info(f"Migration: backfilled admin_commission on order {o['order_id']}")
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

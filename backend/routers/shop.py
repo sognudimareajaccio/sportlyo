@@ -91,6 +91,7 @@ async def create_shop_order(request: Request, current_user: dict = Depends(get_c
     order_items = []
     total = 0
     total_commission = 0
+    admin_commission_total = 0
     organizer_id = None
     provider_ids = set()
     for item in items:
@@ -103,14 +104,19 @@ async def create_shop_order(request: Request, current_user: dict = Depends(get_c
         total += line_total
         total_commission += commission
         organizer_id = product.get("organizer_id")
-        if product.get("provider_id"):
+        is_provider_product = bool(product.get("provider_id"))
+        if is_provider_product:
             provider_ids.add(product["provider_id"])
+        # Admin commission: 1€ per provider product sold
+        item_admin_commission = (1.0 * qty) if is_provider_product else 0
+        admin_commission_total += item_admin_commission
         order_items.append({
             "product_id": product["product_id"], "product_name": product["name"],
             "price": product["price"], "quantity": qty,
             "size": item.get("size", ""), "color": item.get("color", ""),
             "line_total": line_total, "commission": commission,
-            "provider_id": product.get("provider_id")
+            "provider_id": product.get("provider_id"),
+            "admin_commission": item_admin_commission
         })
         await db.products.update_one({"product_id": product["product_id"]}, {"$inc": {"sold": qty, "stock": -qty}})
     provider_id = list(provider_ids)[0] if len(provider_ids) == 1 else None
@@ -155,6 +161,7 @@ async def create_shop_order(request: Request, current_user: dict = Depends(get_c
         "event_id": data.get("event_id", ""), "items": order_items,
         "total": grand_total, "subtotal": total, "delivery_fee": delivery_fee,
         "organizer_commission_total": total_commission,
+        "admin_commission_total": admin_commission_total,
         "payment_status": payment_status,
         "payment_method": "SumUp" if sumup_key else "Simulation",
         "checkout_url": checkout_url,

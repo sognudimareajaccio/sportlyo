@@ -7,7 +7,7 @@ import requests
 import os
 import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://sportlyo-events-1.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://sportlyo-tickets.preview.emergentagent.com')
 
 class TestEventNewFields:
     """Test event creation and retrieval with new fields"""

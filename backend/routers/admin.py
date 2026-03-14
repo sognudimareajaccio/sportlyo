@@ -87,6 +87,74 @@ async def get_all_payments(page: int = Query(1, ge=1), limit: int = Query(20, ge
     return {"payments": payments, "totals": totals, "total": total, "page": page, "pages": (total + limit - 1) // limit}
 
 
+@router.get("/admin/commissions")
+async def get_admin_commissions(current_user: dict = Depends(get_current_user)):
+    """Get admin commission stats from provider product sales (1€ per product sold)."""
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    orders = await db.orders.find(
+        {"provider_ids": {"$exists": True, "$ne": []}},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(10000)
+
+    total_admin_commission = 0
+    total_provider_items = 0
+    by_provider = {}
+    orders_detail = []
+
+    for o in orders:
+        order_admin_commission = o.get("admin_commission_total", 0)
+        # Fallback: calculate from items if admin_commission_total not yet stored
+        if order_admin_commission == 0:
+            for item in o.get("items", []):
+                if item.get("provider_id"):
+                    order_admin_commission += 1.0 * item.get("quantity", 1)
+
+        if order_admin_commission > 0:
+            total_admin_commission += order_admin_commission
+
+            # Count provider items
+            for item in o.get("items", []):
+                if item.get("provider_id"):
+                    qty = item.get("quantity", 1)
+                    total_provider_items += qty
+                    pid = item["provider_id"]
+                    if pid not in by_provider:
+                        by_provider[pid] = {"provider_id": pid, "name": "", "items_sold": 0, "commission": 0, "orders_count": 0}
+                    by_provider[pid]["items_sold"] += qty
+                    by_provider[pid]["commission"] += 1.0 * qty
+
+            # Track unique orders per provider
+            for pid in o.get("provider_ids", []):
+                if pid in by_provider:
+                    by_provider[pid]["orders_count"] += 1
+
+            orders_detail.append({
+                "order_id": o.get("order_id"),
+                "user_name": o.get("user_name", ""),
+                "event_id": o.get("event_id", ""),
+                "total": o.get("total", 0),
+                "admin_commission": order_admin_commission,
+                "created_at": o.get("created_at", "")
+            })
+
+    # Enrich provider names
+    for pid, info in by_provider.items():
+        p = await db.users.find_one({"user_id": pid}, {"_id": 0, "name": 1, "company_name": 1})
+        if p:
+            info["name"] = p.get("company_name") or p.get("name", "")
+        info["commission"] = round(info["commission"], 2)
+
+    return {
+        "total_admin_commission": round(total_admin_commission, 2),
+        "total_provider_items_sold": total_provider_items,
+        "total_orders_with_provider": len(orders_detail),
+        "by_provider": list(by_provider.values()),
+        "recent_orders": orders_detail[:20]
+    }
+
+
 @router.get("/admin/messages")
 async def get_admin_messages(current_user: dict = Depends(get_current_user)):
     if current_user['role'] != 'admin':
