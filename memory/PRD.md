@@ -18,7 +18,7 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 | Admin | Supervise la plateforme, valide inscriptions organisateurs et prestataires |
 | Organisateur | Crée et gère événements, participants, promotions, boutique |
 | Participant | S'inscrit aux courses, gère documents, achète produits dérivés |
-| Prestataire | Fournisseur de produits, gère catalogue, voit commandes |
+| Prestataire | Fournisseur de produits, gère catalogue, voit commandes, finances et ventes |
 
 ## Credentials de test
 | Rôle | Email | Mot de passe |
@@ -38,12 +38,13 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 │   │   ├── chat.py
 │   │   ├── events.py
 │   │   ├── messaging.py
+│   │   ├── notifications.py   # NEW - Système de notifications
 │   │   ├── organizer.py
-│   │   ├── participant.py    # NEW
+│   │   ├── participant.py     # NEW - Endpoints participant
 │   │   ├── payments.py
-│   │   ├── provider.py
+│   │   ├── provider.py        # UPDATED - Finances + Ventes
 │   │   ├── registrations.py
-│   │   ├── shop.py
+│   │   ├── shop.py            # UPDATED - Notifications sur commandes
 │   │   ├── timing.py
 │   │   └── uploads.py
 │   ├── models.py
@@ -52,10 +53,12 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 ├── frontend/
 │   └── src/
 │       ├── components/
-│       │   ├── organizer/     # Composants extraits du dashboard organisateur
-│       │   └── ui/            # Shadcn components
+│       │   ├── NotificationBell.js  # NEW - Cloche notifications
+│       │   ├── organizer/
+│       │   └── ui/
 │       ├── pages/
-│       │   ├── ParticipantDashboard.js  # REFAIT - Hub + 7 sections
+│       │   ├── ParticipantDashboard.js  # REFAIT - Hub + 7 sections + notifications
+│       │   ├── ProviderDashboard.js     # UPDATED - 6 onglets + Finances + Ventes
 │       │   ├── OrganizerDashboard.js    # En cours de refactorisation
 │       │   └── ...
 │       └── ...
@@ -63,25 +66,31 @@ Plateforme de vente de tickets en ligne pour des événements sportifs (marathon
 
 ## Ce qui est implémenté
 
-### Mars 2026
-- Refactorisation massive du backend (server.py monolithique -> routeurs modulaires)
-- Création de composants organizer/ pour le dashboard organisateur
-- **Dashboard Participant redesigné** avec hub à widgets :
-  - Mon Profil (vue + édition)
-  - Mes Inscriptions (liste + factures)
-  - Courses à Venir
-  - Mes Résultats (stats par événement)
-  - Bilan Sportif Annuel (charts, stats km/dénivelé/dépenses)
-  - Mes Commandes Boutique
-  - Messagerie Prestataire
-- Backend endpoints participant: GET/PUT /api/participant/profile, GET /api/participant/orders, stats, upcoming, results, providers
-- Correction flux commandes : les prestataires reçoivent les commandes (provider_ids array)
-- Messagerie participant-prestataire via /api/provider/messages
+### Mars 2026 - Session 2
+- **Système de notifications en temps réel** : cloche dans le header (participant + prestataire)
+  - Notifications créées automatiquement sur message et commande
+  - Polling toutes les 15 secondes, panel avec badge compteur
+  - Endpoints: GET /api/notifications, POST /api/notifications/read, GET /api/notifications/unread-count
+- **Widget Financier Prestataire** (onglet Finances) :
+  - 3 cartes résumé : Ventes totales, Commissions dues, Revenu net
+  - Tableau de commissions par organisateur avec barre de marge nette
+- **Widget Répartition des Ventes** (onglet Ventes) :
+  - Graphique barres horizontales : top produits vendus
+  - Camembert : ventes par catégorie
+  - Distribution par taille (barres verticales)
+  - Tableau détaillé chiffre d'affaires avec totaux
+
+### Mars 2026 - Session 1
+- Refactorisation massive du backend (server.py -> routeurs modulaires)
+- Dashboard Participant redesigné avec hub à widgets (7 sections)
+- Backend endpoints participant (profile, orders, stats, upcoming, results, providers)
+- Correction flux commandes : prestataires reçoivent les commandes
+- Messagerie participant-prestataire
 
 ## Backlog Priorisé
 
 ### P0 (Haute priorité)
-- [ ] Achever la refactorisation du frontend OrganizerDashboard.js (composants non encore intégrés)
+- [ ] Achever la refactorisation du frontend OrganizerDashboard.js
 
 ### P1 (Moyenne priorité)
 - [ ] Intégration SumUp (paiement boutique réel) - BLOQUÉ
