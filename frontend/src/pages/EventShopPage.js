@@ -190,6 +190,12 @@ const ProductCard = ({ product, onOrder }) => {
       <div className="space-y-1.5">
         <h3 className="font-heading font-bold text-sm uppercase tracking-wide text-slate-900 group-hover:text-brand transition-colors">{product.name}</h3>
         {product.description && <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{product.description}</p>}
+        {product.colors?.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            <span className="text-[10px] text-slate-400">Couleurs:</span>
+            {product.colors.map(c => <span key={c} className="text-[10px] font-bold text-slate-600">{c}</span>).reduce((prev, curr, i) => i === 0 ? [curr] : [...prev, <span key={`sep-${i}`} className="text-[10px] text-slate-300">·</span>, curr], [])}
+          </div>
+        )}
         <div className="flex items-center justify-between pt-1">
           <div className="flex items-center gap-3">
             <span className="font-heading font-black text-lg text-slate-900">{product.price}€</span>

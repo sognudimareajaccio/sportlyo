@@ -174,7 +174,8 @@ const ProviderDashboard = () => {
                 <div className="p-4">
                   <h4 className="font-heading font-bold text-base mb-1">{p.name}</h4>
                   {p.description && <p className="text-xs text-slate-500 line-clamp-2 mb-2">{p.description}</p>}
-                  {p.sizes?.length > 0 && <div className="flex flex-wrap gap-1 mb-2">{p.sizes.map(s => <span key={s} className="bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold">{s}</span>)}</div>}
+                  {p.sizes?.length > 0 && <div className="flex flex-wrap gap-1 mb-2"><span className="text-[10px] text-slate-400 mr-1">Tailles:</span>{p.sizes.map(s => <span key={s} className="bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold">{s}</span>)}</div>}
+                  {p.colors?.length > 0 && <div className="flex flex-wrap gap-1 mb-2"><span className="text-[10px] text-slate-400 mr-1">Couleurs:</span>{p.colors.map(c => <span key={c} className="bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold">{c}</span>)}</div>}
                   <div className="flex items-center justify-between text-xs text-slate-500 mb-3">
                     <span>Stock: <strong>{p.stock}</strong></span>
                     <span>Commission suggérée: <strong className="text-green-600">{p.suggested_commission}€</strong>/unité</span>
