@@ -15,6 +15,10 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { toast } from 'sonner';
 import NotificationBell from '../components/NotificationBell';
+import ProviderCatalogue from '../components/provider/ProviderCatalogue';
+import ProviderFinances from '../components/provider/ProviderFinances';
+import ProviderSales from '../components/provider/ProviderSales';
+import ProviderMessages from '../components/provider/ProviderMessages';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 
 const CHART_COLORS = ['#ff4500', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
@@ -404,83 +408,14 @@ const ProviderDashboard = () => {
 
         {/* Catalogue */}
         {activeSection === 'catalogue' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {products.map(p => {
-              const imgs = getProductImages(p);
-              const currentIdx = cardImageIndex[p.product_id] || 0;
-              return (
-                <motion.div key={p.product_id} className="bg-white border border-slate-200 rounded-lg overflow-hidden group hover:shadow-lg hover:border-brand/50 transition-all duration-300" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} data-testid={`provider-product-${p.product_id}`}>
-                  {/* Image carousel - tall portrait */}
-                  <div className="relative aspect-[3/4] bg-slate-50 flex items-center justify-center overflow-hidden">
-                    {imgs.length > 0 ? (
-                      <AnimatePresence mode="wait">
-                        <motion.img key={currentIdx} src={imgs[currentIdx]} alt={p.name} className="w-full h-full object-cover" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} />
-                      </AnimatePresence>
-                    ) : (
-                      <Package className="w-20 h-20 text-slate-200" />
-                    )}
-                    {/* Image navigation */}
-                    {imgs.length > 1 && (
-                      <>
-                        <button className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white" onClick={(e) => { e.stopPropagation(); setCardImageIndex(prev => ({ ...prev, [p.product_id]: (currentIdx - 1 + imgs.length) % imgs.length })); }}>
-                          <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        <button className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white" onClick={(e) => { e.stopPropagation(); setCardImageIndex(prev => ({ ...prev, [p.product_id]: (currentIdx + 1) % imgs.length })); }}>
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                        {/* Dots indicator */}
-                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
-                          {imgs.map((_, i) => (
-                            <button key={i} className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentIdx ? 'bg-white w-4' : 'bg-white/50'}`} onClick={(e) => { e.stopPropagation(); setCardImageIndex(prev => ({ ...prev, [p.product_id]: i })); }} />
-                          ))}
-                        </div>
-                      </>
-                    )}
-                    {/* Badges */}
-                    <div className="absolute top-3 left-3 flex flex-col gap-1">
-                      <span className="bg-brand text-white px-2 py-0.5 text-[10px] font-bold uppercase rounded">{p.category}</span>
-                      {imgs.length > 1 && <span className="bg-black/60 text-white px-2 py-0.5 text-[10px] font-bold rounded">{imgs.length} photos</span>}
-                    </div>
-                    <div className="absolute top-3 right-3">
-                      <span className="bg-slate-900 text-white px-3 py-1.5 font-heading font-bold text-sm rounded">{p.price}€</span>
-                    </div>
-                  </div>
-                  {/* Product info */}
-                  <div className="p-4">
-                    <h4 className="font-heading font-bold text-sm leading-tight mb-1.5 line-clamp-2">{p.name}</h4>
-                    {p.description && <p className="text-[11px] text-slate-500 line-clamp-2 mb-3">{p.description}</p>}
-                    {p.sizes?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {p.sizes.slice(0, 6).map(s => <span key={s} className="bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold rounded">{s}</span>)}
-                        {p.sizes.length > 6 && <span className="text-[10px] text-slate-400">+{p.sizes.length - 6}</span>}
-                      </div>
-                    )}
-                    {p.colors?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {p.colors.slice(0, 4).map(c => <span key={c} className="bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold rounded">{c}</span>)}
-                        {p.colors.length > 4 && <span className="text-[10px] text-slate-400">+{p.colors.length - 4}</span>}
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 mb-3 pt-2 border-t border-slate-100">
-                      <span>Stock: <strong>{p.stock}</strong></span>
-                      <span>Commission: <strong className="text-green-600">{p.suggested_commission}€</strong></span>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1 rounded" onClick={() => { setEditingProduct(p); setProductForm({ name: p.name, description: p.description, category: p.category, price: p.price, suggested_commission: p.suggested_commission, image_url: p.image_url, images: p.images || [], sizes: p.sizes || [], colors: p.colors || [], stock: p.stock }); setShowProductDialog(true); }}><Edit className="w-3 h-3" /> Modifier</Button>
-                      <Button variant="outline" size="sm" className="h-8 text-red-500 rounded" onClick={() => handleDeleteProduct(p.product_id)}><Trash2 className="w-3.5 h-3.5" /></Button>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-            {products.length === 0 && (
-              <div className="col-span-full bg-white border border-slate-200 p-12 text-center rounded-lg">
-                <Package className="w-16 h-16 mx-auto mb-4 text-slate-200" />
-                <h3 className="font-heading font-bold text-lg uppercase mb-2">Aucun produit</h3>
-                <p className="text-slate-500 mb-4">Créez votre catalogue pour que les organisateurs puissent sélectionner vos produits</p>
-              </div>
-            )}
-          </div>
+          <ProviderCatalogue
+            products={products}
+            getProductImages={getProductImages}
+            cardImageIndex={cardImageIndex}
+            setCardImageIndex={setCardImageIndex}
+            onEdit={(p) => { setEditingProduct(p); setProductForm({ name: p.name, description: p.description, category: p.category, price: p.price, suggested_commission: p.suggested_commission, image_url: p.image_url, images: p.images || [], sizes: p.sizes || [], colors: p.colors || [], stock: p.stock }); setShowProductDialog(true); }}
+            onDelete={handleDeleteProduct}
+          />
         )}
 
 
@@ -790,198 +725,14 @@ const ProviderDashboard = () => {
         )}
 
 
-        {/* ===== FINANCES ===== */}
+        {/* Finances */}
         {activeSection === 'finances' && financialData && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} data-testid="provider-finances-section">
-            <h3 className="font-heading font-bold text-base uppercase mb-4">Bilan Financier & Commissions</h3>
-
-            {/* Summary cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-white border border-slate-200 p-5 text-center">
-                <Euro className="w-6 h-6 text-green-600 mx-auto mb-2" />
-                <p className="font-heading font-black text-3xl">{financialData.total_sales.toFixed(0)}€</p>
-                <p className="text-xs text-slate-500 font-heading uppercase mt-1">Ventes totales</p>
-              </div>
-              <div className="bg-white border border-red-200 p-5 text-center">
-                <ArrowDownRight className="w-6 h-6 text-red-500 mx-auto mb-2" />
-                <p className="font-heading font-black text-3xl text-red-600">{financialData.total_commission.toFixed(0)}€</p>
-                <p className="text-xs text-slate-500 font-heading uppercase mt-1">Commission organisateurs</p>
-              </div>
-              <div className="bg-white border border-orange-200 p-5 text-center" data-testid="provider-admin-commission-card">
-                <ArrowDownRight className="w-6 h-6 text-orange-500 mx-auto mb-2" />
-                <p className="font-heading font-black text-3xl text-orange-600">{(financialData.total_admin_commission || 0).toFixed(0)}€</p>
-                <p className="text-xs text-slate-500 font-heading uppercase mt-1">Commission plateforme</p>
-                <p className="text-[10px] text-slate-400 mt-0.5">1€ / produit vendu</p>
-              </div>
-              <div className="bg-white border border-brand/30 p-5 text-center">
-                <TrendingUp className="w-6 h-6 text-brand mx-auto mb-2" />
-                <p className="font-heading font-black text-3xl text-brand">{financialData.net_revenue.toFixed(0)}€</p>
-                <p className="text-xs text-slate-500 font-heading uppercase mt-1">Revenu net</p>
-              </div>
-            </div>
-
-            {/* Commission breakdown by organizer */}
-            <div className="bg-white border border-slate-200">
-              <div className="p-4 border-b flex items-center justify-between">
-                <h4 className="font-heading font-bold uppercase text-sm">Commissions par organisateur</h4>
-                <Users className="w-4 h-4 text-slate-400" />
-              </div>
-              {financialData.by_organizer.length > 0 ? (
-                <div className="divide-y">
-                  {financialData.by_organizer.map(org => (
-                    <div key={org.organizer_id} className="p-4 hover:bg-slate-50 transition-colors" data-testid={`finance-org-${org.organizer_id}`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="font-heading font-bold text-sm">{org.name || 'Organisateur'}</p>
-                          <p className="text-xs text-slate-400">{org.orders_count} commande{org.orders_count > 1 ? 's' : ''}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-heading font-bold text-lg">{org.total_sales.toFixed(2)}€</p>
-                          <p className="text-[10px] text-slate-400">ventes</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-4">
-                        <div className="flex-1 bg-slate-50 p-2">
-                          <p className="text-[10px] text-slate-400 font-heading uppercase">Commission organisateur</p>
-                          <p className="font-heading font-bold text-red-600">{org.total_commission.toFixed(2)}€</p>
-                        </div>
-                        <div className="flex-1 bg-slate-50 p-2">
-                          <p className="text-[10px] text-slate-400 font-heading uppercase">Commission plateforme</p>
-                          <p className="font-heading font-bold text-orange-600">{(org.admin_commission || 0).toFixed(2)}€</p>
-                        </div>
-                        <div className="flex-1 bg-slate-50 p-2">
-                          <p className="text-[10px] text-slate-400 font-heading uppercase">Revenu net</p>
-                          <p className="font-heading font-bold text-green-600">{org.net_revenue.toFixed(2)}€</p>
-                        </div>
-                      </div>
-                      {/* Progress bar: commission/total */}
-                      <div className="mt-2 h-2 bg-slate-100 overflow-hidden">
-                        <div className="h-full bg-brand" style={{ width: `${org.total_sales > 0 ? ((org.net_revenue / org.total_sales) * 100) : 0}%` }} />
-                      </div>
-                      <p className="text-[10px] text-slate-400 mt-1">{org.total_sales > 0 ? ((org.net_revenue / org.total_sales) * 100).toFixed(1) : 0}% de marge nette</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-8 text-center text-slate-400 text-xs">Aucune commission pour le moment</div>
-              )}
-            </div>
-          </motion.div>
+          <ProviderFinances financialData={financialData} />
         )}
 
-        {/* ===== VENTES ===== */}
+        {/* Ventes */}
         {activeSection === 'ventes' && salesData && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} data-testid="provider-sales-section">
-            <h3 className="font-heading font-bold text-base uppercase mb-4">Répartition des Ventes</h3>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              {/* Top products bar chart */}
-              <div className="bg-white border border-slate-200 p-6">
-                <h4 className="font-heading font-bold uppercase text-xs mb-4">Top produits vendus</h4>
-                {salesData.top_products.length > 0 ? (
-                  <div className="h-56">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={salesData.top_products} layout="vertical" margin={{ left: 0, right: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                        <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-                        <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 10, fill: '#475569' }} tickLine={false} axisLine={false} />
-                        <Tooltip contentStyle={{ fontFamily: 'var(--font-heading)', fontSize: 12, border: '1px solid #e2e8f0', borderRadius: 0 }}
-                          formatter={(v, name) => [name === 'quantity' ? `${v} unités` : `${v}€`, name === 'quantity' ? 'Quantité' : 'Chiffre d\'affaires']} />
-                        <Bar dataKey="quantity" fill="#ff4500" radius={[0, 3, 3, 0]} name="quantity" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <div className="h-56 flex items-center justify-center text-slate-400 text-xs">Pas de données</div>
-                )}
-              </div>
-
-              {/* Category breakdown pie chart */}
-              <div className="bg-white border border-slate-200 p-6">
-                <h4 className="font-heading font-bold uppercase text-xs mb-4">Ventes par catégorie</h4>
-                {salesData.by_category.length > 0 ? (
-                  <div className="flex items-center gap-4 h-56">
-                    <div className="w-1/2 h-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie data={salesData.by_category} cx="50%" cy="50%" innerRadius={40} outerRadius={75}
-                            paddingAngle={3} dataKey="value" strokeWidth={0}>
-                            {salesData.by_category.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                          </Pie>
-                          <Tooltip formatter={(v) => [`${v} unités`, 'Vendu']} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="w-1/2 space-y-2">
-                      {salesData.by_category.map((c, i) => (
-                        <div key={c.name} className="flex items-center gap-2 text-xs">
-                          <div className="w-3 h-3 flex-shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                          <span className="flex-1 font-medium truncate">{c.name}</span>
-                          <span className="font-heading font-bold">{c.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-56 flex items-center justify-center text-slate-400 text-xs">Pas de données</div>
-                )}
-              </div>
-            </div>
-
-            {/* Size distribution */}
-            {salesData.by_size.length > 0 && (
-              <div className="bg-white border border-slate-200 p-6">
-                <h4 className="font-heading font-bold uppercase text-xs mb-4">Distribution par taille</h4>
-                <div className="flex gap-3 flex-wrap">
-                  {salesData.by_size.map((s, i) => {
-                    const max = Math.max(...salesData.by_size.map(x => x.value));
-                    const pct = max > 0 ? (s.value / max) * 100 : 0;
-                    return (
-                      <div key={s.name} className="flex flex-col items-center" data-testid={`size-${s.name}`}>
-                        <div className="w-14 bg-slate-100 relative flex items-end justify-center" style={{ height: '80px' }}>
-                          <div className="w-full bg-brand absolute bottom-0" style={{ height: `${pct}%` }} />
-                        </div>
-                        <p className="font-heading font-bold text-xs mt-2">{s.name}</p>
-                        <p className="text-[10px] text-slate-400">{s.value} unités</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Revenue table */}
-            {salesData.top_products.length > 0 && (
-              <div className="bg-white border border-slate-200 mt-6">
-                <div className="p-4 border-b"><h4 className="font-heading font-bold uppercase text-xs">Détail chiffre d'affaires</h4></div>
-                <table className="w-full">
-                  <thead className="bg-slate-50 text-[10px] font-heading uppercase text-slate-400">
-                    <tr>
-                      <th className="text-left p-3">Produit</th>
-                      <th className="text-right p-3">Quantité</th>
-                      <th className="text-right p-3">CA</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y text-sm">
-                    {salesData.top_products.map(p => (
-                      <tr key={p.product_id} className="hover:bg-slate-50">
-                        <td className="p-3 font-medium">{p.name}</td>
-                        <td className="p-3 text-right font-heading font-bold">{p.quantity}</td>
-                        <td className="p-3 text-right font-heading font-bold text-brand">{p.revenue.toFixed(2)}€</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot className="bg-slate-50 font-heading font-bold text-sm">
-                    <tr>
-                      <td className="p-3">Total</td>
-                      <td className="p-3 text-right">{salesData.top_products.reduce((a, p) => a + p.quantity, 0)}</td>
-                      <td className="p-3 text-right text-brand">{salesData.top_products.reduce((a, p) => a + p.revenue, 0).toFixed(2)}€</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            )}
-          </motion.div>
+          <ProviderSales salesData={salesData} />
         )}
 
 
@@ -1060,67 +811,17 @@ const ProviderDashboard = () => {
 
         {/* Messages */}
         {activeSection === 'messages' && (
-          <div className="bg-white border border-slate-200 grid grid-cols-3 min-h-[500px]">
-            {/* Conversation list — merged organizers + existing convos */}
-            <div className="border-r border-slate-200 overflow-y-auto">
-              <div className="p-4 border-b"><h3 className="font-heading font-bold uppercase text-sm">Organisateurs</h3></div>
-              {(() => {
-                const convoMap = {};
-                conversations.filter(c => c.role === 'organizer').forEach(c => { convoMap[c.user_id] = c; });
-                const allOrgs = organizersList.map(o => ({
-                  user_id: o.user_id,
-                  name: o.company_name || o.name,
-                  email: o.email,
-                  last_message: convoMap[o.user_id]?.last_message || '',
-                  unread: convoMap[o.user_id]?.unread || 0,
-                }));
-                conversations.filter(c => c.role === 'organizer' && !allOrgs.find(o => o.user_id === c.user_id)).forEach(c => {
-                  allOrgs.push({ user_id: c.user_id, name: c.name, email: '', last_message: c.last_message, unread: c.unread });
-                });
-                return allOrgs.length > 0 ? allOrgs.map(o => (
-                  <button key={o.user_id} onClick={() => openChat(o.user_id)} className={`w-full text-left p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors ${activeChat === o.user_id ? 'bg-brand/5 border-l-2 border-l-brand' : ''}`} data-testid={`chat-org-${o.user_id}`}>
-                    <div className="flex items-center justify-between">
-                      <p className="font-heading font-bold text-sm truncate">{o.name}</p>
-                      {o.unread > 0 && <span className="bg-brand text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">{o.unread}</span>}
-                    </div>
-                    <p className="text-[10px] text-slate-400 uppercase">Organisateur</p>
-                    <p className="text-xs text-slate-500 truncate mt-0.5">{o.last_message || 'Aucun message — Démarrer la conversation'}</p>
-                  </button>
-                )) : (
-                  <div className="p-8 text-center text-slate-400 text-sm">Aucun organisateur inscrit sur la plateforme</div>
-                );
-              })()}
-            </div>
-            {/* Chat */}
-            <div className="col-span-2 flex flex-col">
-              {activeChat ? (
-                <>
-                  <div className="p-4 border-b bg-slate-50">
-                    <p className="font-heading font-bold text-sm">{organizersList.find(o => o.user_id === activeChat)?.name || conversations.find(c => c.user_id === activeChat)?.name || 'Conversation'}</p>
-                    <p className="text-[10px] text-slate-400 uppercase">Organisateur</p>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-[380px]">
-                    {messages.length > 0 ? messages.map(m => (
-                      <div key={m.message_id} className={`flex ${m.sender_id === user?.user_id ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[70%] px-3 py-2 text-sm ${m.sender_id === user?.user_id ? 'bg-brand text-white' : 'bg-slate-100 text-slate-700'}`}>
-                          <p>{m.content}</p>
-                          <p className={`text-[10px] mt-1 ${m.sender_id === user?.user_id ? 'text-white/60' : 'text-slate-400'}`}>{m.created_at && format(new Date(m.created_at), 'HH:mm', { locale: fr })}</p>
-                        </div>
-                      </div>
-                    )) : (
-                      <div className="text-center text-slate-400 text-xs py-8">Aucun message. Envoyez le premier message pour entamer la discussion.</div>
-                    )}
-                  </div>
-                  <div className="p-4 border-t flex gap-2">
-                    <Input value={newMsg} onChange={(e) => setNewMsg(e.target.value)} placeholder="Votre message..." onKeyDown={(e) => e.key === 'Enter' && sendMessage()} className="flex-1" data-testid="provider-msg-input" />
-                    <Button className="bg-brand hover:bg-brand/90 text-white" onClick={sendMessage} data-testid="provider-msg-send"><Send className="w-4 h-4" /></Button>
-                  </div>
-                </>
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">Sélectionnez un organisateur pour démarrer une conversation</div>
-              )}
-            </div>
-          </div>
+          <ProviderMessages
+            user={user}
+            conversations={conversations}
+            organizersList={organizersList}
+            activeChat={activeChat}
+            messages={messages}
+            newMsg={newMsg}
+            setNewMsg={setNewMsg}
+            openChat={openChat}
+            sendMessage={sendMessage}
+          />
         )}
       </div>
 
