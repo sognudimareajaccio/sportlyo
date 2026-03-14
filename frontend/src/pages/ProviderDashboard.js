@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   ShoppingBag, Package, Euro, TrendingUp, FileText, Plus, Edit, Trash2,
-  MessageSquare, Send, Loader2, X, ChevronRight, PieChart as PieChartIcon, BarChart3, Users, ArrowDownRight, Upload, Check, Search
+  MessageSquare, Send, Loader2, X, ChevronRight, ChevronLeft, PieChart as PieChartIcon, BarChart3, Users, ArrowDownRight, Upload, Check, Search, ImagePlus
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -29,7 +29,7 @@ const ProviderDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [productForm, setProductForm] = useState({ name: '', description: '', category: 'Textile', price: '', suggested_commission: 5, image_url: '', sizes: [], colors: [], stock: 100 });
+  const [productForm, setProductForm] = useState({ name: '', description: '', category: 'Textile', price: '', suggested_commission: 5, image_url: '', images: [], sizes: [], colors: [], stock: 100 });
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMsg, setNewMsg] = useState('');
@@ -42,11 +42,15 @@ const ProviderDashboard = () => {
   const [importSelected, setImportSelected] = useState(new Set());
   const [importing, setImporting] = useState(false);
   const [parsing, setParsing] = useState(false);
+  const [parsingProgress, setParsingProgress] = useState('');
   const [importFilter, setImportFilter] = useState('');
   // TopTex lookup by ref
   const [lookupRef, setLookupRef] = useState('');
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupResult, setLookupResult] = useState(null);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [cardImageIndex, setCardImageIndex] = useState({});
+  const imageInputRef = useRef(null);
 
   const categories = ['Textile', 'Accessoire', 'Gourde', 'Sac', 'Nutrition', 'Équipement'];
 
@@ -117,48 +121,48 @@ const ProviderDashboard = () => {
   const handlePdfUpload = async (file) => {
     if (!file || !file.name.toLowerCase().endsWith('.pdf')) { toast.error('Fichier PDF requis'); return; }
     setParsing(true);
+    setParsingProgress('Upload du fichier...');
     setImportProducts([]);
     setImportSelected(new Set());
     try {
       const formData = new FormData();
       formData.append('file', file);
-      // Step 1: Upload the PDF
-      const uploadRes = await api.post('/provider/import/parse-pdf', formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 300000 });
+      const uploadRes = await api.post('/provider/import/parse-pdf', formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 600000 });
       const taskId = uploadRes.data.task_id;
       if (!taskId) {
-        // Legacy response (direct products)
         setImportProducts(uploadRes.data.products || []);
         toast.success(`${uploadRes.data.total} produits trouvés !`);
-        setParsing(false);
+        setParsing(false); setParsingProgress('');
         return;
       }
-      toast.info('PDF uploadé, analyse en cours...');
-      // Step 2: Poll for results
+      setParsingProgress('Analyse du PDF...');
       let attempts = 0;
-      const maxAttempts = 120; // 2 minutes max polling
+      const maxAttempts = 600;
       while (attempts < maxAttempts) {
-        await new Promise(r => setTimeout(r, 2000)); // Poll every 2s
+        await new Promise(r => setTimeout(r, 1000));
         attempts++;
         try {
           const statusRes = await api.get(`/provider/import/pdf-status/${taskId}`);
           if (statusRes.data.status === 'done') {
             setImportProducts(statusRes.data.products || []);
             toast.success(`${statusRes.data.total} produits trouvés dans le catalogue !`);
-            setParsing(false);
+            setParsing(false); setParsingProgress('');
             return;
           }
-          // Still processing, continue polling
+          if (statusRes.data.total_pages > 0) {
+            setParsingProgress(`Page ${statusRes.data.current_page} / ${statusRes.data.total_pages}`);
+          }
         } catch (pollErr) {
           if (pollErr.response?.status === 500) {
             toast.error(pollErr.response?.data?.detail || 'Erreur analyse PDF');
-            setParsing(false);
+            setParsing(false); setParsingProgress('');
             return;
           }
         }
       }
-      toast.error('Le traitement a pris trop de temps. Essayez avec un fichier plus petit.');
+      toast.error('Le traitement a pris trop de temps.');
     } catch (e) { toast.error(e.response?.data?.detail || 'Erreur upload PDF'); }
-    finally { setParsing(false); }
+    finally { setParsing(false); setParsingProgress(''); }
   };
 
   const handleImportConfirm = async () => {
@@ -224,6 +228,38 @@ const ProviderDashboard = () => {
     } catch (e) { toast.error(e.response?.data?.detail || 'Erreur import'); }
   };
 
+  const handleImageUpload = async (files) => {
+    if (!files || files.length === 0) return;
+    const currentImages = productForm.images || [];
+    const remaining = 10 - currentImages.length;
+    if (remaining <= 0) { toast.error('Maximum 10 images atteint'); return; }
+    const filesToUpload = Array.from(files).slice(0, remaining);
+    setUploadingImages(true);
+    try {
+      const uploaded = [];
+      for (const file of filesToUpload) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await api.post('/upload/image', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        uploaded.push(res.data.url);
+      }
+      setProductForm(p => ({ ...p, images: [...(p.images || []), ...uploaded] }));
+      toast.success(`${uploaded.length} image(s) ajoutée(s)`);
+    } catch (e) { toast.error('Erreur upload image'); }
+    finally { setUploadingImages(false); }
+  };
+
+  const removeFormImage = (index) => {
+    setProductForm(p => ({ ...p, images: (p.images || []).filter((_, i) => i !== index) }));
+  };
+
+  const getProductImages = (p) => {
+    const imgs = [];
+    if (p.images && p.images.length > 0) imgs.push(...p.images);
+    else if (p.image_url) imgs.push(p.image_url);
+    return imgs;
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="loader" /></div>;
 
   const statCards = [
@@ -254,7 +290,7 @@ const ProviderDashboard = () => {
             <h1 className="font-heading text-2xl font-black uppercase tracking-tight">Espace Prestataire</h1>
             <p className="text-sm text-slate-500">{user?.company_name || user?.name}</p>
           </div>
-          <Button className="bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase text-xs gap-2" onClick={() => { setEditingProduct(null); setProductForm({ name: '', description: '', category: 'Textile', price: '', suggested_commission: 5, image_url: '', sizes: [], colors: [], stock: 100 }); setShowProductDialog(true); }} data-testid="add-provider-product-btn">
+          <Button className="bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase text-xs gap-2" onClick={() => { setEditingProduct(null); setProductForm({ name: '', description: '', category: 'Textile', price: '', suggested_commission: 5, image_url: '', images: [], sizes: [], colors: [], stock: 100 }); setShowProductDialog(true); }} data-testid="add-provider-product-btn">
             <Plus className="w-4 h-4" /> Nouveau produit
           </Button>
           <NotificationBell onNavigate={setActiveSection} />
@@ -285,32 +321,77 @@ const ProviderDashboard = () => {
 
         {/* Catalogue */}
         {activeSection === 'catalogue' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {products.map(p => (
-              <motion.div key={p.product_id} className="bg-white border border-slate-200 overflow-hidden group hover:border-brand transition-colors" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} data-testid={`provider-product-${p.product_id}`}>
-                <div className="relative h-48 bg-slate-50 flex items-center justify-center overflow-hidden">
-                  {p.image_url ? <img src={p.image_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" /> : <Package className="w-16 h-16 text-slate-200" />}
-                  <div className="absolute top-3 left-3"><span className="bg-brand text-white px-2 py-0.5 text-[10px] font-bold uppercase">{p.category}</span></div>
-                  <div className="absolute top-3 right-3"><span className="bg-slate-900 text-white px-2.5 py-1 font-heading font-bold text-sm">{p.price}€</span></div>
-                </div>
-                <div className="p-4">
-                  <h4 className="font-heading font-bold text-base mb-1">{p.name}</h4>
-                  {p.description && <p className="text-xs text-slate-500 line-clamp-2 mb-2">{p.description}</p>}
-                  {p.sizes?.length > 0 && <div className="flex flex-wrap gap-1 mb-2"><span className="text-[10px] text-slate-400 mr-1">Tailles:</span>{p.sizes.map(s => <span key={s} className="bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold">{s}</span>)}</div>}
-                  {p.colors?.length > 0 && <div className="flex flex-wrap gap-1 mb-2"><span className="text-[10px] text-slate-400 mr-1">Couleurs:</span>{p.colors.map(c => <span key={c} className="bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold">{c}</span>)}</div>}
-                  <div className="flex items-center justify-between text-xs text-slate-500 mb-3">
-                    <span>Stock: <strong>{p.stock}</strong></span>
-                    <span>Commission suggérée: <strong className="text-green-600">{p.suggested_commission}€</strong>/unité</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {products.map(p => {
+              const imgs = getProductImages(p);
+              const currentIdx = cardImageIndex[p.product_id] || 0;
+              return (
+                <motion.div key={p.product_id} className="bg-white border border-slate-200 rounded-lg overflow-hidden group hover:shadow-lg hover:border-brand/50 transition-all duration-300" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} data-testid={`provider-product-${p.product_id}`}>
+                  {/* Image carousel - tall portrait */}
+                  <div className="relative aspect-[3/4] bg-slate-50 flex items-center justify-center overflow-hidden">
+                    {imgs.length > 0 ? (
+                      <AnimatePresence mode="wait">
+                        <motion.img key={currentIdx} src={imgs[currentIdx]} alt={p.name} className="w-full h-full object-cover" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} />
+                      </AnimatePresence>
+                    ) : (
+                      <Package className="w-20 h-20 text-slate-200" />
+                    )}
+                    {/* Image navigation */}
+                    {imgs.length > 1 && (
+                      <>
+                        <button className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white" onClick={(e) => { e.stopPropagation(); setCardImageIndex(prev => ({ ...prev, [p.product_id]: (currentIdx - 1 + imgs.length) % imgs.length })); }}>
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white" onClick={(e) => { e.stopPropagation(); setCardImageIndex(prev => ({ ...prev, [p.product_id]: (currentIdx + 1) % imgs.length })); }}>
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                        {/* Dots indicator */}
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
+                          {imgs.map((_, i) => (
+                            <button key={i} className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentIdx ? 'bg-white w-4' : 'bg-white/50'}`} onClick={(e) => { e.stopPropagation(); setCardImageIndex(prev => ({ ...prev, [p.product_id]: i })); }} />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    {/* Badges */}
+                    <div className="absolute top-3 left-3 flex flex-col gap-1">
+                      <span className="bg-brand text-white px-2 py-0.5 text-[10px] font-bold uppercase rounded">{p.category}</span>
+                      {imgs.length > 1 && <span className="bg-black/60 text-white px-2 py-0.5 text-[10px] font-bold rounded">{imgs.length} photos</span>}
+                    </div>
+                    <div className="absolute top-3 right-3">
+                      <span className="bg-slate-900 text-white px-3 py-1.5 font-heading font-bold text-sm rounded">{p.price}€</span>
+                    </div>
                   </div>
-                  <div className="flex gap-1">
-                    <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1" onClick={() => { setEditingProduct(p); setProductForm({ name: p.name, description: p.description, category: p.category, price: p.price, suggested_commission: p.suggested_commission, image_url: p.image_url, sizes: p.sizes || [], colors: p.colors || [], stock: p.stock }); setShowProductDialog(true); }}><Edit className="w-3 h-3" /> Modifier</Button>
-                    <Button variant="outline" size="sm" className="h-8 text-red-500" onClick={() => handleDeleteProduct(p.product_id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                  {/* Product info */}
+                  <div className="p-4">
+                    <h4 className="font-heading font-bold text-sm leading-tight mb-1.5 line-clamp-2">{p.name}</h4>
+                    {p.description && <p className="text-[11px] text-slate-500 line-clamp-2 mb-3">{p.description}</p>}
+                    {p.sizes?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {p.sizes.slice(0, 6).map(s => <span key={s} className="bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold rounded">{s}</span>)}
+                        {p.sizes.length > 6 && <span className="text-[10px] text-slate-400">+{p.sizes.length - 6}</span>}
+                      </div>
+                    )}
+                    {p.colors?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {p.colors.slice(0, 4).map(c => <span key={c} className="bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold rounded">{c}</span>)}
+                        {p.colors.length > 4 && <span className="text-[10px] text-slate-400">+{p.colors.length - 4}</span>}
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 mb-3 pt-2 border-t border-slate-100">
+                      <span>Stock: <strong>{p.stock}</strong></span>
+                      <span>Commission: <strong className="text-green-600">{p.suggested_commission}€</strong></span>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1 rounded" onClick={() => { setEditingProduct(p); setProductForm({ name: p.name, description: p.description, category: p.category, price: p.price, suggested_commission: p.suggested_commission, image_url: p.image_url, images: p.images || [], sizes: p.sizes || [], colors: p.colors || [], stock: p.stock }); setShowProductDialog(true); }}><Edit className="w-3 h-3" /> Modifier</Button>
+                      <Button variant="outline" size="sm" className="h-8 text-red-500 rounded" onClick={() => handleDeleteProduct(p.product_id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
             {products.length === 0 && (
-              <div className="col-span-full bg-white border border-slate-200 p-12 text-center">
+              <div className="col-span-full bg-white border border-slate-200 p-12 text-center rounded-lg">
                 <Package className="w-16 h-16 mx-auto mb-4 text-slate-200" />
                 <h3 className="font-heading font-bold text-lg uppercase mb-2">Aucun produit</h3>
                 <p className="text-slate-500 mb-4">Créez votre catalogue pour que les organisateurs puissent sélectionner vos produits</p>
@@ -402,11 +483,11 @@ const ProviderDashboard = () => {
                     <input type="file" accept=".pdf" className="hidden" onChange={(e) => handlePdfUpload(e.target.files[0])} disabled={parsing} data-testid="toptex-pdf-input" />
                     <Button className="bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase gap-2 h-12 px-8" disabled={parsing} asChild>
                       <span>
-                        {parsing ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyse en cours...</> : <><Upload className="w-4 h-4" /> Choisir le fichier PDF</>}
+                        {parsing ? <><Loader2 className="w-4 h-4 animate-spin" /> {parsingProgress || 'Analyse en cours...'}</> : <><Upload className="w-4 h-4" /> Choisir le fichier PDF</>}
                       </span>
                     </Button>
                   </label>
-                  <p className="text-[10px] text-slate-400 mt-3">Fichier PDF du catalogue sport TopTex (European Textile Catalogue)</p>
+                  <p className="text-[10px] text-slate-400 mt-3">Fichier PDF du catalogue sport TopTex — jusqu'à 600 Mo</p>
                 </div>
               </div>
             ) : (
@@ -822,7 +903,35 @@ const ProviderDashboard = () => {
               <div><Label className="text-xs font-heading uppercase text-slate-500">Commission suggérée (€)</Label><Input type="number" step="0.5" value={productForm.suggested_commission} onChange={(e) => setProductForm(p => ({ ...p, suggested_commission: e.target.value }))} /></div>
               <div><Label className="text-xs font-heading uppercase text-slate-500">Stock</Label><Input type="number" value={productForm.stock} onChange={(e) => setProductForm(p => ({ ...p, stock: parseInt(e.target.value) || 0 }))} /></div>
             </div>
-            <div><Label className="text-xs font-heading uppercase text-slate-500">URL Image</Label><Input value={productForm.image_url} onChange={(e) => setProductForm(p => ({ ...p, image_url: e.target.value }))} /></div>
+
+            {/* Multi-image gallery upload */}
+            <div>
+              <Label className="text-xs font-heading uppercase text-slate-500 mb-2 block">Photos du produit ({(productForm.images || []).length}/10)</Label>
+              {(productForm.images || []).length > 0 && (
+                <div className="grid grid-cols-5 gap-2 mb-3">
+                  {(productForm.images || []).map((img, i) => (
+                    <div key={i} className="relative aspect-square bg-slate-50 rounded-lg overflow-hidden border border-slate-200 group">
+                      <img src={img} alt="" className="w-full h-full object-cover" />
+                      <button onClick={() => removeFormImage(i)} className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <X className="w-3 h-3" />
+                      </button>
+                      {i === 0 && <span className="absolute bottom-1 left-1 bg-brand text-white text-[8px] font-bold px-1 rounded">Principal</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {(productForm.images || []).length < 10 && (
+                <div className="flex gap-2">
+                  <input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleImageUpload(e.target.files)} />
+                  <Button type="button" variant="outline" className="flex-1 h-10 text-xs gap-2 border-dashed" onClick={() => imageInputRef.current?.click()} disabled={uploadingImages}>
+                    {uploadingImages ? <><Loader2 className="w-4 h-4 animate-spin" /> Upload...</> : <><ImagePlus className="w-4 h-4" /> Ajouter des photos</>}
+                  </Button>
+                </div>
+              )}
+              <p className="text-[10px] text-slate-400 mt-1">Jusqu'à 10 photos. La première sera l'image principale.</p>
+            </div>
+
+            <div><Label className="text-xs font-heading uppercase text-slate-500">Ou URL image externe</Label><Input value={productForm.image_url} onChange={(e) => setProductForm(p => ({ ...p, image_url: e.target.value }))} placeholder="https://..." /></div>
             <div><Label className="text-xs font-heading uppercase text-slate-500">Tailles (séparées par des virgules)</Label><Input value={(productForm.sizes || []).join(', ')} onChange={(e) => setProductForm(p => ({ ...p, sizes: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))} placeholder="S, M, L, XL" /></div>
             <div><Label className="text-xs font-heading uppercase text-slate-500">Couleurs (séparées par des virgules)</Label><Input value={(productForm.colors || []).join(', ')} onChange={(e) => setProductForm(p => ({ ...p, colors: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))} placeholder="Noir, Blanc, Bleu" /></div>
             <Button className="w-full bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase" onClick={handleSaveProduct} data-testid="save-provider-product">{editingProduct ? 'Enregistrer' : 'Ajouter au catalogue'}</Button>

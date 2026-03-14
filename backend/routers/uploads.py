@@ -57,7 +57,7 @@ async def verify_pps_document(registration_id: str, request=None, current_user: 
 
 @router.post("/upload/image")
 async def upload_image(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
-    if current_user['role'] not in ['organizer', 'admin']:
+    if current_user['role'] not in ['organizer', 'admin', 'provider']:
         raise HTTPException(status_code=403, detail="Not authorized")
     ext = Path(file.filename).suffix.lower()
     if ext not in ALLOWED_EXTENSIONS:

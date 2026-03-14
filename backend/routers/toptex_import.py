@@ -45,12 +45,14 @@ CATEGORY_MAP = {
 }
 
 
-def parse_toptex_pdf(pdf_path: str) -> list:
+def parse_toptex_pdf(pdf_path: str, task_id: str = None) -> list:
     doc = fitz.open(pdf_path)
     products = {}
     current_category = "Sport"
 
     for page_idx in range(doc.page_count):
+        if task_id and task_id in _pdf_tasks:
+            _pdf_tasks[task_id]["current_page"] = page_idx + 1
         text = doc[page_idx].get_text()
         if not text.strip():
             continue
@@ -158,7 +160,12 @@ def _process_pdf_sync(task_id: str, pdf_path: str):
     """Process PDF synchronously in background thread."""
     try:
         _pdf_tasks[task_id]["status"] = "processing"
-        products = parse_toptex_pdf(pdf_path)
+        doc = fitz.open(pdf_path)
+        total_pages = doc.page_count
+        _pdf_tasks[task_id]["total_pages"] = total_pages
+        _pdf_tasks[task_id]["current_page"] = 0
+        doc.close()
+        products = parse_toptex_pdf(pdf_path, task_id)
         _pdf_tasks[task_id]["status"] = "done"
         _pdf_tasks[task_id]["products"] = products
         _pdf_tasks[task_id]["total"] = len(products)
@@ -184,7 +191,7 @@ async def parse_toptex_catalog(file: UploadFile = File(...), current_user: dict 
     # Stream file to disk in chunks to handle large files
     tmp_path = os.path.join(tempfile.gettempdir(), f"toptex_{uuid.uuid4().hex}.pdf")
     total_size = 0
-    max_size = 100 * 1024 * 1024  # 100MB limit
+    max_size = 600 * 1024 * 1024  # 600MB limit
 
     try:
         with open(tmp_path, "wb") as f:
@@ -226,7 +233,6 @@ async def get_pdf_task_status(task_id: str, current_user: dict = Depends(get_cur
 
     if task["status"] == "done":
         products = task["products"]
-        # Clean up task after retrieval
         del _pdf_tasks[task_id]
         return {"status": "done", "products": products, "total": len(products)}
     elif task["status"] == "error":
@@ -234,7 +240,11 @@ async def get_pdf_task_status(task_id: str, current_user: dict = Depends(get_cur
         del _pdf_tasks[task_id]
         raise HTTPException(status_code=500, detail=f"Erreur d'analyse: {error}")
     else:
-        return {"status": task["status"]}
+        return {
+            "status": task["status"],
+            "current_page": task.get("current_page", 0),
+            "total_pages": task.get("total_pages", 0)
+        }
 
 
 @router.post("/provider/import/confirm")
@@ -306,7 +316,7 @@ async def lookup_toptex_reference(ref: str, current_user: dict = Depends(get_cur
         # Step 1: Search on TopTex to find the product URL
         async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
             search_res = await client.get(
-                f"https://www.toptex.fr/catalogsearch/result/",
+                "https://www.toptex.fr/catalogsearch/result/",
                 params={"q": ref},
                 headers={"User-Agent": "Mozilla/5.0"}
             )

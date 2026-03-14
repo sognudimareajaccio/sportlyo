@@ -41,6 +41,7 @@ async def create_provider_product(request: Request, current_user: dict = Depends
         "price": float(data.get("price", 0)),
         "suggested_commission": float(data.get("suggested_commission", 5)),
         "image_url": data.get("image_url", ""),
+        "images": data.get("images", []),
         "sizes": data.get("sizes", []),
         "colors": data.get("colors", []),
         "stock": int(data.get("stock", 100)),
@@ -58,7 +59,7 @@ async def update_provider_product(product_id: str, request: Request, current_use
         raise HTTPException(status_code=403, detail="Prestataire requis")
     data = await request.json()
     fields = {}
-    for f in ["name","description","category","price","suggested_commission","image_url","sizes","colors","stock","active"]:
+    for f in ["name","description","category","price","suggested_commission","image_url","images","sizes","colors","stock","active"]:
         if f in data:
             fields[f] = data[f]
     fields["updated_at"] = datetime.now(timezone.utc).isoformat()
