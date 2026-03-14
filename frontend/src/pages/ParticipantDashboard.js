@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { format } from 'date-fns';
+import { format, isSameMonth, startOfMonth, addMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   User, Calendar, Trophy, TrendingUp, ShoppingBag, MessageSquare,
   ChevronRight, ArrowLeft, Home, MapPin, Clock, Upload, CheckCircle,
   XCircle, ExternalLink, FileText, Loader2, Send, Package, Edit,
-  Footprints, Mountain, Euro, BarChart3, Save
+  Footprints, Mountain, Euro, BarChart3, Save, Flame, Sparkles, ArrowRight
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -59,15 +59,19 @@ const ParticipantDashboard = () => {
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMsg, setNewMsg] = useState('');
+  // New features
+  const [newEvents, setNewEvents] = useState([]);
 
   const fetchInitialData = async () => {
     try {
-      const [regsRes, invRes] = await Promise.all([
+      const [regsRes, invRes, newEvtsRes] = await Promise.all([
         registrationsApi.getAll(),
-        api.get('/invoices')
+        api.get('/invoices'),
+        api.get('/participant/new-events')
       ]);
       setRegistrations(regsRes.data.registrations);
       setInvoices(invRes.data.invoices || []);
+      setNewEvents(newEvtsRes.data.events || []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -251,6 +255,98 @@ const ParticipantDashboard = () => {
                 </div>
               ))}
             </div>
+
+            {/* Nouveau Defi Banner */}
+            {newEvents.length > 0 && (
+              <div className="mb-8" data-testid="nouveau-defi-banner">
+                <div className="flex items-center gap-2 mb-4">
+                  <Flame className="w-5 h-5 text-brand" />
+                  <h3 className="font-heading font-bold text-sm uppercase tracking-wider">Nouveau Defi</h3>
+                  <span className="text-xs text-slate-400 ml-1">Evenements recemment publies</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {newEvents.slice(0, 3).map((evt, idx) => (
+                    <motion.div key={evt.event_id}
+                      initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: idx * 0.08 }}
+                      className="relative bg-white border border-slate-200 overflow-hidden group hover:border-brand transition-all"
+                      data-testid={`new-event-card-${evt.event_id}`}>
+                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand to-orange-400" />
+                      <div className="relative h-28 overflow-hidden">
+                        <img src={evt.image_url || 'https://images.unsplash.com/photo-1766970096430-204f27f6e247?w=800'} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                        <div className="absolute top-2 right-2">
+                          <span className="bg-brand text-white text-[10px] font-heading font-bold uppercase px-2 py-0.5 flex items-center gap-1">
+                            <Sparkles className="w-3 h-3" /> Nouveau
+                          </span>
+                        </div>
+                        <div className="absolute bottom-2 left-2 text-white">
+                          <p className="font-heading font-bold text-sm leading-tight line-clamp-1">{evt.title}</p>
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <div className="flex items-center gap-3 text-xs text-slate-500 mb-2">
+                          {evt.date && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{format(new Date(evt.date), 'd MMM yyyy', { locale: fr })}</span>}
+                          {evt.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{evt.location.split(',')[0]}</span>}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-heading font-bold text-brand">A partir de {evt.price}€</span>
+                          <Link to={`/events/${evt.event_id}`}>
+                            <Button size="sm" className="h-7 text-xs btn-primary gap-1">
+                              Decouvrir <ArrowRight className="w-3 h-3" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Agenda des evenements */}
+            {upcomingRegistrations.length > 0 && (
+              <div className="mb-8" data-testid="agenda-widget">
+                <div className="flex items-center gap-2 mb-4">
+                  <Calendar className="w-5 h-5 text-blue-500" />
+                  <h3 className="font-heading font-bold text-sm uppercase tracking-wider">Agenda des evenements</h3>
+                </div>
+                <div className="bg-white border border-slate-200 divide-y">
+                  {upcomingRegistrations.slice(0, 5).map((reg, idx) => {
+                    const daysLeft = reg.event?.date ? Math.ceil((new Date(reg.event.date) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+                    return (
+                      <motion.div key={reg.registration_id}
+                        initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.2, delay: idx * 0.05 }}
+                        className="flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors"
+                        data-testid={`agenda-item-${reg.registration_id}`}>
+                        <div className="bg-asphalt text-white w-14 h-14 flex flex-col items-center justify-center flex-shrink-0">
+                          <span className="font-heading font-bold text-lg leading-none">{reg.event?.date && format(new Date(reg.event.date), 'd')}</span>
+                          <span className="font-heading text-[9px] uppercase tracking-wider text-slate-400">{reg.event?.date && format(new Date(reg.event.date), 'MMM', { locale: fr })}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-heading font-bold text-sm truncate">{reg.event?.title}</h4>
+                          <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                            {reg.event?.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{reg.event.location.split(',')[0]}</span>}
+                            {reg.selected_race && <span className="text-brand font-bold">{reg.selected_race}</span>}
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          {daysLeft !== null && daysLeft > 0 && (
+                            <span className={`font-heading font-bold text-sm ${daysLeft <= 7 ? 'text-brand' : daysLeft <= 30 ? 'text-amber-500' : 'text-slate-500'}`}>
+                              J-{daysLeft}
+                            </span>
+                          )}
+                          <Link to={`/events/${reg.event_id}`} className="block mt-1">
+                            <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2">Voir</Button>
+                          </Link>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Navigation Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" data-testid="participant-hub-grid">

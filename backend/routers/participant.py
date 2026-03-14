@@ -58,6 +58,18 @@ async def get_participant_upcoming(current_user: dict = Depends(get_current_user
     return {"upcoming": upcoming}
 
 
+@router.get("/participant/new-events")
+async def get_new_published_events(current_user: dict = Depends(get_current_user)):
+    """Return recently published events for 'Nouveau Defi' widget."""
+    now = datetime.now(timezone.utc).isoformat()
+    events = await db.events.find(
+        {"status": "active", "published": True, "date": {"$gte": now}},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(6).to_list(6)
+    return {"events": events}
+
+
+
 @router.get("/participant/results")
 async def get_participant_results(current_user: dict = Depends(get_current_user)):
     now = datetime.now(timezone.utc).isoformat()

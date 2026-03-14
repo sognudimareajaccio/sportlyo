@@ -14,6 +14,9 @@ router = APIRouter(prefix="/api")
 
 @router.post("/registrations")
 async def create_registration(reg_data: RegistrationCreate, current_user: dict = Depends(get_current_user)):
+    if not reg_data.emergency_contact or not reg_data.emergency_phone:
+        raise HTTPException(status_code=400, detail="Le contact d'urgence est obligatoire (nom et telephone)")
+
     event = await db.events.find_one({"event_id": reg_data.event_id}, {"_id": 0})
     if not event:
         raise HTTPException(status_code=404, detail="Evenement introuvable")

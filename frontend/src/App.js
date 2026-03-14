@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -25,7 +25,7 @@ import ResultsPage from "./pages/ResultsPage";
 import CheckInPage from "./pages/CheckInPage";
 import OrganizerEventPage from "./pages/OrganizerEventPage";
 import OrgaLandingPage from "./pages/OrgaLandingPage";
-import ComingSoonPage from "./pages/ComingSoonPage";
+// ComingSoonPage removed - app is now publicly accessible
 import MessagingPage from "./pages/MessagingPage";
 import EventShopPage from "./pages/EventShopPage";
 import ProviderDashboard from "./pages/ProviderDashboard";
@@ -188,26 +188,6 @@ const AppRouter = () => {
 };
 
 function App() {
-  const [hasAccess, setHasAccess] = useState(() => {
-    // Check localStorage or URL param
-    if (localStorage.getItem('sportlyo_preview') === 'true') return true;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('preview') === 'SPORTLYO2026') {
-      localStorage.setItem('sportlyo_preview', 'true');
-      return true;
-    }
-    return false;
-  });
-
-  if (!hasAccess) {
-    return (
-      <ErrorBoundary>
-        <ComingSoonPage onAccessGranted={() => setHasAccess(true)} />
-        <Toaster position="top-right" richColors />
-      </ErrorBoundary>
-    );
-  }
-
   return (
     <ErrorBoundary>
       <AuthProvider>

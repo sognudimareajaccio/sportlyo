@@ -197,6 +197,11 @@ const EventDetailPage = () => {
       return;
     }
 
+    if (!formData.emergency_contact || !formData.emergency_phone) {
+      toast.error('Le contact d\'urgence est obligatoire (nom et téléphone)');
+      return;
+    }
+
     // Build birth_date from day/month/year
     const birthDate = (formData.birth_year && formData.birth_month && formData.birth_day)
       ? `${formData.birth_year}-${String(formData.birth_month).padStart(2, '0')}-${String(formData.birth_day).padStart(2, '0')}`
@@ -1065,13 +1070,14 @@ const EventDetailPage = () => {
                               </div>
                             </div>
 
-                            {/* Emergency contact */}
-                            <div className="bg-slate-50 border border-slate-200 p-4 space-y-3">
-                              <Label className="text-xs font-heading uppercase tracking-wider text-slate-500 block">Contact d'urgence</Label>
+                            {/* Emergency contact - REQUIRED */}
+                            <div className="bg-red-50 border border-red-200 p-4 space-y-3" data-testid="emergency-contact-section">
+                              <Label className="text-xs font-heading uppercase tracking-wider text-red-600 block flex items-center gap-1">Contact d'urgence <span className="text-red-500">*</span></Label>
                               <div className="grid grid-cols-2 gap-3">
-                                <Input value={formData.emergency_contact} onChange={(e) => setFormData(p => ({ ...p, emergency_contact: e.target.value }))} placeholder="Nom du contact" data-testid="reg-emergency-name" />
-                                <Input value={formData.emergency_phone} onChange={(e) => setFormData(p => ({ ...p, emergency_phone: e.target.value }))} placeholder="06 XX XX XX XX" data-testid="reg-emergency-phone" />
+                                <Input value={formData.emergency_contact} onChange={(e) => setFormData(p => ({ ...p, emergency_contact: e.target.value }))} placeholder="Nom du contact *" className={!formData.emergency_contact ? 'border-red-300' : ''} data-testid="reg-emergency-name" required />
+                                <Input value={formData.emergency_phone} onChange={(e) => setFormData(p => ({ ...p, emergency_phone: e.target.value }))} placeholder="06 XX XX XX XX *" className={!formData.emergency_phone ? 'border-red-300' : ''} data-testid="reg-emergency-phone" required />
                               </div>
+                              <p className="text-[10px] text-red-500">Ces informations sont obligatoires pour votre securite</p>
                             </div>
 
                             {/* Club name */}
