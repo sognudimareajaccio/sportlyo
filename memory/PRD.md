@@ -23,7 +23,17 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 
 ## Ce qui est implemente
 
-### Mars 2026 - Session 15 (4 nouvelles fonctionnalites)
+### Mars 2026 - Session 15 (4 nouvelles fonctionnalites + Abonnement Partenaire)
+
+**Abonnement Partenaire 19€/mois (P0) - COMPLETE:**
+- Systeme d'abonnement complet avec essai gratuit 14 jours
+- Engagement minimum 12 mois, sans renouvellement automatique
+- Auto-creation de l'essai a l'inscription du partenaire
+- Section tarification sur la page /partners (prix, essai, fonctionnalites incluses)
+- Banniere d'abonnement dans le dashboard partenaire (statut, jours restants, bouton paiement)
+- Paiement via Square (lien de paiement mensuel)
+- Endpoints: GET /api/subscriptions/my, POST /api/subscriptions/create-payment, POST /api/subscriptions/confirm-payment/{id}, POST /api/subscriptions/cancel
+- Dashboard admin: GET /api/admin/subscriptions avec stats (total, trial, active, expired, revenue)
 
 **Evenements Gratuits (P0) - COMPLETE:**
 - Toggle `is_free` dans les formulaires creation et edition d'evenements
