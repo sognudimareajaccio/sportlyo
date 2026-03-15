@@ -2,63 +2,87 @@
 L'utilisateur souhaite créer une plateforme de vente de tickets en ligne pour des événements sportifs (marathon, trail, vélo, etc.), nommée SportLyo.
 
 **PRODUCT REQUIREMENTS:**
-- **Rôles :** Organisateurs, Participants, Admin, et Prestataires (fournisseurs de produits).
-- **Fonctionnalités Clés :**
-    - **Gestion d'événements :** Création, modification, publication, et gestion des épreuves. Ajout d'une option pour télécharger le règlement en PDF et spécifier si un T-shirt est fourni. Le statut de publication (publié/dépublié) doit être gérable par l'organisateur et l'admin.
-    - **Workflow Prestataire-Organisateur :** Un flux complexe où les organisateurs sélectionnent des produits dans le catalogue d'un prestataire, qui personnalise ensuite ces produits avec le logo de l'organisateur avant de les rendre disponibles pour l'événement.
-    - **Commissions :** L'administrateur doit toucher une commission de 1€ par produit vendu par un prestataire.
-    - **Dashboards :** Modernisation et ajout de fonctionnalités pour tous les rôles (Organisateur, Participant, Admin).
-    - **Page Tous les événements :** Doit être modernisée et n'afficher que les événements publiés.
-    - **Inscription Participant :** Le contact d'urgence doit être un champ obligatoire.
-    - **Import de Catalogue :** L'application doit permettre aux prestataires d'importer des produits depuis des catalogues externes comme TopTex et XDConnects.
-    - **Fonctionnalités P2/P3 :** Système de facturation, gestion communautaire, demandes de remboursement, location de matériel RFID, application de check-in, statistiques avancées, et notifications SMS.
-    - **Refactorisation (P1) :** Décomposition des composants monolithiques pour améliorer la maintenabilité.
+-   **Rôles :** Organisateurs, Participants, Admin, et Prestataires/Partenaires.
+-   **Fonctionnalités Clés :**
+    -   **Gestion d'événements :** Création/modification (y compris événements gratuits), publication, téléchargement de règlement PDF, gestion de la dotation participant, et ajout de logos des sponsors.
+    -   **Monétisation & Finances :**
+        -   Commissions de 5% (Frais de fonctionnement plateforme) sur les dons et sponsorings.
+        -   Génération automatique de reçus fiscaux (Cerfa 11580) pour les donateurs.
+        -   Dashboards financiers détaillés pour l'Admin et l'Organisateur, avec graphiques et ventilation des revenus.
+        -   Abonnement mensuel pour les partenaires.
+    -   **Gestion des Opérations :**
+        -   Widget de gestion de bénévoles (CRUD) pour les organisateurs.
+        -   Section Prestations externes pour trouver des prestataires logistiques.
+        -   Imports de catalogues produits pour certains partenaires (TopTex, XD Connects, Boracay).
+    -   **Expérience Utilisateur :**
+        -   Page d'accueil avec slideshow interactif.
+        -   Pages de destination pour les Organisateurs et les Partenaires.
+        -   Un participant peut enregistrer un événement dans son espace personnel.
+        -   Le formulaire d'inscription pré-sélectionne le rôle de l'utilisateur en fonction du lien d'origine.
+-   **Fonctionnalités Futures :** Facturation, communauté, remboursements, location RFID, check-in, statistiques avancées, notifications SMS.
 
 **User's preferred language**: fr
 
 **what currently exists?**
-La plateforme est une application full-stack (React/FastAPI/MongoDB). Les fonctionnalités de base comme la gestion des événements, l'import de produits, et un système de commissions sont fonctionnelles. Dans cette session, une refactorisation majeure du  a été effectuée. Le fichier monolithique de ~2800 lignes a été décomposé en 16 sous-composants modulaires, et le fichier principal a été réécrit pour orchestrer ces composants. L'ensemble de ce travail de refactorisation est écrit mais n'a pas encore été testé.
+Une application full-stack (React/FastAPI/MongoDB) très robuste. Les fonctionnalités principales sont implémentées et stables. Au cours de la session précédente, l'agent a réalisé de nombreuses avancées, notamment :
+-   Un système d'abonnement complet pour les Partenaires, avec essai gratuit de 14 jours, paiement récurrent via Square, et gestion par l'admin.
+-   L'intégration des revenus d'abonnements dans le tableau de bord financier de l'admin.
+-   Un système d'alertes et de notifications par e-mail (via Resend) pour la gestion des périodes d'essai des partenaires.
+-   Un tableau de bord avancé pour l'admin permettant de gérer en détail les comptes partenaires (statut, abonnement, statistiques individuelles).
+-   La correction d'un bug majeur qui empêchait les partenaires d'accéder à leur tableau de bord.
+-   L'amorce de la prochaine grande fonctionnalité : l'import de catalogue pour un nouveau fournisseur (Boracay) et la refonte de la manière dont les produits des partenaires sont affichés aux organisateurs.
 
 **Last working item**:
-- Last item agent was working on: L'agent vient de terminer la réécriture complète du fichier . Il l'a transformé en un conteneur qui importe et utilise les 16 sous-composants qui ont été extraits ou créés, réduisant ainsi drastiquement sa complexité.
+- Last item agent was working on: L'agent a commencé à implémenter une demande complexe en plusieurs parties :
+    1.  **Renommer** le tableau de bord du prestataire en Boutique Personnalisée.
+    2.  **Créer un scraper** pour un nouveau fournisseur, , destiné au partenaire principal ().
+    3.  **Adapter le flux pour les nouveaux prestataires :**
+        *   Ces derniers gèrent leurs produits manuellement.
+        *   Leurs produits/services doivent apparaître dans la section Prestations Externes du tableau de bord organisateur, et non dans la boutique principale.
+        *   Ils auront un moyen de contacter l'admin pour demander un import de catalogue personnalisé.
 - Status: IN PROGRESS
 - Agent Testing Done: N
-- Which testing method agent to use? Frontend testing agent
+- Which testing method agent to use? both
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Aucun problème en suspens.
+  - Aucun.
 
 **In progress Task List**:
-  - Task 1:  (P0) Finaliser la refactorisation de .
+  - Task 1:  (P0) Finaliser l'intégration Boracay et la nouvelle logique des prestataires.
 
  Task Detail:
   - Task 1: 
-     - Where to resume: Le code de la refactorisation est entièrement écrit (nouveaux composants créés,  réécrit). L'étape suivante et impérative est de **tester** l'ensemble du tableau de bord de l'organisateur pour vérifier qu'aucune régression fonctionnelle n'a été introduite et que tous les nouveaux composants interagissent correctement.
-     - What will be achieved with this?: Une base de code beaucoup plus saine, maintenable et lisible pour l'une des pages les plus critiques de l'application. La dette technique sera considérablement réduite.
-     - Status:  TESTING PENDING
-     - Should Test frontend/backend/both after fix?: frontend
+     - Where to resume: Le travail a été initié mais est loin d'être terminé. L'agent précédent a créé les fichiers et endpoints de base. Le prochain agent doit :
+        1.  **Backend :** Implémenter la logique de scraping dans  en s'inspirant de .
+        2.  **Frontend () :**
+            -   Renommer la page en Boutique Personnalisée.
+            -   Afficher conditionnellement le bouton d'import Boracay uniquement pour l'utilisateur .
+            -   Pour les autres prestataires, afficher un formulaire de saisie manuelle de produits et un bouton Demander un import personnalisé qui ouvre une discussion avec l'admin.
+        3.  **Frontend () :**
+            -   Modifier la section Prestations Externes pour qu'elle récupère et affiche les produits depuis le nouvel endpoint .
+     - What will be achieved with this?: Le partenaire principal pourra importer un nouveau catalogue. Les autres partenaires auront un flux de gestion de produits clair et leurs offres seront correctement visibles par les organisateurs, créant une nouvelle source de revenus et de services sur la plateforme.
+     - Status:  IN PROGRESS
+     - Should Test frontend/backend/both after fix?: both
      - Blocked on something: Non.
 
 **Upcoming and Future Tasks**
-*   **Upcoming Tasks (P3):** (Priorisés par l'utilisateur après la refactorisation)
-    *   **Finaliser les 7 fonctionnalités ébauchées :**
-        1.  **Facturation avancée :** Améliorer les PDF de factures (branding, plus de détails).
-        2.  **Gestion communautaire :** Polir l'interface du fil d'actualité, ajouter la pagination.
-        3.  **Demandes de remboursement :** Améliorer l'interface utilisateur et ajouter des notifications.
-        4.  **Location matériel RFID :** Construire l'interface de gestion de stock pour les organisateurs et de location pour les participants.
-        5.  **Application de check-in :** Développer une interface fonctionnelle pour le jour de l'événement.
-        6.  **Statistiques avancées :** Ajouter des filtres (par date) et plus de graphiques.
-        7.  **Notifications SMS (Twilio) :** Guider l'utilisateur pour la configuration des clés API et activer la fonctionnalité.
 *   **Future Tasks (Backlog):**
-    *   Améliorer l'onglet Commissions de l'admin avec des graphiques visuels (par ex: courbe mensuelle).
+    *   Facturation avancée (hors abonnements).
+    *   Fonctionnalités communautaires.
+    *   Gestion des remboursements.
+    *   Location de puces RFID.
+    *   Système de check-in pour les événements.
+    *   Notifications par SMS.
 
 **Completed work in this session**
-- **Refactorisation de  (Code écrit, non testé)**:
-  - Analyse du fichier monolithique et identification de 16 sections à extraire.
-  - Mise à jour des composants existants () et création de 14 nouveaux composants (ex: , , , , etc.) dans le dossier .
-  - Création d'un fichier  dans ce dossier pour exporter tous les composants de manière centralisée.
-  - Réécriture complète de  pour utiliser une structure modulaire basée sur les composants extraits.
+- **Correction de Bug Critique :** Résolution du problème d'accès au tableau de bord pour les comptes partenaires ().
+- **Emails Automatisés de Suivi d'Essai :** Mise en place d'un système avec Resend pour notifier les partenaires (et l'admin) du statut de leur période d'essai (J-3, J-1, Expiré).
+- **Tableau de Bord Admin Amélioré :**
+    -   Création d'une section complète pour la gestion des partenaires, incluant la suspension de compte, la gestion manuelle de l'abonnement et des graphiques de performance individuels.
+    -   Ajout d'alertes pour les essais arrivant à expiration.
+- **Intégration Financière :** Les revenus des abonnements sont maintenant inclus dans les graphiques et totaux du tableau de bord financier de l'admin.
+- **Système d'Abonnement Partenaire :** Implémentation du cycle de vie complet : inscription avec essai de 14 jours, affichage du tarif sur la page partenaires, et bannière de gestion de l'abonnement dans leur espace personnel.
 
 **Earlier issues found/mentioned but not fixed**
    - Aucun.
@@ -70,74 +94,89 @@ La plateforme est une application full-stack (React/FastAPI/MongoDB). Les foncti
 
 
 **Key Technical Concepts**
-- **Frontend:** React, TailwindCSS, Shadcn UI
-- **Backend:** FastAPI, APIRouter
+- **Frontend:** React, TailwindCSS, Shadcn UI, Recharts
+- **Backend:** FastAPI, Pydantic, **BeautifulSoup & Playwright (pour le scraping)**
 - **Database:** MongoDB
-- **Web Scraping:** 
-- **PDF Generation:** 
-- **Data Seeding:** Script ad-hoc dans  pour les données de démo RFID.
+- **Architecture:** API RESTful, state management via React Context.
 
 **key DB schema**
-- **orders**: Migration pour ajouter  et  aux items.
-- **new collections**: , , , .
+  - **users**: Contient le  ('admin', 'organizer', 'participant', 'provider') qui est crucial pour la logique de l'application.
+  - **subscriptions**: Gère les abonnements des partenaires avec ,  ('trial', 'active', 'cancelled'), , .
+  - **products**: Stocke les produits des partenaires avec des champs comme .
 
 **changes in tech stack**
-  - Ajout de  pour la génération de PDF.
+  - Les dépendances  et  devront être installées pour implémenter le nouveau scraper.
 
 **All files of reference**
-- : Le fichier principal qui a été réécrit.
-- : Le répertoire contenant tous les nouveaux composants modulaires et ceux mis à jour.
-- : Le nouveau fichier qui exporte tous les composants du tableau de bord organisateur.
+- : Le nouveau fichier pour la logique de scraping de Boracay.
+- : Fichier de référence pour les scrapers existants.
+- : À modifier pour le renommage et la logique conditionnelle d'import.
+- : À modifier pour intégrer les produits des prestataires externes.
+- : Le site web cible pour le scraping.
 
 **Areas that need refactoring**:
-- : A été amélioré mais peut encore être décomposé.
+-  et  sont des composants très volumineux qui gèrent de nombreuses logiques. Une décomposition en hooks personnalisés ou en sous-composants améliorerait la maintenabilité.
 
 **key api endpoints**
-- Aucun nouvel endpoint n'a été créé dans cette session.
+- **Nouveaux (à finaliser/utiliser) :**
+    - : Pour lancer le scraping du catalogue Boracay.
+    - : Pour lister les produits des prestataires externes aux organisateurs.
+- **Récemment ajoutés :**
+    - , , : Suite complète pour la gestion des partenaires par l'admin.
+    - : Pour déclencher manuellement la vérification des essais et l'envoi des emails.
+    - , : Pour la gestion de l'abonnement par le partenaire.
 
 **Critical Info for New Agent**
-- **La priorité absolue (P0) est de valider la refactorisation de **. Le code a été entièrement réécrit mais n'est absolument pas testé. Une régression est très probable.
-- Lancez le  pour effectuer une passe de test complète sur le tableau de bord de l'organisateur. Attendez-vous à devoir corriger des bugs (imports manquants, props incorrectes, gestion d'état, etc.).
-- Ne commencez aucune nouvelle tâche (y compris les fonctionnalités P3) tant que le tableau de bord organisateur n'est pas entièrement fonctionnel et validé.
-- Une fois la refactorisation terminée et validée, informez l'utilisateur et proposez de passer à la finalisation des 7 fonctionnalités P3 ébauchées.
+- **Focalisation sur la logique des partenaires :** La tâche en cours est cruciale et établit une distinction importante entre le partenaire principal () et les autres. Le partenaire principal a des intégrations d'import personnalisées, tandis que les autres gèrent leurs produits manuellement et leurs offres apparaissent dans une section distincte (Prestations Externes).
+- **Démarche impérative :**
+    1.  Commencez par implémenter la logique de scraping dans .
+    2.  Modifiez le  pour afficher les bons outils en fonction de l'utilisateur connecté (import Boracay vs saisie manuelle).
+    3.  Mettez à jour la section Prestations Externes dans  pour qu'elle consomme le nouvel endpoint .
+    4.  Assurez-vous que le renommage de la page en Boutique Personnalisée est bien effectif.
+    5.  Testez rigoureusement les deux flux de partenaires (principal et autre).
 
 **documents and test reports created in this job**
-- 
-- 
-- 
+-  (mis à jour régulièrement)
+- Multiples rapports dans  pour les tâches précédentes.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:**  - Approuve le plan de refactorisation de  avant le début des travaux. (Tous les messages suivants sont des pensées et actions de l'agent).
+1.  **User :** Propose les prochaines tâches : Mode Démo et Stats Abonnements.
+2.  **User :** Annule le Mode Démo. Clarifie le flux d'essai et demande des alertes pour l'admin et l'intégration des stats d'abonnements au dashboard de revenus. **(Completed)**
+3.  **User :** Approuve le plan pour les emails automatisés. **(Completed)**
+4.  **User :** OUI - Confirme le plan. **(Completed)**
+5.  **User :** Signale un bug : le compte partenaire est redirigé vers une page d'accès réservé aux organisateurs (avec capture d'écran). **(Completed)**
+6.  **User :** Le bug est corrigé, merci.
+7.  **User :** ALORS POUR BIEN FAIRE... - Décrit une nouvelle série de fonctionnalités : renommer le dashboard prestataire en Boutique Personnalisée, ajouter un import pour Boracay, et créer un flux distinct pour les produits des nouveaux prestataires dans la section Prestations Externes. **(In Progress)**
+8.  **Agent:** Demande des clarifications sur le mode d'ajout de produits pour les nouveaux prestataires.
+9.  **User :** Confirme que le scraping Boracay est OK, les nouveaux prestataires utiliseront la saisie manuelle pour l'instant, et pourront contacter l'admin pour un import personnalisé via la messagerie. **(In Progress)**
 
 **Project Health Check:**
-- **Broken:** Aucun.
-- **Mocked:** L'intégration Twilio est en mode dégradé (elle sauvegarde les notifications en base de données mais ne les envoie pas par SMS tant que les clés API ne sont pas configurées).
-- **Technical Debt:** **Élevée** sur , mais le travail pour la résoudre a été effectué. La dette est maintenant en phase de validation.
+- **Broken:** Le flux de gestion de produits pour les nouveaux partenaires et l'affichage de leurs services aux organisateurs ne sont pas implémentés. Le scraper Boracay est un squelette vide.
+- **Mocked:** L'intégration Square est en mode . L'intégration Resend utilise une clé de test (n'envoie des emails qu'à l'adresse du propriétaire).
+- **Technical Debt:** Les composants  et  sont devenus complexes et mériteraient d'être refactorisés.
 
 **3rd Party Integrations**
-- **SumUp (Payments):** Existant.
-- **Square (Payments):** Existant.
-- **Resend (Email):** Existant.
-- **TopTex (Product Catalog):** Intégration via scraping .
-- **Playwright:** Utilisé pour le scraping de .
-- **fpdf2:** Utilisé pour la génération de factures PDF.
-- **Twilio:** Scaffolding mis en place, en attente de configuration par l'utilisateur.
+- **Square (Payments):** Intégré pour les abonnements en mode .
+- **Resend (Email):** Intégré pour les notifications transactionnelles, en mode test.
+- ** (PDF Generation):** Utilisé pour les reçus fiscaux.
+- **Recharts (Charting):** Utilisé pour les dashboards.
+- **Playwright & BeautifulSoup (Web Scraping):** Requis pour la tâche en cours.
+- **Twilio (SMS):** Configuré mais en attente de clés API, non utilisé.
 
 **Testing status**
-  - Testing agent used after significant changes: NO (Mais c'est la prochaine étape impérative).
+  - Testing agent used after significant changes: YES
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: []
-  - Known regressions: Inconnues, mais hautement probables après une refactorisation d'une telle ampleur.
+  - Known regressions: Aucune.
 
 **Credentials to test flow:**
 | Rôle | Email | Mot de passe | Notes |
 |---|---|---|---|
-| Admin |  |  | |
-| Organisateur |  |  | **Utiliser ce compte pour tester la refactorisation.** |
-| Participant |  |  | |
-| Prestataire |  |  | Nom de l'entreprise : Moreati |
-| Organisateur |  |  | Compte de test |
-| Organisateur | |  | Compte de test |
+| Admin |  |  | Accès total. |
+| Organisateur |  |  | Crée des événements. |
+| Participant |  |  | S'inscrit aux événements. |
+| Partenaire (Principal) |  |  | Doit avoir accès aux imports. |
+| Partenaire (Autre) |  |  | Utilisateur de test pour le nouveau flux. |
 
 **What agent forgot to execute**
-- L'agent n'a rien oublié. Il a suivi le plan de manière méthodique. La seule chose qui manque est l'étape cruciale de la validation par les tests, qui est maintenant la prochaine action à entreprendre.</analysis>
+L'agent n'a rien oublié ; il a été interrompu au tout début de l'implémentation d'une tâche complexe. L'ensemble de la logique pour le scraper Boracay et le nouveau flux des partenaires reste à construire.</analysis>

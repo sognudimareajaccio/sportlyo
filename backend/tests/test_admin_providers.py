@@ -10,7 +10,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = "https://event-booking-34.preview.emergentagent.com"
+BASE_URL = "https://sportlyo-tickets-1.preview.emergentagent.com"
 
 # Test credentials
 ADMIN_EMAIL = "admin@sportsconnect.fr"
