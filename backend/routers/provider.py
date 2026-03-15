@@ -211,8 +211,8 @@ async def browse_provider_catalogs(current_user: dict = Depends(get_current_user
     return {"products": products}
 
 
-# Email of the main partner who has import access (TopTex, XDConnects, Boracay)
-MAIN_PARTNER_EMAIL = "laboutique@sportlyo.fr"
+# Emails of partners who have import access (TopTex, XDConnects, Boracay)
+MAIN_PARTNER_EMAILS = ["laboutique@sportlyo.fr", "boutique@sportlyo.fr"]
 
 
 @router.get("/provider-products/external")
@@ -220,13 +220,13 @@ async def get_external_provider_products(current_user: dict = Depends(get_curren
     """Organisateurs: get products/services from external providers (not main partner)."""
     if current_user['role'] not in ['organizer', 'admin']:
         raise HTTPException(status_code=403, detail="Organisateur requis")
-    # Find main partner user_id
-    main_partner = await db.users.find_one({"email": MAIN_PARTNER_EMAIL}, {"_id": 0, "user_id": 1})
-    main_partner_id = main_partner["user_id"] if main_partner else None
-    # Get products from all providers EXCEPT the main partner
+    # Find main partner user_ids
+    main_partners = await db.users.find({"email": {"$in": MAIN_PARTNER_EMAILS}}, {"_id": 0, "user_id": 1}).to_list(10)
+    main_partner_ids = [p["user_id"] for p in main_partners]
+    # Get products from all providers EXCEPT the main partners
     query = {"active": True}
-    if main_partner_id:
-        query["provider_id"] = {"$ne": main_partner_id}
+    if main_partner_ids:
+        query["provider_id"] = {"$nin": main_partner_ids}
     products = await db.provider_products.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
     # Enrich with provider info
     provider_ids = list(set(p.get("provider_id") for p in products))
@@ -248,7 +248,7 @@ async def check_is_main_partner(current_user: dict = Depends(get_current_user)):
     """Check if current provider is the main partner with import access."""
     if current_user['role'] != 'provider':
         raise HTTPException(status_code=403, detail="Prestataire requis")
-    is_main = current_user.get('email') == MAIN_PARTNER_EMAIL
+    is_main = current_user.get('email') in MAIN_PARTNER_EMAILS
     return {"is_main_partner": is_main}
 
 
