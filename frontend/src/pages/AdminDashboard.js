@@ -5,7 +5,8 @@ import { fr } from 'date-fns/locale';
 import {
   Users, Calendar, Euro, TrendingUp, BarChart3,
   Settings, Search, ChevronLeft, ChevronRight, Download, FileText, MessageSquare, ShoppingBag, Check, X,
-  CheckCircle, XCircle, Radio, Plus, Trash2, Edit, Package, Loader2
+  CheckCircle, XCircle, Radio, Plus, Trash2, Edit, Package, Loader2,
+  CreditCard, Heart, Gift, Crown, Wallet
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -15,6 +16,7 @@ import { adminApi } from '../services/api';
 import api from '../services/api';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import MessagingPage from './MessagingPage';
 
 const AdminDashboard = () => {
@@ -46,6 +48,8 @@ const AdminDashboard = () => {
   const [rfidForm, setRfidForm] = useState({ name: '', description: '', category: 'chronometrage', daily_rate: '', quantity_total: 1, image_url: '' });
   const [rfidSaving, setRfidSaving] = useState(false);
   const [refundFilter, setRefundFilter] = useState('all');
+  const [revenueData, setRevenueData] = useState(null);
+  const [revenueLoading, setRevenueLoading] = useState(false);
 
   const filteredRefunds = refundFilter === 'all' ? refundRequests : refundRequests.filter(r => r.status === refundFilter);
 
@@ -87,6 +91,15 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchRevenueData = async () => {
+    setRevenueLoading(true);
+    try {
+      const res = await api.get('/admin/revenue-breakdown');
+      setRevenueData(res.data);
+    } catch { toast.error('Erreur chargement revenus'); }
+    finally { setRevenueLoading(false); }
   };
 
   const fetchRfidData = async () => {
@@ -245,15 +258,15 @@ const AdminDashboard = () => {
               <p className="text-slate-400">Gérez la plateforme SportLyo</p>
             </div>
             <div className="flex gap-2 flex-wrap">
-              {['overview', 'users', 'payments', 'commissions', 'invoices', 'refunds', 'providers', 'rfid', 'messages'].map(tab => (
+              {['overview', 'users', 'payments', 'revenus', 'commissions', 'invoices', 'refunds', 'providers', 'rfid', 'messages'].map(tab => (
                 <Button
                   key={tab}
                   variant={activeTab === tab ? 'default' : 'outline'}
                   className={activeTab === tab ? 'bg-brand' : 'border-white text-white'}
-                  onClick={() => { setActiveTab(tab); if (tab === 'rfid') fetchRfidData(); }}
+                  onClick={() => { setActiveTab(tab); if (tab === 'rfid') fetchRfidData(); if (tab === 'revenus') fetchRevenueData(); }}
                   data-testid={`tab-${tab}`}
                 >
-                  {tab === 'overview' ? 'Vue d\'ensemble' : tab === 'users' ? 'Utilisateurs' : tab === 'payments' ? 'Paiements' : tab === 'commissions' ? 'Commissions' : tab === 'invoices' ? 'Factures' : tab === 'refunds' ? 'Remboursements' : tab === 'providers' ? `Prestataires${providers.filter(p => p.status === 'pending').length > 0 ? ` (${providers.filter(p => p.status === 'pending').length})` : ''}` : tab === 'rfid' ? 'RFID' : 'Messages'}
+                  {tab === 'overview' ? 'Vue d\'ensemble' : tab === 'users' ? 'Utilisateurs' : tab === 'payments' ? 'Paiements' : tab === 'revenus' ? 'Revenus' : tab === 'commissions' ? 'Commissions' : tab === 'invoices' ? 'Factures' : tab === 'refunds' ? 'Remboursements' : tab === 'providers' ? `Prestataires${providers.filter(p => p.status === 'pending').length > 0 ? ` (${providers.filter(p => p.status === 'pending').length})` : ''}` : tab === 'rfid' ? 'RFID' : 'Messages'}
                 </Button>
               ))}
             </div>
@@ -860,6 +873,180 @@ const AdminDashboard = () => {
                 </table>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ==================== REVENUS TAB ==================== */}
+        {activeTab === 'revenus' && (
+          <div className="space-y-6" data-testid="revenus-tab">
+            {revenueLoading ? (
+              <div className="p-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-brand" /></div>
+            ) : revenueData ? (
+              <>
+                {/* Grand Total Banner */}
+                <div className="bg-asphalt text-white p-6 border-l-4 border-brand">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-heading uppercase text-slate-400">Chiffre d'affaires total</p>
+                      <p className="text-4xl font-heading font-extrabold text-brand" data-testid="grand-total">{revenueData.grand_total.toLocaleString()}€</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-heading uppercase text-slate-400">Revenus plateforme (frais)</p>
+                      <p className="text-2xl font-heading font-bold text-green-400" data-testid="grand-fees">{revenueData.grand_fees.toLocaleString()}€</p>
+                      <p className="text-[10px] text-slate-500">dont {revenueData.platform_fees_collected.toLocaleString()}€ encaisses / {revenueData.platform_fees_pending.toLocaleString()}€ en attente</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Source Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  {[
+                    { key: 'inscriptions', icon: CreditCard, color: 'border-blue-500', bg: 'bg-blue-50', iconColor: 'text-blue-600' },
+                    { key: 'dons', icon: Heart, color: 'border-pink-500', bg: 'bg-pink-50', iconColor: 'text-pink-600' },
+                    { key: 'sponsors', icon: Crown, color: 'border-amber-500', bg: 'bg-amber-50', iconColor: 'text-amber-600' },
+                    { key: 'produits', icon: ShoppingBag, color: 'border-violet-500', bg: 'bg-violet-50', iconColor: 'text-violet-600' },
+                    { key: 'abonnements', icon: Wallet, color: 'border-teal-500', bg: 'bg-teal-50', iconColor: 'text-teal-600' }
+                  ].map(({ key, icon: Icon, color, bg, iconColor }) => {
+                    const src = revenueData.sources[key];
+                    return (
+                      <motion.div key={key} className={`bg-white border-l-4 ${color} p-4`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} data-testid={`source-card-${key}`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className={`w-8 h-8 ${bg} flex items-center justify-center rounded`}><Icon className={`w-4 h-4 ${iconColor}`} /></div>
+                          <span className="text-[10px] font-heading uppercase text-slate-500 font-bold">{src.label}</span>
+                        </div>
+                        <p className="text-2xl font-heading font-extrabold">{src.total.toLocaleString()}€</p>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-[10px] text-slate-400">{src.count} transaction(s)</span>
+                          <span className="text-[10px] text-green-600 font-bold">Frais: {src.fees.toLocaleString()}€</span>
+                        </div>
+                        {src.pending_total > 0 && (
+                          <div className="mt-1 text-[10px] text-amber-600 font-medium">{src.pending_count} en attente ({src.pending_total.toLocaleString()}€)</div>
+                        )}
+                        {key === 'abonnements' && src.total === 0 && (
+                          <div className="mt-1 text-[10px] text-slate-400 italic">Bientot disponible</div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+
+                {/* Charts Row */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  {/* Evolution Chart */}
+                  <div className="lg:col-span-2 bg-white border border-slate-200 p-4">
+                    <h3 className="font-heading font-bold uppercase text-sm mb-4">Evolution des revenus (12 mois)</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <AreaChart data={revenueData.monthly}>
+                        <defs>
+                          <linearGradient id="gradInsc" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} /><stop offset="100%" stopColor="#3b82f6" stopOpacity={0} /></linearGradient>
+                          <linearGradient id="gradDons" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ec4899" stopOpacity={0.3} /><stop offset="100%" stopColor="#ec4899" stopOpacity={0} /></linearGradient>
+                          <linearGradient id="gradSpon" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f59e0b" stopOpacity={0.3} /><stop offset="100%" stopColor="#f59e0b" stopOpacity={0} /></linearGradient>
+                          <linearGradient id="gradProd" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} /><stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} /></linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${v}€`} />
+                        <Tooltip formatter={(v) => `${v.toLocaleString()}€`} />
+                        <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
+                        <Area type="monotone" dataKey="inscriptions" name="Inscriptions" stroke="#3b82f6" fill="url(#gradInsc)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="dons" name="Dons" stroke="#ec4899" fill="url(#gradDons)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="sponsors" name="Sponsors" stroke="#f59e0b" fill="url(#gradSpon)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="produits" name="Produits" stroke="#8b5cf6" fill="url(#gradProd)" strokeWidth={2} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Pie Chart Distribution */}
+                  <div className="bg-white border border-slate-200 p-4">
+                    <h3 className="font-heading font-bold uppercase text-sm mb-4">Repartition des revenus</h3>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart>
+                        <Pie
+                          data={Object.entries(revenueData.sources).filter(([, v]) => v.total > 0).map(([k, v]) => ({ name: v.label, value: v.total, key: k }))}
+                          cx="50%" cy="50%" innerRadius={50} outerRadius={80}
+                          dataKey="value" paddingAngle={3}
+                        >
+                          {Object.entries(revenueData.sources).filter(([, v]) => v.total > 0).map(([k], i) => {
+                            const colors = { inscriptions: '#3b82f6', dons: '#ec4899', sponsors: '#f59e0b', produits: '#8b5cf6', abonnements: '#14b8a6' };
+                            return <Cell key={k} fill={colors[k] || '#94a3b8'} />;
+                          })}
+                        </Pie>
+                        <Tooltip formatter={(v) => `${v.toLocaleString()}€`} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="space-y-2 mt-2">
+                      {Object.entries(revenueData.sources).filter(([, v]) => v.total > 0).map(([k, v]) => {
+                        const colors = { inscriptions: 'bg-blue-500', dons: 'bg-pink-500', sponsors: 'bg-amber-500', produits: 'bg-violet-500', abonnements: 'bg-teal-500' };
+                        const pct = revenueData.grand_total > 0 ? ((v.total / revenueData.grand_total) * 100).toFixed(1) : 0;
+                        return (
+                          <div key={k} className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2"><span className={`w-2.5 h-2.5 rounded-full ${colors[k]}`} />{v.label}</div>
+                            <span className="font-heading font-bold">{pct}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bar Chart: Frais plateforme par mois */}
+                <div className="bg-white border border-slate-200 p-4">
+                  <h3 className="font-heading font-bold uppercase text-sm mb-4">Frais de fonctionnement plateforme (par mois)</h3>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={revenueData.monthly}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                      <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${v}€`} />
+                      <Tooltip formatter={(v) => `${v.toLocaleString()}€`} />
+                      <Bar dataKey="frais_plateforme" name="Frais plateforme" fill="#f97316" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Recent Transactions Table */}
+                <div className="bg-white border border-slate-200">
+                  <div className="p-4 border-b"><h3 className="font-heading font-bold uppercase">Dernieres transactions (toutes sources)</h3></div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm" data-testid="recent-transactions-table">
+                      <thead className="bg-slate-50"><tr>
+                        <th className="text-left p-3 font-heading text-xs font-bold uppercase">Source</th>
+                        <th className="text-left p-3 font-heading text-xs font-bold uppercase">Description</th>
+                        <th className="text-right p-3 font-heading text-xs font-bold uppercase">Montant</th>
+                        <th className="text-right p-3 font-heading text-xs font-bold uppercase">Frais plateforme</th>
+                        <th className="text-left p-3 font-heading text-xs font-bold uppercase">Statut</th>
+                        <th className="text-left p-3 font-heading text-xs font-bold uppercase">Date</th>
+                      </tr></thead>
+                      <tbody>
+                        {revenueData.recent_transactions.map((t, i) => {
+                          const typeConfig = {
+                            inscription: { label: 'Inscription', cls: 'bg-blue-100 text-blue-700' },
+                            don: { label: 'Don', cls: 'bg-pink-100 text-pink-700' },
+                            sponsor: { label: 'Sponsor', cls: 'bg-amber-100 text-amber-700' },
+                            produit: { label: 'Produit', cls: 'bg-violet-100 text-violet-700' }
+                          };
+                          const cfg = typeConfig[t.type] || { label: t.type, cls: 'bg-slate-100 text-slate-600' };
+                          return (
+                            <tr key={i} className="border-b hover:bg-slate-50">
+                              <td className="p-3"><span className={`px-2 py-0.5 text-[10px] font-bold uppercase ${cfg.cls}`}>{cfg.label}</span></td>
+                              <td className="p-3 text-sm">{t.label}</td>
+                              <td className="p-3 text-right font-heading font-bold">{t.amount?.toLocaleString()}€</td>
+                              <td className="p-3 text-right text-green-600 font-bold">{t.fee > 0 ? `${t.fee.toLocaleString()}€` : '—'}</td>
+                              <td className="p-3">{t.status === 'completed' || t.status === 'paid' ? <span className="text-green-600 text-xs font-bold flex items-center gap-1"><CheckCircle className="w-3 h-3" />Paye</span> : <span className="text-amber-600 text-xs font-bold">En attente</span>}</td>
+                              <td className="p-3 text-xs text-slate-500">{t.date ? format(new Date(t.date), 'd MMM yyyy', { locale: fr }) : '—'}</td>
+                            </tr>
+                          );
+                        })}
+                        {revenueData.recent_transactions.length === 0 && (
+                          <tr><td colSpan="6" className="p-8 text-center text-slate-400">Aucune transaction</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="p-12 text-center text-slate-400">Cliquez pour charger les donnees de revenus</div>
+            )}
           </div>
         )}
 
