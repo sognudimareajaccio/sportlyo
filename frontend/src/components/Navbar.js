@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Menu, X, User, LogOut, LayoutDashboard, Calendar, ChevronDown,
   Ticket, Settings, ShieldCheck, BarChart3, QrCode, Trophy,
-  CreditCard, UserCircle, ChevronRight
+  CreditCard, UserCircle, ChevronRight, ShoppingBag
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
@@ -33,6 +33,14 @@ const roleConfig = {
     items: [
       { icon: UserCircle, label: 'Mon espace', to: '/dashboard', testId: 'dashboard-link' },
       { icon: Ticket, label: 'Mes inscriptions', to: '/dashboard/registrations', testId: 'my-registrations-link' },
+    ]
+  },
+  provider: {
+    label: 'Partenaire',
+    color: 'bg-teal-500',
+    items: [
+      { icon: LayoutDashboard, label: 'Mon espace', to: '/provider', testId: 'dashboard-link' },
+      { icon: ShoppingBag, label: 'Mon catalogue', to: '/provider', testId: 'catalog-link' },
     ]
   }
 };
@@ -79,6 +87,7 @@ const Navbar = () => {
     switch (user.role) {
       case 'admin': return '/admin';
       case 'organizer': return '/organizer';
+      case 'provider': return '/provider';
       default: return '/dashboard';
     }
   };

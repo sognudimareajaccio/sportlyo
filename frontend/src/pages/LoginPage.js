@@ -38,6 +38,8 @@ const LoginPage = () => {
         navigate('/admin');
       } else if (userData.role === 'organizer') {
         navigate('/organizer');
+      } else if (userData.role === 'provider') {
+        navigate('/provider');
       } else {
         navigate(from);
       }

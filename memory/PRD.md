@@ -196,10 +196,11 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 - **Twilio SMS MOCKED** : notifications sauvegardees en base, envoi reel en attente de configuration cles API
 
 ## Backlog restant
-- [ ] (P1) Mode Demo avec bouton "Essayer gratuitement" sur la page d'accueil
-- [ ] (P2) Ameliorer onglet Commissions admin avec graphiques visuels
 - [ ] (P2) Configurer cles Twilio pour envoi reel de SMS
 - [ ] (P2) Export CSV des statistiques organisateur
 - [ ] (P2) Paiement en ligne locations RFID
 - [ ] (P2) Refactorisation supplementaire ProviderDashboard.js
 - [ ] (P2) Refactorisation OrganizerDashboard.js (hooks personnalises)
+
+## Bugs corriges
+- [x] Bug: Partenaire redirige vers page "Acces reserve organisateurs" au login -> Fix: LoginPage.js redirige vers /provider, Navbar.js ajoute config role provider, getDashboardLink retourne /provider
