@@ -29,8 +29,8 @@ async def create_provider_product(request: Request, current_user: dict = Depends
     if current_user['role'] != 'provider':
         raise HTTPException(status_code=403, detail="Prestataire requis")
     data = await request.json()
-    if not data.get("name") or not data.get("price"):
-        raise HTTPException(status_code=400, detail="Nom et prix requis")
+    if not data.get("name"):
+        raise HTTPException(status_code=400, detail="Nom requis")
     product = {
         "product_id": f"pprod_{uuid.uuid4().hex[:12]}",
         "provider_id": current_user['user_id'],
@@ -38,6 +38,7 @@ async def create_provider_product(request: Request, current_user: dict = Depends
         "name": data.get("name"),
         "description": data.get("description", ""),
         "category": data.get("category", "Textile"),
+        "product_type": data.get("product_type", "product"),
         "price": float(data.get("price", 0)),
         "suggested_commission": float(data.get("suggested_commission", 5)),
         "image_url": data.get("image_url", ""),
@@ -59,7 +60,7 @@ async def update_provider_product(product_id: str, request: Request, current_use
         raise HTTPException(status_code=403, detail="Prestataire requis")
     data = await request.json()
     fields = {}
-    for f in ["name","description","category","price","suggested_commission","image_url","images","sizes","colors","stock","active"]:
+    for f in ["name","description","category","product_type","price","suggested_commission","image_url","images","sizes","colors","stock","active"]:
         if f in data:
             fields[f] = data[f]
     fields["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -208,6 +209,85 @@ async def browse_provider_catalogs(current_user: dict = Depends(get_current_user
         raise HTTPException(status_code=403, detail="Organisateur requis")
     products = await db.provider_products.find({"active": True}, {"_id": 0}).sort("created_at", -1).to_list(500)
     return {"products": products}
+
+
+# Email of the main partner who has import access (TopTex, XDConnects, Boracay)
+MAIN_PARTNER_EMAIL = "laboutique@sportlyo.fr"
+
+
+@router.get("/provider-products/external")
+async def get_external_provider_products(current_user: dict = Depends(get_current_user)):
+    """Organisateurs: get products/services from external providers (not main partner)."""
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    # Find main partner user_id
+    main_partner = await db.users.find_one({"email": MAIN_PARTNER_EMAIL}, {"_id": 0, "user_id": 1})
+    main_partner_id = main_partner["user_id"] if main_partner else None
+    # Get products from all providers EXCEPT the main partner
+    query = {"active": True}
+    if main_partner_id:
+        query["provider_id"] = {"$ne": main_partner_id}
+    products = await db.provider_products.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    # Enrich with provider info
+    provider_ids = list(set(p.get("provider_id") for p in products))
+    providers_map = {}
+    for pid in provider_ids:
+        prov = await db.users.find_one({"user_id": pid}, {"_id": 0, "user_id": 1, "name": 1, "company_name": 1, "email": 1, "phone": 1})
+        if prov:
+            providers_map[pid] = prov
+    for p in products:
+        prov = providers_map.get(p.get("provider_id"), {})
+        p["provider_name"] = prov.get("company_name") or prov.get("name", "")
+        p["provider_email"] = prov.get("email", "")
+        p["provider_phone"] = prov.get("phone", "")
+    return {"products": products}
+
+
+@router.get("/provider/is-main-partner")
+async def check_is_main_partner(current_user: dict = Depends(get_current_user)):
+    """Check if current provider is the main partner with import access."""
+    if current_user['role'] != 'provider':
+        raise HTTPException(status_code=403, detail="Prestataire requis")
+    is_main = current_user.get('email') == MAIN_PARTNER_EMAIL
+    return {"is_main_partner": is_main}
+
+
+@router.post("/provider/request-custom-import")
+async def request_custom_import(request: Request, current_user: dict = Depends(get_current_user)):
+    """Provider requests a custom catalog import from admin."""
+    if current_user['role'] != 'provider':
+        raise HTTPException(status_code=403, detail="Prestataire requis")
+    data = await request.json()
+    message_content = data.get("message", "").strip()
+    if not message_content:
+        raise HTTPException(status_code=400, detail="Message requis")
+    # Find admin
+    admin = await db.users.find_one({"role": "admin"}, {"_id": 0, "user_id": 1})
+    if not admin:
+        raise HTTPException(status_code=500, detail="Admin introuvable")
+    # Send message to admin
+    msg = {
+        "message_id": f"msg_{uuid.uuid4().hex[:12]}",
+        "sender_id": current_user['user_id'],
+        "sender_name": current_user.get('company_name') or current_user['name'],
+        "sender_role": "provider",
+        "recipient_id": admin["user_id"],
+        "content": f"[DEMANDE IMPORT CATALOGUE] {message_content}",
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.provider_messages.insert_one(msg)
+    del msg["_id"]
+    # Notify admin
+    from routers.notifications import create_notification
+    sender_name = current_user.get('company_name') or current_user['name']
+    await create_notification(
+        admin["user_id"], "import_request",
+        f"Demande d'import catalogue de {sender_name}",
+        message_content[:100],
+        "/admin"
+    )
+    return {"message": "Demande envoyee a l'administrateur", "msg": msg}
 
 @router.get("/providers/list")
 async def list_providers(current_user: dict = Depends(get_current_user)):

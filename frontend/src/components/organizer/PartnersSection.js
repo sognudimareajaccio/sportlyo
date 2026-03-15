@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plus, Edit, Trash2, Loader2, Search, Users, Phone, Mail, MapPinned, Check, X,
   Tent, TrafficCone, Flag, Sparkles, Timer, Shield, Megaphone,
-  Utensils, HeartPulse, Truck, Zap, Speaker, Trash, Droplets
+  Utensils, HeartPulse, Truck, Zap, Speaker, Trash, Droplets,
+  ShoppingBag, ExternalLink, Package
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -11,6 +12,7 @@ import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import api from '../../services/api';
 
 const WIDGET_CATEGORIES = [
   {
@@ -51,6 +53,32 @@ export const PartnersSection = ({
   partnerSaving, onSave
 }) => {
   const [activeWidget, setActiveWidget] = useState(null);
+  const [viewMode, setViewMode] = useState('prestataires'); // 'prestataires' | 'produits-externes'
+  const [externalProducts, setExternalProducts] = useState([]);
+  const [externalLoading, setExternalLoading] = useState(false);
+  const [externalSearch, setExternalSearch] = useState('');
+
+  const fetchExternalProducts = useCallback(async () => {
+    setExternalLoading(true);
+    try {
+      const res = await api.get('/provider-products/external');
+      setExternalProducts(res.data.products || []);
+    } catch (e) { console.error('Error fetching external products', e); }
+    finally { setExternalLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    if (viewMode === 'produits-externes' && externalProducts.length === 0) {
+      fetchExternalProducts();
+    }
+  }, [viewMode, fetchExternalProducts, externalProducts.length]);
+
+  const filteredExternalProducts = externalProducts.filter(p =>
+    !externalSearch ||
+    (p.name || '').toLowerCase().includes(externalSearch.toLowerCase()) ||
+    (p.provider_name || '').toLowerCase().includes(externalSearch.toLowerCase()) ||
+    (p.category || '').toLowerCase().includes(externalSearch.toLowerCase())
+  );
 
   // Group partners by widget category
   const groupedPartners = {};
@@ -68,6 +96,18 @@ export const PartnersSection = ({
 
   return (
     <div>
+      {/* View Mode Toggle */}
+      <div className="flex gap-2 mb-6">
+        <Button variant={viewMode === 'prestataires' ? 'default' : 'outline'} className={`gap-2 text-xs ${viewMode === 'prestataires' ? 'bg-brand' : ''}`} onClick={() => setViewMode('prestataires')} data-testid="view-prestataires-btn">
+          <Users className="w-4 h-4" /> Mes prestataires
+        </Button>
+        <Button variant={viewMode === 'produits-externes' ? 'default' : 'outline'} className={`gap-2 text-xs ${viewMode === 'produits-externes' ? 'bg-brand' : ''}`} onClick={() => setViewMode('produits-externes')} data-testid="view-external-products-btn">
+          <ShoppingBag className="w-4 h-4" /> Produits & services partenaires
+        </Button>
+      </div>
+
+      {viewMode === 'prestataires' && (
+        <>
       {/* Actions bar */}
       <div className="flex flex-wrap justify-between items-center gap-2 mb-6">
         <div className="flex items-center gap-2">
@@ -206,6 +246,78 @@ export const PartnersSection = ({
           </div>
         </DialogContent>
       </Dialog>
+        </>
+      )}
+
+      {/* External Products View */}
+      {viewMode === 'produits-externes' && (
+        <div data-testid="external-products-section">
+          <div className="flex flex-wrap justify-between items-center gap-2 mb-6">
+            <div className="flex items-center gap-2">
+              <Search className="w-4 h-4 text-slate-400" />
+              <Input placeholder="Rechercher un produit ou service..." value={externalSearch} onChange={(e) => setExternalSearch(e.target.value)} className="w-64" data-testid="external-product-search" />
+              <span className="text-xs text-slate-400">{filteredExternalProducts.length} produit(s) / service(s)</span>
+            </div>
+            <Button variant="outline" size="sm" className="gap-2 text-xs" onClick={fetchExternalProducts} data-testid="refresh-external-btn">
+              <Loader2 className={`w-3.5 h-3.5 ${externalLoading ? 'animate-spin' : ''}`} /> Actualiser
+            </Button>
+          </div>
+
+          {externalLoading ? (
+            <div className="p-12 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-brand" /></div>
+          ) : filteredExternalProducts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredExternalProducts.map(product => (
+                <motion.div key={product.product_id} className="bg-white border border-slate-200 overflow-hidden hover:shadow-md transition-shadow" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} data-testid={`external-product-${product.product_id}`}>
+                  <div className="flex gap-4 p-4">
+                    <div className="w-20 h-20 bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {product.image_url ? (
+                        <img src={product.image_url} alt="" className="w-full h-full object-cover" onError={(e) => { e.target.style.display='none'; }} />
+                      ) : (
+                        <Package className="w-8 h-8 text-slate-200" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="font-heading font-bold text-sm leading-tight line-clamp-2">{product.name}</h4>
+                        {product.price > 0 && <span className="font-heading font-black text-brand text-sm shrink-0">{product.price.toFixed(2)}€</span>}
+                        {(!product.price || product.price === 0) && <span className="text-[10px] text-slate-400 font-bold uppercase shrink-0">Sur devis</span>}
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">{product.description}</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <span className="inline-block px-2 py-0.5 text-[10px] font-bold uppercase bg-slate-100 text-slate-600">{product.category}</span>
+                        <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                          <Users className="w-3 h-3" /> {product.provider_name}
+                        </span>
+                      </div>
+                      {(product.provider_email || product.provider_phone) && (
+                        <div className="flex gap-3 mt-2">
+                          {product.provider_email && (
+                            <a href={`mailto:${product.provider_email}`} className="text-[10px] text-brand hover:underline flex items-center gap-1">
+                              <Mail className="w-3 h-3" /> Contacter
+                            </a>
+                          )}
+                          {product.provider_phone && (
+                            <a href={`tel:${product.provider_phone}`} className="text-[10px] text-brand hover:underline flex items-center gap-1">
+                              <Phone className="w-3 h-3" /> {product.provider_phone}
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white border border-slate-200 p-12 text-center">
+              <ShoppingBag className="w-16 h-16 mx-auto mb-4 text-slate-200" />
+              <h3 className="font-heading font-bold text-lg uppercase mb-2">Aucun produit ou service externe</h3>
+              <p className="text-slate-500 text-sm">Les partenaires proposeront bientot leurs produits et services ici.</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

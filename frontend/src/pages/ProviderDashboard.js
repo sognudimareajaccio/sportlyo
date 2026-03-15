@@ -66,12 +66,24 @@ const ProviderDashboard = () => {
   const [uploadingCustomize, setUploadingCustomize] = useState(false);
   const customizeInputRef = useRef(null);
   const [subscription, setSubscription] = useState(null);
+  const [isMainPartner, setIsMainPartner] = useState(false);
+  // Boracay import
+  const [boracayCategories, setBoracayCategories] = useState([]);
+  const [boracayProducts, setBoracayProducts] = useState([]);
+  const [boracayBrowsing, setBoracayBrowsing] = useState(false);
+  const [boracayImporting, setBoracayImporting] = useState(null);
+  const [boracayLookupUrl, setBoracayLookupUrl] = useState('');
+  const [boracayLookupLoading, setBoracayLookupLoading] = useState(false);
+  const [boracayLookupResult, setBoracayLookupResult] = useState(null);
+  // Custom import request
+  const [customImportMsg, setCustomImportMsg] = useState('');
+  const [sendingImportRequest, setSendingImportRequest] = useState(false);
 
   const categories = ['Textile', 'Accessoire', 'Gourde', 'Sac', 'Nutrition', 'Équipement'];
 
   const fetchData = useCallback(async () => {
     try {
-      const [catRes, ordRes, statsRes, convRes, logosRes, orgRes, finRes, salesRes, subRes] = await Promise.all([
+      const [catRes, ordRes, statsRes, convRes, logosRes, orgRes, finRes, salesRes, subRes, mainRes] = await Promise.all([
         api.get('/provider/catalog'),
         api.get('/provider/orders'),
         api.get('/provider/stats'),
@@ -80,7 +92,8 @@ const ProviderDashboard = () => {
         api.get('/provider/organizers'),
         api.get('/provider/financial-breakdown'),
         api.get('/provider/sales-breakdown'),
-        api.get('/subscriptions/my').catch(() => ({ data: { subscription: null } }))
+        api.get('/subscriptions/my').catch(() => ({ data: { subscription: null } })),
+        api.get('/provider/is-main-partner').catch(() => ({ data: { is_main_partner: false } }))
       ]);
       setProducts(catRes.data.products || []);
       setOrders(ordRes.data.orders || []);
@@ -91,6 +104,7 @@ const ProviderDashboard = () => {
       setFinancialData(finRes.data || null);
       setSalesData(salesRes.data || null);
       setSubscription(subRes.data.subscription || null);
+      setIsMainPartner(mainRes.data.is_main_partner || false);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, []);
@@ -349,6 +363,68 @@ const ProviderDashboard = () => {
     } catch (e) { toast.error(e.response?.data?.detail || 'Erreur'); }
   };
 
+  // Boracay import handlers
+  const handleBoracayBrowse = async (categorySlug) => {
+    setBoracayBrowsing(true);
+    try {
+      const res = await api.get(`/provider/import/boracay/browse/${categorySlug}`);
+      setBoracayProducts(res.data.products || []);
+    } catch (e) { toast.error(e.response?.data?.detail || 'Erreur navigation Boracay'); }
+    finally { setBoracayBrowsing(false); }
+  };
+
+  const handleBoracayImport = async (productUrl) => {
+    setBoracayImporting(productUrl);
+    try {
+      const res = await api.post('/provider/import/boracay/import', { url: productUrl });
+      toast.success(res.data.message || 'Produit importe !');
+      fetchData();
+    } catch (e) { toast.error(e.response?.data?.detail || 'Erreur import Boracay'); }
+    finally { setBoracayImporting(null); }
+  };
+
+  const handleBoracayLookup = async () => {
+    if (!boracayLookupUrl.trim() || !boracayLookupUrl.includes('boracay.fr')) {
+      toast.error('Entrez une URL Boracay valide'); return;
+    }
+    setBoracayLookupLoading(true);
+    setBoracayLookupResult(null);
+    try {
+      const res = await api.get(`/provider/import/boracay/lookup?url=${encodeURIComponent(boracayLookupUrl.trim())}`);
+      setBoracayLookupResult(res.data.product);
+      toast.success('Produit trouve !');
+    } catch (e) { toast.error(e.response?.data?.detail || 'Produit non trouve'); }
+    finally { setBoracayLookupLoading(false); }
+  };
+
+  const handleBoracayAddFromLookup = async () => {
+    if (!boracayLookupResult?.source_url) return;
+    await handleBoracayImport(boracayLookupResult.source_url);
+    setBoracayLookupResult(null);
+    setBoracayLookupUrl('');
+  };
+
+  // Fetch Boracay categories
+  useEffect(() => {
+    if (activeSection === 'import-boracay' && isMainPartner && boracayCategories.length === 0) {
+      api.get('/provider/import/boracay/categories').then(res => {
+        setBoracayCategories(res.data.categories || []);
+      }).catch(() => {});
+    }
+  }, [activeSection, isMainPartner, boracayCategories.length]);
+
+  // Custom import request for non-main partners
+  const handleRequestCustomImport = async () => {
+    if (!customImportMsg.trim()) { toast.error('Decrivez votre besoin d\'import'); return; }
+    setSendingImportRequest(true);
+    try {
+      await api.post('/provider/request-custom-import', { message: customImportMsg });
+      toast.success('Demande envoyee a l\'administrateur !');
+      setCustomImportMsg('');
+    } catch (e) { toast.error(e.response?.data?.detail || 'Erreur envoi'); }
+    finally { setSendingImportRequest(false); }
+  };
+
   const handleSubscriptionPayment = async () => {
     try {
       const res = await api.post('/subscriptions/create-payment');
@@ -371,16 +447,22 @@ const ProviderDashboard = () => {
   ];
 
   const pendingSelections = selections.filter(s => s.status === 'pending').length;
-  const navItems = [
+  const baseNavItems = [
     { id: 'catalogue', label: 'Catalogue', icon: ShoppingBag },
     { id: 'selections', label: 'Selections', icon: ClipboardList, badge: pendingSelections },
+  ];
+  const importNavItems = isMainPartner ? [
     { id: 'import', label: 'Import TopTex', icon: Package },
     { id: 'import-xd', label: 'Import XD Connects', icon: Package },
+    { id: 'import-boracay', label: 'Import Boracay', icon: Package },
+  ] : [];
+  const otherNavItems = [
     { id: 'finances', label: 'Finances', icon: Euro },
     { id: 'ventes', label: 'Ventes', icon: BarChart3 },
     { id: 'commandes', label: 'Commandes', icon: FileText },
     { id: 'messages', label: 'Messages', icon: MessageSquare, badge: conversations.reduce((a, c) => a + (c.unread || 0), 0) },
   ];
+  const navItems = [...baseNavItems, ...importNavItems, ...otherNavItems];
 
   const chatPartner = conversations.find(c => c.user_id === activeChat);
 
@@ -390,7 +472,7 @@ const ProviderDashboard = () => {
       <div className="bg-white border-b border-slate-200 px-6 py-5">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="font-heading text-2xl font-black uppercase tracking-tight">Espace Prestataire</h1>
+            <h1 className="font-heading text-2xl font-black uppercase tracking-tight">Boutique Personnalisee</h1>
             <p className="text-sm text-slate-500">{user?.company_name || user?.name}</p>
           </div>
           <Button className="bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase text-xs gap-2" onClick={() => { setEditingProduct(null); setProductForm({ name: '', description: '', category: 'Textile', price: '', suggested_commission: 5, image_url: '', images: [], sizes: [], colors: [], stock: 100 }); setShowProductDialog(true); }} data-testid="add-provider-product-btn">
@@ -797,6 +879,129 @@ const ProviderDashboard = () => {
                   </div>
                 </motion.div>
               )}
+            </div>
+          </motion.div>
+        )}
+
+
+        {/* ===== IMPORT BORACAY ===== */}
+        {activeSection === 'import-boracay' && isMainPartner && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} data-testid="provider-import-boracay-section">
+            <h3 className="font-heading font-bold text-base uppercase mb-4">Import Catalogue Boracay</h3>
+
+            {/* Lookup by URL */}
+            <div className="bg-white border border-slate-200 p-6 mb-6">
+              <h4 className="font-heading font-bold uppercase text-xs mb-3">Importer par URL</h4>
+              <p className="text-xs text-slate-500 mb-4">Collez l'URL d'un produit boracay.fr et le systeme recupere automatiquement toutes les informations.</p>
+              <div className="flex gap-3 items-end">
+                <div className="flex-1">
+                  <Label className="text-[10px] font-heading uppercase text-slate-400">URL du produit Boracay</Label>
+                  <Input value={boracayLookupUrl} onChange={(e) => setBoracayLookupUrl(e.target.value)} placeholder="https://www.boracay.fr/fr/..."
+                    onKeyDown={(e) => e.key === 'Enter' && handleBoracayLookup()} className="text-sm h-10" data-testid="boracay-lookup-url-input" />
+                </div>
+                <Button className="bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase text-xs gap-2 h-10" onClick={handleBoracayLookup} disabled={boracayLookupLoading} data-testid="boracay-lookup-btn">
+                  {boracayLookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  {boracayLookupLoading ? 'Recherche...' : 'Rechercher'}
+                </Button>
+              </div>
+
+              {boracayLookupResult && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 border border-brand/30 bg-brand/5 p-4" data-testid="boracay-lookup-result">
+                  <div className="flex gap-4">
+                    {boracayLookupResult.image_url && (
+                      <div className="w-32 h-32 bg-white border overflow-hidden flex-shrink-0">
+                        <img src={boracayLookupResult.image_url} alt="" className="w-full h-full object-contain" onError={(e) => { e.target.style.display='none'; }} />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          {boracayLookupResult.ref && <span className="font-mono text-xs font-bold text-brand bg-brand/10 px-2 py-0.5">{boracayLookupResult.ref}</span>}
+                          <span className="ml-2 text-xs font-bold text-slate-500">Boracay</span>
+                        </div>
+                      </div>
+                      <h4 className="font-heading font-bold text-sm mt-1">{boracayLookupResult.name}</h4>
+                      <p className="text-xs text-slate-400 mt-1 line-clamp-2">{boracayLookupResult.description}</p>
+                      {boracayLookupResult.material && <p className="text-[10px] text-slate-500 mt-1">Matiere: {boracayLookupResult.material}</p>}
+                      {boracayLookupResult.dimensions && <p className="text-[10px] text-slate-500">Dimensions: {boracayLookupResult.dimensions}</p>}
+                      <div className="flex items-center gap-3 mt-3">
+                        <Button className="bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase text-xs gap-2" onClick={handleBoracayAddFromLookup} disabled={boracayImporting} data-testid="boracay-add-lookup-btn">
+                          {boracayImporting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />} Ajouter au catalogue
+                        </Button>
+                        <Button variant="outline" size="sm" className="text-xs" onClick={() => setBoracayLookupResult(null)}>Annuler</Button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Browse by category */}
+            <div className="bg-white border border-slate-200 p-6">
+              <h4 className="font-heading font-bold uppercase text-xs mb-3">Parcourir par categorie</h4>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {boracayCategories.map(cat => (
+                  <Button key={cat.slug} variant="outline" size="sm" className="text-xs" onClick={() => handleBoracayBrowse(cat.slug)} disabled={boracayBrowsing} data-testid={`boracay-cat-${cat.slug}`}>
+                    {cat.label}
+                  </Button>
+                ))}
+              </div>
+
+              {boracayBrowsing && (
+                <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-brand" /><p className="text-xs text-slate-400 mt-2">Chargement des produits...</p></div>
+              )}
+
+              {!boracayBrowsing && boracayProducts.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mt-4">
+                  {boracayProducts.map((prod, i) => (
+                    <div key={i} className="border border-slate-200 overflow-hidden group" data-testid={`boracay-product-${i}`}>
+                      <div className="aspect-square bg-slate-50 flex items-center justify-center overflow-hidden">
+                        {prod.image_url ? (
+                          <img src={prod.image_url} alt="" className="w-full h-full object-contain" onError={(e) => { e.target.style.display='none'; }} />
+                        ) : (
+                          <Package className="w-8 h-8 text-slate-200" />
+                        )}
+                      </div>
+                      <div className="p-2">
+                        <p className="text-[11px] font-heading font-bold line-clamp-2 leading-tight">{prod.name}</p>
+                        <Button size="sm" className="w-full mt-2 h-7 text-[10px] bg-brand hover:bg-brand/90 text-white gap-1" onClick={() => handleBoracayImport(prod.url)} disabled={boracayImporting === prod.url}>
+                          {boracayImporting === prod.url ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />} Importer
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+
+        {/* ===== REQUEST CUSTOM IMPORT (non-main partners) ===== */}
+        {activeSection === 'catalogue' && !isMainPartner && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6 bg-white border border-slate-200 p-6" data-testid="custom-import-request-section">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-amber-50 flex items-center justify-center flex-shrink-0 rounded">
+                <Upload className="w-6 h-6 text-amber-500" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-heading font-bold text-sm uppercase mb-1">Demander un import de catalogue personnalise</h4>
+                <p className="text-xs text-slate-500 mb-3">Vous avez un catalogue fournisseur a importer ? Decrivez votre besoin et notre equipe s'en chargera.</p>
+                <div className="flex gap-2">
+                  <Input
+                    value={customImportMsg}
+                    onChange={(e) => setCustomImportMsg(e.target.value)}
+                    placeholder="Ex: J'aimerais importer mon catalogue depuis mon-fournisseur.com..."
+                    className="flex-1 text-sm"
+                    onKeyDown={(e) => e.key === 'Enter' && handleRequestCustomImport()}
+                    data-testid="custom-import-message-input"
+                  />
+                  <Button className="bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase text-xs gap-2 shrink-0" onClick={handleRequestCustomImport} disabled={sendingImportRequest} data-testid="send-import-request-btn">
+                    {sendingImportRequest ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    Envoyer
+                  </Button>
+                </div>
+              </div>
             </div>
           </motion.div>
         )}

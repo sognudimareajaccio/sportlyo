@@ -103,6 +103,8 @@ async def seed_default_accounts():
         {"user_id": "user_org_001", "email": "club@paris-sport.fr", "name": "Club Sportif Paris", "password": "club123", "role": "organizer", "status": "active", "company_name": "Club Sportif Paris"},
         {"user_id": "user_part_001", "email": "pierre@test.com", "name": "Pierre Dupont", "password": "test1234", "role": "participant", "status": "active", "company_name": ""},
         {"user_id": "user_provider_001", "email": "boutique@sportlyo.fr", "name": "Moreati", "password": "boutique123", "role": "provider", "status": "active", "company_name": "Moreati"},
+        {"user_id": "user_provider_main", "email": "laboutique@sportlyo.fr", "name": "La Boutique SportLyo", "password": "boutique123", "role": "provider", "status": "active", "company_name": "La Boutique SportLyo"},
+        {"user_id": "user_provider_002", "email": "boutique2@sportlyo.fr", "name": "EquipSport Lyon", "password": "boutique123", "role": "provider", "status": "active", "company_name": "EquipSport Lyon"},
     ]
     for d in defaults:
         existing = await db.users.find_one({"email": d["email"]})
