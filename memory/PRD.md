@@ -46,6 +46,19 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 - Suspension automatique de l'abonnement lors de la suspension du compte
 - Endpoints: GET /api/admin/providers/detailed, GET /api/admin/providers/{id}/detail, PUT /api/admin/providers/{id}/status, PUT /api/admin/providers/{id}/subscription
 
+**Alertes fin d'essai partenaires (P1) - COMPLETE:**
+- Banniere d'alerte amber dans l'overview admin pour les partenaires avec essai finissant dans 5 jours
+- Affichage du compteur de jours restants, nom, email, date de fin
+- Boutons d'action rapide: Voir (ouvre la fiche detail) et Couper (suspend le compte)
+- Tri par urgence (jours restants croissants)
+
+**Stats abonnements dans le dashboard revenus (P1) - COMPLETE:**
+- Carte "Abonnements" avec donnees reelles (total, pending, active_subs, trial_subs)
+- AreaChart 12 mois avec 5e ligne "Abonnements" (couleur teal)
+- PieChart inclut les abonnements si total > 0
+- Transactions recentes incluent les paiements d'abonnement
+- Champ "abonnements" dans les donnees mensuelles
+
 **Evenements Gratuits (P0) - COMPLETE:**
 - Toggle `is_free` dans les formulaires creation et edition d'evenements
 - Badge "GRATUIT" affiche sur la page detail (hero + sidebar)
