@@ -33,6 +33,21 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 - Filtre par evenement + barre de recherche
 - Liens cliquables telephone (tel:) et email (mailto:)
 
+**Commission 5% plateforme sur liens de paiement (P0) - COMPLETE:**
+- Frais de fonctionnement plateforme 5% ajoutes automatiquement au montant du lien de paiement
+- 2 lignes dans la commande Square : montant du don + frais plateforme
+- Decomposition affichee sur la fiche sponsor : Montant / Frais 5% / Total facture
+- Commission enregistree dans la collection 'commissions' (pending → collected)
+- S'applique aux sponsors ET donateurs
+
+**Recu fiscal Cerfa 11580 automatique (P0) - COMPLETE:**
+- Genere automatiquement lors de la confirmation de paiement
+- PDF conforme Cerfa : organisme beneficiaire, donateur, montant, cadre fiscal (articles 200/238 bis CGI)
+- Montant en toutes lettres, numero de recu unique
+- Telechargeable depuis la fiche sponsor
+- Notification email au donateur via Resend
+- 3 etats visuels : "Generer lien" → "Confirmer paiement" / "Copier lien" → "Telecharger recu fiscal" / "Paye"
+
 **Ameliorations UI:**
 - Boutons Publier/Depublier: rond vert clignotant (en ligne) + rond rouge fixe (brouillon)
 - Badges statut: "EN LIGNE" avec animation ping verte, "BROUILLON" avec point rouge
