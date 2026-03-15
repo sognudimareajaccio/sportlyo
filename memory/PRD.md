@@ -19,9 +19,33 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 | Admin | admin@sportsconnect.fr | admin123 |
 | Organisateur | club@paris-sport.fr | club123 |
 | Participant | pierre@test.com | test1234 |
-| Prestataire | boutique@sportlyo.fr | boutique123 |
+| Partenaire Principal | laboutique@sportlyo.fr | boutique123 |
+| Partenaire (Moreati) | boutique@sportlyo.fr | boutique123 |
+| Partenaire (Autre) | boutique2@sportlyo.fr | boutique123 |
 
 ## Ce qui est implemente
+
+### Mars 2026 - Session 16 (Integration Boracay + Flux Prestataires)
+
+**Integration Boracay (P0) - COMPLETE:**
+- Scraper complet pour boracay.fr avec httpx + BeautifulSoup
+- 13 categories navigables (Porte-cles, Metallerie, Gourde & Drink, etc.)
+- Import par URL (lookup + import) et navigation par categorie
+- Endpoints: GET /api/provider/import/boracay/categories, GET /api/provider/import/boracay/browse/{slug}, POST /api/provider/import/boracay/import, GET /api/provider/import/boracay/lookup
+
+**Flux Prestataires Differencie (P0) - COMPLETE:**
+- Renommage du dashboard prestataire en "Boutique Personnalisee"
+- Partenaire principal (laboutique@sportlyo.fr) : acces aux imports TopTex, XD Connects, Boracay
+- Autres partenaires : saisie manuelle de produits + bouton "Demander un import de catalogue personnalise"
+- Endpoint GET /api/provider/is-main-partner pour detection cote frontend
+- Endpoint POST /api/provider/request-custom-import pour envoi de demande a l'admin via messagerie
+- Comptes seed crees : laboutique@sportlyo.fr (principal), boutique2@sportlyo.fr (secondaire)
+
+**Produits Externes pour Organisateurs (P0) - COMPLETE:**
+- Nouvel endpoint GET /api/provider-products/external (exclut le partenaire principal)
+- Toggle "Mes prestataires" / "Produits & services partenaires" dans la section Prestations Externes
+- Affichage en grille avec image, nom, prix, description, categorie, infos contact du prestataire
+- Barre de recherche et bouton actualiser
 
 ### Mars 2026 - Session 15 (4 nouvelles fonctionnalites + Abonnement Partenaire)
 
@@ -199,8 +223,11 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 - [ ] (P2) Configurer cles Twilio pour envoi reel de SMS
 - [ ] (P2) Export CSV des statistiques organisateur
 - [ ] (P2) Paiement en ligne locations RFID
-- [ ] (P2) Refactorisation supplementaire ProviderDashboard.js
-- [ ] (P2) Refactorisation OrganizerDashboard.js (hooks personnalises)
+- [ ] (P2) Refactorisation AdminDashboard.js et OrganizerDashboard.js
+- [ ] (P3) Facturation avancee (hors abonnements)
+- [ ] (P3) Fonctionnalites communautaires
+- [ ] (P3) Gestion des remboursements
+- [ ] (P3) Notifications par SMS
 
 ## Bugs corriges
 - [x] Bug: Partenaire redirige vers page "Acces reserve organisateurs" au login -> Fix: LoginPage.js redirige vers /provider, Navbar.js ajoute config role provider, getDashboardLink retourne /provider
