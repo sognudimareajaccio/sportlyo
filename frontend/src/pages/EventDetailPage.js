@@ -646,7 +646,7 @@ const EventDetailPage = () => {
                   data-testid="regulations-toggle"
                 >
                   <h2 className="font-heading text-xl font-bold uppercase flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-brand" /> Règlement de la course
+                    <FileText className="w-5 h-5 text-brand" /> Règlement de l'événement
                   </h2>
                   {showRegulations ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
                 </button>
