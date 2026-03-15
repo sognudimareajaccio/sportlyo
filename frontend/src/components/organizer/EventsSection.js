@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar, Users, MapPin, Settings, Edit, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Calendar, Users, MapPin, Settings, Edit, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
 
 export const EventsSection = ({ events, onEdit, onDelete, onCreateNew, onTogglePublish }) => (
@@ -23,8 +23,12 @@ export const EventsSection = ({ events, onEdit, onDelete, onCreateNew, onToggleP
                   <span className={`inline-flex items-center px-2.5 py-1 text-xs font-heading font-bold uppercase tracking-wider ${event.status === 'active' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
                     {event.status === 'active' ? 'Actif' : 'Annule'}
                   </span>
-                  <span className={`inline-flex items-center px-2.5 py-1 text-xs font-heading font-bold uppercase tracking-wider ${event.published ? 'bg-brand text-white' : 'bg-slate-500 text-white'}`}>
-                    {event.published ? 'Publie' : 'Brouillon'}
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-heading font-bold uppercase tracking-wider ${event.published ? 'bg-brand text-white' : 'bg-slate-500 text-white'}`}>
+                    <span className="relative flex h-2 w-2 shrink-0">
+                      {event.published && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-300 opacity-75" />}
+                      <span className={`relative inline-flex rounded-full h-2 w-2 ${event.published ? 'bg-green-400' : 'bg-red-400'}`} />
+                    </span>
+                    {event.published ? 'En ligne' : 'Brouillon'}
                   </span>
                 </div>
                 <div className="absolute bottom-3 left-3 flex items-center gap-2">
@@ -52,8 +56,12 @@ export const EventsSection = ({ events, onEdit, onDelete, onCreateNew, onToggleP
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 pt-3 border-t border-slate-100">
-                  <Button size="sm" className={`h-8 text-xs gap-1 font-heading font-bold uppercase ${event.published ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`} onClick={() => onTogglePublish(event)} data-testid={`publish-toggle-${event.event_id}`}>
-                    {event.published ? <><ToggleRight className="w-3.5 h-3.5" />Depublier</> : <><ToggleLeft className="w-3.5 h-3.5" />Publier</>}
+                  <Button size="sm" className={`h-8 text-xs gap-1.5 font-heading font-bold uppercase ${event.published ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`} onClick={() => onTogglePublish(event)} data-testid={`publish-toggle-${event.event_id}`}>
+                    <span className={`relative flex h-2.5 w-2.5 shrink-0`}>
+                      {event.published && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-300 opacity-75" />}
+                      <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${event.published ? 'bg-green-400' : 'bg-red-400'}`} />
+                    </span>
+                    {event.published ? 'Depublier' : 'Publier'}
                   </Button>
                   <Link to={`/organizer/event/${event.event_id}`} className="flex-1">
                     <Button variant="outline" size="sm" className="w-full text-xs font-heading uppercase tracking-wider gap-1.5 h-8"><Settings className="w-3.5 h-3.5" />Gerer</Button>
