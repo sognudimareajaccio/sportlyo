@@ -89,8 +89,9 @@ const OrganizerDashboard = () => {
     elevation_gain: '', image_url: '', requires_pps: false,
     requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '',
     races: [], route_url: '', exact_address: '', regulations: '',
-    regulations_pdf_url: '', published: false, provides_tshirt: true,
+    regulations_pdf_url: '', published: false, provided_items: ['tshirt'],
     themes: [], circuit_type: '', has_timer: null,
+    custom_provided_item: '',
     website_url: '', facebook_url: '', instagram_url: '', twitter_url: '', youtube_url: ''
   });
   const [upgradeData, setUpgradeData] = useState({ company_name: '', description: '', iban: '' });
@@ -434,10 +435,11 @@ const OrganizerDashboard = () => {
     setCreating(true);
     try {
       let eventDate; try { eventDate = new Date(newEvent.date).toISOString(); } catch { toast.error('Date invalide'); setCreating(false); return; }
-      const eventData = { ...newEvent, date: eventDate, distances: (newEvent.distances || '').split(',').map(d => d.trim()).filter(Boolean), elevation_gain: newEvent.elevation_gain ? parseInt(newEvent.elevation_gain) : null, min_age: newEvent.min_age ? parseInt(newEvent.min_age) : null, max_age: newEvent.max_age ? parseInt(newEvent.max_age) : null };
+      const eventData = { ...newEvent, date: eventDate, distances: (newEvent.distances || '').split(',').map(d => d.trim()).filter(Boolean), elevation_gain: newEvent.elevation_gain ? parseInt(newEvent.elevation_gain) : null, min_age: newEvent.min_age ? parseInt(newEvent.min_age) : null, max_age: newEvent.max_age ? parseInt(newEvent.max_age) : null, provides_tshirt: (newEvent.provided_items || []).includes('tshirt') };
+      delete eventData.custom_provided_item;
       await eventsApi.create(eventData); toast.success('Evenement cree !');
       setShowCreateDialog(false); setCreateStep(1);
-      setNewEvent({ title: '', description: '', sport_type: 'running', location: '', date: '', max_participants: 100, price: 25, distances: '', elevation_gain: '', image_url: '', requires_pps: false, requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '', races: [], route_url: '', exact_address: '', regulations: '', regulations_pdf_url: '', published: false, provides_tshirt: true, themes: [], circuit_type: '', has_timer: null, website_url: '', facebook_url: '', instagram_url: '', twitter_url: '', youtube_url: '' });
+      setNewEvent({ title: '', description: '', sport_type: 'running', location: '', date: '', max_participants: 100, price: 25, distances: '', elevation_gain: '', image_url: '', requires_pps: false, requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '', races: [], route_url: '', exact_address: '', regulations: '', regulations_pdf_url: '', published: false, provided_items: ['tshirt'], custom_provided_item: '', themes: [], circuit_type: '', has_timer: null, website_url: '', facebook_url: '', instagram_url: '', twitter_url: '', youtube_url: '' });
       setImagePreview(null); fetchEvents();
     } catch (error) { toast.error(error.response?.data?.detail || 'Erreur creation'); }
     finally { setCreating(false); }
@@ -449,7 +451,7 @@ const OrganizerDashboard = () => {
     if (!editingEvent.title || !editingEvent.location) { toast.error('Champs obligatoires'); return; }
     setEditing(true);
     try {
-      const updateData = { title: editingEvent.title, description: editingEvent.description, sport_type: editingEvent.sport_type, date: editingEvent.date, location: editingEvent.location, max_participants: editingEvent.max_participants, price: editingEvent.price, distances: editingEvent.distances, elevation_gain: editingEvent.elevation_gain, image_url: editingEvent.image_url, requires_pps: editingEvent.requires_pps, races: editingEvent.races || [], regulations_pdf_url: editingEvent.regulations_pdf_url || '', published: editingEvent.published, provides_tshirt: editingEvent.provides_tshirt !== false };
+      const updateData = { title: editingEvent.title, description: editingEvent.description, sport_type: editingEvent.sport_type, date: editingEvent.date, location: editingEvent.location, max_participants: editingEvent.max_participants, price: editingEvent.price, distances: editingEvent.distances, elevation_gain: editingEvent.elevation_gain, image_url: editingEvent.image_url, requires_pps: editingEvent.requires_pps, races: editingEvent.races || [], regulations_pdf_url: editingEvent.regulations_pdf_url || '', published: editingEvent.published, provided_items: editingEvent.provided_items || [], provides_tshirt: (editingEvent.provided_items || []).includes('tshirt') };
       await eventsApi.update(editingEvent.event_id, updateData); toast.success('Evenement mis a jour !');
       setShowEditDialog(false); setEditingEvent(null); setImagePreview(null); fetchEvents();
     } catch (error) { toast.error(error.response?.data?.detail || 'Erreur mise a jour'); }
@@ -779,7 +781,7 @@ const OrganizerDashboard = () => {
       </div>
 
       {/* CREATE EVENT DIALOG */}
-      <Dialog open={showCreateDialog} onOpenChange={(open) => { setShowCreateDialog(open); if (!open) { setCreateStep(1); setNewEvent({ title: '', description: '', sport_type: 'running', location: '', date: '', max_participants: 100, price: 25, distances: '', elevation_gain: '', image_url: '', requires_pps: false, requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '', races: [], route_url: '', exact_address: '', regulations: '', regulations_pdf_url: '', published: false, provides_tshirt: true, themes: [], circuit_type: '', has_timer: null, website_url: '', facebook_url: '', instagram_url: '', twitter_url: '', youtube_url: '' }); setImagePreview(null); } }}>
+      <Dialog open={showCreateDialog} onOpenChange={(open) => { setShowCreateDialog(open); if (!open) { setCreateStep(1); setNewEvent({ title: '', description: '', sport_type: 'running', location: '', date: '', max_participants: 100, price: 25, distances: '', elevation_gain: '', image_url: '', requires_pps: false, requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '', races: [], route_url: '', exact_address: '', regulations: '', regulations_pdf_url: '', published: false, provided_items: ['tshirt'], custom_provided_item: '', themes: [], circuit_type: '', has_timer: null, website_url: '', facebook_url: '', instagram_url: '', twitter_url: '', youtube_url: '' }); setImagePreview(null); } }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
           <div className="p-6 pb-0">
             <DialogHeader><DialogTitle className="font-heading text-xl uppercase">Creer un evenement</DialogTitle><DialogDescription className="sr-only">Formulaire de creation</DialogDescription></DialogHeader>
@@ -826,7 +828,50 @@ const OrganizerDashboard = () => {
                 <div className="flex items-center gap-6 p-4 bg-slate-50 border">
                   <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={newEvent.requires_pps} onChange={(e) => setNewEvent(p => ({ ...p, requires_pps: e.target.checked }))} className="w-4 h-4 accent-brand" /><span className="text-sm font-medium">PPS obligatoire</span></label>
                   <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={newEvent.allows_teams} onChange={(e) => setNewEvent(p => ({ ...p, allows_teams: e.target.checked }))} className="w-4 h-4 accent-brand" /><span className="text-sm font-medium">Equipes autorisees</span></label>
-                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={newEvent.provides_tshirt} onChange={(e) => setNewEvent(p => ({ ...p, provides_tshirt: e.target.checked }))} className="w-4 h-4 accent-brand" /><Shirt className="w-4 h-4 text-brand" /><span className="text-sm font-medium">T-shirt fourni</span></label>
+                </div>
+                {/* Dotation participant */}
+                <div className="border border-slate-200 p-4 bg-slate-50 space-y-3" data-testid="provided-items-section">
+                  <Label className="text-sm font-heading uppercase text-slate-500">Dotation participant</Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {[
+                      { id: 'tshirt', label: 'T-shirt', icon: '👕' },
+                      { id: 'medal', label: 'Medaille', icon: '🏅' },
+                      { id: 'bag', label: 'Sac', icon: '🎒' },
+                      { id: 'cap', label: 'Casquette', icon: '🧢' },
+                      { id: 'bottle', label: 'Gourde', icon: '🍶' },
+                      { id: 'bib', label: 'Dossard', icon: '🏷️' },
+                      { id: 'towel', label: 'Serviette', icon: '🧣' },
+                      { id: 'food', label: 'Ravitaillement', icon: '🍌' },
+                      { id: 'photo', label: 'Photo souvenir', icon: '📸' },
+                    ].map(item => {
+                      const selected = (newEvent.provided_items || []).includes(item.id);
+                      return (
+                        <button key={item.id} type="button" onClick={() => setNewEvent(p => ({ ...p, provided_items: selected ? (p.provided_items || []).filter(i => i !== item.id) : [...(p.provided_items || []), item.id] }))}
+                          className={`flex items-center gap-2 p-2.5 border rounded text-sm text-left transition-all ${selected ? 'border-brand bg-brand/5 text-brand font-bold' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}
+                          data-testid={`provided-item-${item.id}`}>
+                          <span className="text-base">{item.icon}</span> {item.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input placeholder="Autre dotation personnalisee..." value={newEvent.custom_provided_item || ''} onChange={(e) => setNewEvent(p => ({ ...p, custom_provided_item: e.target.value }))}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && newEvent.custom_provided_item?.trim()) { e.preventDefault(); setNewEvent(p => ({ ...p, provided_items: [...(p.provided_items || []), p.custom_provided_item.trim()], custom_provided_item: '' })); } }}
+                      className="flex-1" data-testid="custom-provided-item-input" />
+                    <Button type="button" variant="outline" size="sm" className="shrink-0" disabled={!newEvent.custom_provided_item?.trim()}
+                      onClick={() => setNewEvent(p => ({ ...p, provided_items: [...(p.provided_items || []), p.custom_provided_item.trim()], custom_provided_item: '' }))}
+                      data-testid="add-custom-item-btn">Ajouter</Button>
+                  </div>
+                  {(newEvent.provided_items || []).filter(i => !['tshirt','medal','bag','cap','bottle','bib','towel','food','photo'].includes(i)).length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {(newEvent.provided_items || []).filter(i => !['tshirt','medal','bag','cap','bottle','bib','towel','food','photo'].includes(i)).map((item, idx) => (
+                        <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 bg-brand/10 text-brand text-xs font-bold rounded">
+                          {item}
+                          <button type="button" onClick={() => setNewEvent(p => ({ ...p, provided_items: (p.provided_items || []).filter(i => i !== item) }))} className="hover:text-red-500">&times;</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex justify-between pt-2">
                   <Button variant="outline" onClick={() => setCreateStep(1)} className="gap-2"><ArrowLeft className="w-4 h-4" /> Retour</Button>
@@ -911,7 +956,40 @@ const OrganizerDashboard = () => {
                 <div><Label>Participants max</Label><Input type="number" value={editingEvent.max_participants} onChange={(e) => setEditingEvent(p => ({ ...p, max_participants: parseInt(e.target.value) }))} /></div>
                 <div><Label>Lieu</Label><Input value={editingEvent.location} onChange={(e) => setEditingEvent(p => ({ ...p, location: e.target.value }))} /></div>
                 <div><Label>Prix (€)</Label><Input type="number" value={editingEvent.price} onChange={(e) => setEditingEvent(p => ({ ...p, price: parseFloat(e.target.value) }))} /></div>
-                <div><Label>Options</Label><div className="flex items-center gap-4 mt-2"><label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={editingEvent.provides_tshirt !== false} onChange={(e) => setEditingEvent(p => ({ ...p, provides_tshirt: e.target.checked }))} className="w-4 h-4 accent-brand" /><Shirt className="w-4 h-4 text-brand" /><span className="text-xs font-medium">T-shirt fourni</span></label></div></div>
+                <div><Label>Dotation participant</Label>
+                  <div className="grid grid-cols-3 gap-1.5 mt-2">
+                    {[
+                      { id: 'tshirt', label: 'T-shirt', icon: '👕' },
+                      { id: 'medal', label: 'Medaille', icon: '🏅' },
+                      { id: 'bag', label: 'Sac', icon: '🎒' },
+                      { id: 'cap', label: 'Casquette', icon: '🧢' },
+                      { id: 'bottle', label: 'Gourde', icon: '🍶' },
+                      { id: 'bib', label: 'Dossard', icon: '🏷️' },
+                      { id: 'towel', label: 'Serviette', icon: '🧣' },
+                      { id: 'food', label: 'Ravitaillement', icon: '🍌' },
+                      { id: 'photo', label: 'Photo souvenir', icon: '📸' },
+                    ].map(item => {
+                      const items = editingEvent.provided_items || (editingEvent.provides_tshirt !== false ? ['tshirt'] : []);
+                      const selected = items.includes(item.id);
+                      return (
+                        <button key={item.id} type="button" onClick={() => setEditingEvent(p => ({ ...p, provided_items: selected ? items.filter(i => i !== item.id) : [...items, item.id] }))}
+                          className={`flex items-center gap-1.5 p-2 border rounded text-xs text-left transition-all ${selected ? 'border-brand bg-brand/5 text-brand font-bold' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}>
+                          <span>{item.icon}</span> {item.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex gap-1.5 mt-2">
+                    <Input placeholder="Autre..." value={editingEvent.custom_provided_item || ''} onChange={(e) => setEditingEvent(p => ({ ...p, custom_provided_item: e.target.value }))}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && editingEvent.custom_provided_item?.trim()) { e.preventDefault(); const items = editingEvent.provided_items || []; setEditingEvent(p => ({ ...p, provided_items: [...items, p.custom_provided_item.trim()], custom_provided_item: '' })); } }}
+                      className="flex-1 h-8 text-xs" />
+                    <Button type="button" variant="outline" size="sm" className="h-8 text-xs" disabled={!editingEvent.custom_provided_item?.trim()}
+                      onClick={() => { const items = editingEvent.provided_items || []; setEditingEvent(p => ({ ...p, provided_items: [...items, p.custom_provided_item.trim()], custom_provided_item: '' })); }}>+</Button>
+                  </div>
+                  {(editingEvent.provided_items || []).filter(i => !['tshirt','medal','bag','cap','bottle','bib','towel','food','photo'].includes(i)).map((item, idx) => (
+                    <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-brand/10 text-brand text-[10px] font-bold rounded mt-1 mr-1">{item} <button type="button" onClick={() => setEditingEvent(p => ({ ...p, provided_items: (p.provided_items || []).filter(i => i !== item) }))} className="hover:text-red-500">&times;</button></span>
+                  ))}
+                </div>
                 <div className="col-span-2"><Label>Image</Label><div className="mt-2">{(imagePreview || editingEvent.image_url) && <div className="relative mb-3 inline-block"><img src={imagePreview || editingEvent.image_url} alt="Preview" className="h-32 w-auto object-cover border" /><button onClick={() => { setImagePreview(null); setEditingEvent(p => ({ ...p, image_url: '' })); }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><X className="w-4 h-4" /></button></div>}<div className="flex gap-2"><input ref={editFileInputRef} type="file" accept="image/*" onChange={(e) => handleImageUpload(e, true)} className="hidden" /><Button variant="outline" onClick={() => editFileInputRef.current?.click()} disabled={uploadingImage}>{uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}Upload</Button><Input placeholder="URL" value={editingEvent.image_url || ''} onChange={(e) => { setEditingEvent(p => ({ ...p, image_url: e.target.value })); setImagePreview(null); }} className="flex-1" /></div></div></div>
                 <div className="col-span-2"><Label>Description</Label><Textarea rows={3} value={editingEvent.description} onChange={(e) => setEditingEvent(p => ({ ...p, description: e.target.value }))} /></div>
                 <div className="col-span-2">

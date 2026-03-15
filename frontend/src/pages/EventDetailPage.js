@@ -1081,7 +1081,22 @@ const EventDetailPage = () => {
                               </div>
                             )}
 
-                            {/* T-shirt size */}
+                            {/* Dotation participant */}
+                            {event.provided_items && event.provided_items.length > 0 && (
+                              <div className="bg-slate-50 border border-slate-200 p-3 rounded" data-testid="provided-items-display">
+                                <p className="text-[10px] font-heading uppercase text-slate-500 mb-1.5">Dotation incluse</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {event.provided_items.map((item, i) => {
+                                    const icons = { tshirt: '👕', medal: '🏅', bag: '🎒', cap: '🧢', bottle: '🍶', bib: '🏷️', towel: '🧣', food: '🍌', photo: '📸' };
+                                    const labels = { tshirt: 'T-shirt', medal: 'Medaille', bag: 'Sac', cap: 'Casquette', bottle: 'Gourde', bib: 'Dossard', towel: 'Serviette', food: 'Ravitaillement', photo: 'Photo souvenir' };
+                                    return <span key={i} className="inline-flex items-center gap-1 px-2 py-1 bg-brand/10 text-brand text-xs font-bold rounded">{icons[item] || '🎁'} {labels[item] || item}</span>;
+                                  })}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* T-shirt size - only if tshirt is in provided_items */}
+                            {(event.provided_items?.includes('tshirt') || event.provides_tshirt !== false) && (
                             <div>
                               <Label className="text-xs font-heading uppercase tracking-wider text-slate-500 mb-2 block"><Shirt className="w-3 h-3 inline mr-1" />Taille de T-Shirt *</Label>
                               <div className="flex gap-2" data-testid="reg-tshirt-grid">
@@ -1102,6 +1117,7 @@ const EventDetailPage = () => {
                                 ))}
                               </div>
                             </div>
+                            )}
 
                             {/* Emergency contact - REQUIRED */}
                             <div className="bg-red-50 border border-red-200 p-4 space-y-3" data-testid="emergency-contact-section">
@@ -1143,7 +1159,8 @@ const EventDetailPage = () => {
                               </Button>
                               <Button
                                 onClick={() => {
-                                  if (!formData.tshirt_size) { toast.error('Veuillez choisir une taille de T-shirt'); return; }
+                                  const needsTshirt = event.provided_items?.includes('tshirt') || event.provides_tshirt !== false;
+                                  if (needsTshirt && !formData.tshirt_size) { toast.error('Veuillez choisir une taille de T-shirt'); return; }
                                   setRegStep(3);
                                 }}
                                 className="btn-primary gap-2"
