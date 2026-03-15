@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   Plus, Edit, Trash2, Loader2, Search, Users, Phone, Mail, MapPinned,
-  Heart, Euro, Star, Globe2, Link2, Copy, Check
+  Heart, Euro, Star, Globe2, Link2, Copy, Check, FileText, CheckCircle2
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -21,7 +21,7 @@ export const SponsorsSection = ({
   onFilterChange, onSearchChange,
   showSponsorDialog, setShowSponsorDialog, editingSponsor, setEditingSponsor,
   sponsorForm, setSponsorForm, sponsorSaving, onSave, onDelete, onOpenEdit,
-  generatePaymentLink
+  generatePaymentLink, onConfirmPayment, onDownloadReceipt
 }) => (
   <div>
     <div className="grid grid-cols-3 gap-4 mb-6">
@@ -87,10 +87,29 @@ export const SponsorsSection = ({
                     </div>
                     <div className="mt-3 p-3 bg-slate-50 border border-slate-100">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                        <div><span className="text-slate-400 font-heading uppercase block">Montant</span><span className="font-heading font-bold text-lg text-brand">{s.amount ? `${s.amount.toLocaleString()}€` : '—'}</span></div>
+                        <div>
+                          <span className="text-slate-400 font-heading uppercase block">Montant</span>
+                          <span className="font-heading font-bold text-lg text-brand">{s.amount ? `${(s.base_amount || s.amount).toLocaleString()}€` : '—'}</span>
+                          {s.platform_fee > 0 && (
+                            <div className="mt-1 space-y-0.5">
+                              <div className="text-[10px] text-slate-400">Frais plateforme 5% : <span className="font-bold text-slate-500">{s.platform_fee.toLocaleString()}€</span></div>
+                              <div className="text-[10px] text-slate-400">Total facture : <span className="font-bold text-slate-600">{s.total_amount.toLocaleString()}€</span></div>
+                            </div>
+                          )}
+                        </div>
                         <div><span className="text-slate-400 font-heading uppercase block">Type de contribution</span><span className="font-bold">{s.contribution_type || '—'}</span></div>
                         <div><span className="text-slate-400 font-heading uppercase block">Debut contrat</span><span className="font-bold">{s.contract_start ? format(new Date(s.contract_start), 'd MMM yyyy', { locale: fr }) : '—'}</span></div>
-                        <div><span className="text-slate-400 font-heading uppercase block">Fin contrat</span><span className="font-bold">{s.contract_end ? format(new Date(s.contract_end), 'd MMM yyyy', { locale: fr }) : '—'}</span></div>
+                        <div>
+                          <span className="text-slate-400 font-heading uppercase block">Statut paiement</span>
+                          {s.payment_status === 'paid' ? (
+                            <span className="inline-flex items-center gap-1 text-green-600 font-bold"><CheckCircle2 className="w-3.5 h-3.5" /> Paye</span>
+                          ) : s.payment_link ? (
+                            <span className="text-amber-600 font-bold">En attente</span>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                          {s.receipt_number && <div className="text-[10px] text-slate-400 mt-0.5">Recu {s.receipt_number}</div>}
+                        </div>
                       </div>
                       {s.contribution_details && <p className="text-xs text-slate-600 mt-2"><strong>Details :</strong> {s.contribution_details}</p>}
                       {s.counterparts && <p className="text-xs text-slate-600 mt-1"><strong>Contreparties :</strong> {s.counterparts}</p>}
@@ -98,12 +117,18 @@ export const SponsorsSection = ({
                     {s.notes && <p className="text-xs text-slate-400 mt-2 italic">{s.notes}</p>}
                   </div>
                 </div>
-                <div className="flex gap-1 flex-shrink-0 ml-3">
+                <div className="flex gap-1 flex-shrink-0 ml-3 flex-wrap justify-end">
                   {s.amount && !s.payment_link && (
                     <Button variant="outline" size="sm" className="h-8 text-green-600 border-green-200 hover:bg-green-50 gap-1 text-[10px]" onClick={() => generatePaymentLink('sponsor', s.sponsor_id, parseFloat(s.amount), `Sponsoring ${s.name}`)} data-testid={`pay-link-sponsor-${s.sponsor_id}`}><Link2 className="w-3 h-3" /> Generer lien de paiement</Button>
                   )}
-                  {s.payment_link && (
-                    <Button variant="outline" size="sm" className="h-8 text-green-600 border-green-200 gap-1 text-[10px]" onClick={() => { navigator.clipboard.writeText(s.payment_link); toast.success('Lien copie !'); }} data-testid={`copy-link-sponsor-${s.sponsor_id}`}><Copy className="w-3 h-3" /> Copier lien</Button>
+                  {s.payment_link && s.payment_status !== 'paid' && (
+                    <>
+                      <Button variant="outline" size="sm" className="h-8 text-green-600 border-green-200 gap-1 text-[10px]" onClick={() => { navigator.clipboard.writeText(s.payment_link); toast.success('Lien copie !'); }} data-testid={`copy-link-sponsor-${s.sponsor_id}`}><Copy className="w-3 h-3" /> Copier lien</Button>
+                      <Button variant="outline" size="sm" className="h-8 text-blue-600 border-blue-200 hover:bg-blue-50 gap-1 text-[10px]" onClick={() => onConfirmPayment(s.sponsor_id)} data-testid={`confirm-pay-${s.sponsor_id}`}><CheckCircle2 className="w-3 h-3" /> Confirmer paiement</Button>
+                    </>
+                  )}
+                  {s.payment_status === 'paid' && (
+                    <Button variant="outline" size="sm" className="h-8 text-purple-600 border-purple-200 hover:bg-purple-50 gap-1 text-[10px]" onClick={() => onDownloadReceipt(s.sponsor_id)} data-testid={`download-receipt-${s.sponsor_id}`}><FileText className="w-3 h-3" /> Telecharger recu fiscal</Button>
                   )}
                   <Button variant="outline" size="sm" className="h-8" onClick={() => onOpenEdit(s)} data-testid={`edit-sponsor-${s.sponsor_id}`}><Edit className="w-3.5 h-3.5" /></Button>
                   <Button variant="outline" size="sm" className="h-8 text-red-500 hover:text-red-600" onClick={() => onDelete(s.sponsor_id)} data-testid={`delete-sponsor-${s.sponsor_id}`}><Trash2 className="w-3.5 h-3.5" /></Button>

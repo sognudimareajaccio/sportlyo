@@ -379,6 +379,26 @@ const OrganizerDashboard = () => {
     catch { toast.error('Erreur suppression'); }
   };
 
+  const handleConfirmPayment = async (sponsorId) => {
+    if (!confirm('Confirmer que le paiement a ete recu ? Un recu fiscal sera genere automatiquement.')) return;
+    try {
+      const res = await api.post(`/payments/confirm-payment/${sponsorId}`);
+      toast.success('Paiement confirme ! Recu fiscal genere.');
+      fetchSponsors(sponsorFilter !== 'all' ? sponsorFilter : undefined);
+    } catch (err) { toast.error(err.response?.data?.detail || 'Erreur confirmation'); }
+  };
+
+  const handleDownloadReceipt = async (sponsorId) => {
+    try {
+      const res = await api.get(`/payments/receipt/${sponsorId}/pdf`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      const link = document.createElement('a'); link.href = url;
+      link.download = `recu_fiscal_${sponsorId}.pdf`; link.click();
+      window.URL.revokeObjectURL(url);
+      toast.success('Recu fiscal telecharge !');
+    } catch { toast.error('Recu fiscal non disponible'); }
+  };
+
   const openEditSponsor = (s) => {
     setEditingSponsor(s);
     setSponsorForm({ name: s.name, sponsor_type: s.sponsor_type, tier: s.tier, contact_name: s.contact_name, phone: s.phone, email: s.email, address: s.address, website: s.website, logo_url: s.logo_url, amount: s.amount || '', currency: s.currency || 'EUR', contribution_type: s.contribution_type, contribution_details: s.contribution_details, counterparts: s.counterparts, contract_start: s.contract_start, contract_end: s.contract_end, event_id: s.event_id, notes: s.notes || '', status: s.status || 'Actif' });
@@ -788,7 +808,7 @@ const OrganizerDashboard = () => {
         {activeSection === 'sponsors' && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
             <SectionHeader title="Sponsors & Donateurs" onBack={() => setActiveSection('hub')} />
-            <SponsorsSection events={events} sponsors={sponsors} filteredSponsors={filteredSponsors} sponsorsLoading={sponsorsLoading} sponsorFilter={sponsorFilter} sponsorSearch={sponsorSearch} onFilterChange={(v) => { setSponsorFilter(v); fetchSponsors(v !== 'all' ? v : undefined); }} onSearchChange={setSponsorSearch} showSponsorDialog={showSponsorDialog} setShowSponsorDialog={setShowSponsorDialog} editingSponsor={editingSponsor} setEditingSponsor={setEditingSponsor} sponsorForm={sponsorForm} setSponsorForm={setSponsorForm} sponsorSaving={sponsorSaving} onSave={handleSaveSponsor} onDelete={handleDeleteSponsor} onOpenEdit={openEditSponsor} generatePaymentLink={generatePaymentLink} />
+            <SponsorsSection events={events} sponsors={sponsors} filteredSponsors={filteredSponsors} sponsorsLoading={sponsorsLoading} sponsorFilter={sponsorFilter} sponsorSearch={sponsorSearch} onFilterChange={(v) => { setSponsorFilter(v); fetchSponsors(v !== 'all' ? v : undefined); }} onSearchChange={setSponsorSearch} showSponsorDialog={showSponsorDialog} setShowSponsorDialog={setShowSponsorDialog} editingSponsor={editingSponsor} setEditingSponsor={setEditingSponsor} sponsorForm={sponsorForm} setSponsorForm={setSponsorForm} sponsorSaving={sponsorSaving} onSave={handleSaveSponsor} onDelete={handleDeleteSponsor} onOpenEdit={openEditSponsor} generatePaymentLink={generatePaymentLink} onConfirmPayment={handleConfirmPayment} onDownloadReceipt={handleDownloadReceipt} />
           </motion.div>
         )}
 

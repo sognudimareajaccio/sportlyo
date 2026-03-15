@@ -21,11 +21,13 @@ async def create_payment_link(request: Request, current_user: dict = Depends(get
     data = await request.json()
     link_type = data.get("type")
     source_id = data.get("source_id")
-    amount = float(data.get("amount", 0))
+    base_amount = float(data.get("amount", 0))
     description = data.get("description", "Paiement SportLyo")
-    if not source_id or amount <= 0:
+    if not source_id or base_amount <= 0:
         raise HTTPException(status_code=400, detail="source_id et amount requis")
-    amount_cents = int(amount * 100)
+    platform_fee = round(base_amount * PLATFORM_COMMISSION, 2)
+    total_amount = round(base_amount + platform_fee, 2)
+    amount_cents = int(total_amount * 100)
     link_id = f"link_{uuid.uuid4().hex[:12]}"
     payment_url = ""
     if SQUARE_ACCESS_TOKEN:
@@ -38,7 +40,10 @@ async def create_payment_link(request: Request, current_user: dict = Depends(get
                 "idempotency_key": str(uuid.uuid4()),
                 "order": {
                     "location_id": SQUARE_LOCATION_ID,
-                    "line_items": [{"name": description, "quantity": "1", "base_price_money": {"amount": amount_cents, "currency": "EUR"}}]
+                    "line_items": [
+                        {"name": description, "quantity": "1", "base_price_money": {"amount": int(base_amount * 100), "currency": "EUR"}},
+                        {"name": "Frais de fonctionnement plateforme (5%)", "quantity": "1", "base_price_money": {"amount": int(platform_fee * 100), "currency": "EUR"}}
+                    ]
                 },
                 "checkout_options": {"allow_tipping": False, "redirect_url": f"{os.environ.get('FRONTEND_URL', '')}/organizer?payment=success&ref={source_id}"}
             })
@@ -47,28 +52,223 @@ async def create_payment_link(request: Request, current_user: dict = Depends(get
         except Exception as e:
             logger.warning(f"Square payment link error: {e}")
     if not payment_url:
-        payment_url = f"https://checkout.square.site/simulated/{link_id}?amount={amount}&desc={description}"
+        payment_url = f"https://checkout.square.site/simulated/{link_id}?amount={total_amount}&desc={description}"
     link_record = {
         "link_id": link_id, "type": link_type, "source_id": source_id,
-        "organizer_id": current_user['user_id'], "amount": amount,
+        "organizer_id": current_user['user_id'], "base_amount": base_amount,
+        "platform_fee": platform_fee, "total_amount": total_amount,
+        "amount": total_amount,
         "description": description, "payment_url": payment_url,
         "payment_status": "pending", "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.payment_links.insert_one(link_record)
+    update_fields = {"payment_link": payment_url, "payment_status": "pending", "base_amount": base_amount, "platform_fee": platform_fee, "total_amount": total_amount}
     if link_type == "sponsor":
-        await db.sponsors.update_one({"sponsor_id": source_id}, {"$set": {"payment_link": payment_url, "payment_status": "pending"}})
+        await db.sponsors.update_one({"sponsor_id": source_id}, {"$set": update_fields})
     elif link_type == "booking":
-        await db.corporate_bookings.update_one({"booking_id": source_id}, {"$set": {"payment_link": payment_url, "payment_status": "pending"}})
+        await db.corporate_bookings.update_one({"booking_id": source_id}, {"$set": update_fields})
     await db.payment_transactions.insert_one({
         "transaction_id": f"txn_{uuid.uuid4().hex[:12]}", "type": link_type,
         "source_id": source_id, "organizer_id": current_user['user_id'],
-        "amount": amount, "description": description, "payment_url": payment_url,
+        "base_amount": base_amount, "platform_fee": platform_fee,
+        "amount": total_amount, "description": description, "payment_url": payment_url,
         "payment_status": "pending", "created_at": datetime.now(timezone.utc).isoformat()
     })
-    return {"payment_url": payment_url, "link_id": link_id}
+    await db.commissions.insert_one({
+        "commission_id": f"com_{uuid.uuid4().hex[:12]}", "type": link_type,
+        "source_id": source_id, "organizer_id": current_user['user_id'],
+        "base_amount": base_amount, "commission_amount": platform_fee,
+        "description": f"Frais plateforme 5% - {description}",
+        "status": "pending", "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    return {"payment_url": payment_url, "link_id": link_id, "base_amount": base_amount, "platform_fee": platform_fee, "total_amount": total_amount}
 
 
-# ============== SQUARE PAYMENT ==============
+# ============== RECU FISCAL CERFA 11580 ==============
+
+@router.post("/payments/confirm-payment/{source_id}")
+async def confirm_payment_and_generate_receipt(source_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    sponsor = await db.sponsors.find_one({"sponsor_id": source_id, "organizer_id": current_user['user_id']}, {"_id": 0})
+    if not sponsor:
+        raise HTTPException(status_code=404, detail="Sponsor/donateur non trouve")
+    organizer = await db.users.find_one({"user_id": current_user['user_id']}, {"_id": 0})
+    receipt_number = f"RF-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+    receipt_data = {
+        "receipt_id": f"rcpt_{uuid.uuid4().hex[:12]}",
+        "receipt_number": receipt_number,
+        "sponsor_id": source_id,
+        "organizer_id": current_user['user_id'],
+        "donor_name": sponsor.get("name", ""),
+        "donor_contact": sponsor.get("contact_name", ""),
+        "donor_email": sponsor.get("email", ""),
+        "donor_address": sponsor.get("address", ""),
+        "organizer_name": organizer.get("organization_name", organizer.get("name", "")),
+        "organizer_address": organizer.get("address", ""),
+        "base_amount": sponsor.get("base_amount", sponsor.get("amount", 0)),
+        "donation_type": sponsor.get("contribution_type", "Financier"),
+        "payment_date": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.fiscal_receipts.insert_one(receipt_data)
+    del receipt_data["_id"]
+    await db.sponsors.update_one({"sponsor_id": source_id}, {"$set": {"payment_status": "paid", "receipt_number": receipt_number, "paid_at": datetime.now(timezone.utc).isoformat()}})
+    await db.payment_links.update_one({"source_id": source_id}, {"$set": {"payment_status": "paid"}})
+    await db.payment_transactions.update_one({"source_id": source_id}, {"$set": {"payment_status": "paid"}})
+    await db.commissions.update_one({"source_id": source_id}, {"$set": {"status": "collected"}})
+    if sponsor.get("email"):
+        try:
+            import resend
+            resend.api_key = os.environ.get("RESEND_API_KEY", "")
+            sender_email = os.environ.get("SENDER_EMAIL", "onboarding@resend.dev")
+            org_name = organizer.get("organization_name", organizer.get("name", "SportLyo"))
+            resend.Emails.send({
+                "from": sender_email,
+                "to": [sponsor["email"]],
+                "subject": f"Recu fiscal - {org_name} - {receipt_number}",
+                "html": f"<h2>Recu fiscal N° {receipt_number}</h2><p>Cher(e) {sponsor.get('contact_name', sponsor.get('name', ''))},</p><p>Nous accusons reception de votre don de <strong>{receipt_data['base_amount']}€</strong> au profit de <strong>{org_name}</strong>.</p><p>Votre recu fiscal est disponible dans votre espace. Ce document vous permettra de beneficier de la reduction d'impot prevue par l'article 200 du Code General des Impots.</p><p>Numero de recu : <strong>{receipt_number}</strong></p><p>Cordialement,<br/>{org_name}</p>"
+            })
+        except Exception as e:
+            logger.warning(f"Email receipt error: {e}")
+    return {"message": "Paiement confirme et recu fiscal genere", "receipt": receipt_data}
+
+
+@router.get("/payments/receipt/{source_id}/pdf")
+async def download_fiscal_receipt(source_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    receipt = await db.fiscal_receipts.find_one({"sponsor_id": source_id, "organizer_id": current_user['user_id']}, {"_id": 0})
+    if not receipt:
+        raise HTTPException(status_code=404, detail="Recu fiscal non trouve")
+    from fpdf import FPDF
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    # Header
+    pdf.set_fill_color(30, 41, 59)
+    pdf.rect(0, 0, 210, 40, 'F')
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.set_y(8)
+    pdf.cell(0, 10, "RECU FISCAL AU TITRE DES DONS", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(0, 8, "Article 200, 238 bis et 978 du Code General des Impots", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "B", 9)
+    pdf.cell(0, 8, f"N° {receipt.get('receipt_number', '')}", align="C", new_x="LMARGIN", new_y="NEXT")
+    # Body
+    pdf.set_text_color(30, 41, 59)
+    pdf.set_y(50)
+    # Section 1: Organisme beneficiaire
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.set_fill_color(241, 245, 249)
+    pdf.cell(0, 9, "  1. ORGANISME BENEFICIAIRE", fill=True, new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 10)
+    pdf.ln(4)
+    pdf.cell(0, 7, f"Nom : {receipt.get('organizer_name', '')}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 7, f"Adresse : {receipt.get('organizer_address', 'Non renseignee')}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 7, "Objet : Organisation d'evenements sportifs", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
+    # Section 2: Donateur
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 9, "  2. DONATEUR", fill=True, new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 10)
+    pdf.ln(4)
+    pdf.cell(0, 7, f"Nom ou raison sociale : {receipt.get('donor_name', '')}", new_x="LMARGIN", new_y="NEXT")
+    if receipt.get("donor_contact"):
+        pdf.cell(0, 7, f"Representant : {receipt['donor_contact']}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 7, f"Adresse : {receipt.get('donor_address', 'Non renseignee')}", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
+    # Section 3: Don
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 9, "  3. DON", fill=True, new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 10)
+    pdf.ln(4)
+    payment_date = receipt.get("payment_date", "")
+    try:
+        dt = datetime.fromisoformat(payment_date.replace("Z", "+00:00"))
+        date_str = dt.strftime("%d/%m/%Y")
+    except Exception:
+        date_str = payment_date[:10] if payment_date else "Non renseignee"
+    base_amount = receipt.get("base_amount", 0)
+    pdf.cell(0, 7, f"Date du versement : {date_str}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 7, f"Montant du don : {base_amount:.2f} EUR", new_x="LMARGIN", new_y="NEXT")
+    amount_words = _number_to_french_words(base_amount)
+    pdf.cell(0, 7, f"Somme en toutes lettres : {amount_words} euros", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 7, f"Nature du don : {receipt.get('donation_type', 'Financier')}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 7, "Mode de versement : Paiement en ligne (carte bancaire)", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
+    # Section 4: Cadre fiscal
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 9, "  4. CADRE FISCAL", fill=True, new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 9)
+    pdf.ln(4)
+    pdf.multi_cell(0, 6, "Le beneficiaire certifie sur l'honneur que les dons et versements qu'il recoit ouvrent droit a la reduction d'impot prevue a l'article 200 du CGI (particuliers) ou a l'article 238 bis du CGI (entreprises).")
+    pdf.ln(3)
+    pdf.multi_cell(0, 6, "- Particuliers : reduction d'impot de 66% du montant du don, dans la limite de 20% du revenu imposable.\n- Entreprises : reduction d'impot de 60% du montant du don, dans la limite de 20 000 EUR ou 0,5% du CA HT.")
+    pdf.ln(8)
+    # Signature
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(0, 7, f"Fait a ________________, le {date_str}", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
+    pdf.cell(95, 7, "Signature du donateur", align="C")
+    pdf.cell(95, 7, "Signature et cachet de l'organisme", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(20)
+    # Footer
+    pdf.set_font("Helvetica", "I", 7)
+    pdf.set_text_color(150, 150, 150)
+    pdf.cell(0, 5, f"Document genere par SportLyo - Recu N° {receipt.get('receipt_number', '')} - Ce document est un recu au sens de l'article 200 du CGI", align="C")
+    buf = BytesIO()
+    pdf.output(buf)
+    buf.seek(0)
+    filename = f"recu_fiscal_{receipt.get('receipt_number', 'RF')}.pdf"
+    return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
+def _number_to_french_words(n):
+    """Convert number to French words for fiscal receipt."""
+    if n == 0:
+        return "zero"
+    units = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix",
+             "onze", "douze", "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf"]
+    tens = ["", "dix", "vingt", "trente", "quarante", "cinquante", "soixante", "soixante", "quatre-vingt", "quatre-vingt"]
+    integer_part = int(n)
+    decimal_part = int(round((n - integer_part) * 100))
+    def convert_below_1000(num):
+        if num == 0: return ""
+        if num < 20: return units[num]
+        if num < 100:
+            t, u = divmod(num, 10)
+            if t == 7 or t == 9:
+                t -= 1
+                u += 10
+            result = tens[t]
+            if u == 1 and t not in [8]:
+                result += " et un"
+            elif u > 0:
+                result += f"-{units[u]}"
+            elif t == 8:
+                result += "s"
+            return result
+        h, remainder = divmod(num, 100)
+        result = "cent" if h == 1 else f"{units[h]} cent"
+        if remainder == 0 and h > 1:
+            result += "s"
+        elif remainder > 0:
+            result += f" {convert_below_1000(remainder)}"
+        return result
+    if integer_part < 1000:
+        result = convert_below_1000(integer_part)
+    elif integer_part < 1000000:
+        thousands, remainder = divmod(integer_part, 1000)
+        result = "mille" if thousands == 1 else f"{convert_below_1000(thousands)} mille"
+        if remainder > 0:
+            result += f" {convert_below_1000(remainder)}"
+    else:
+        result = str(integer_part)
+    if decimal_part > 0:
+        result += f" et {convert_below_1000(decimal_part)} centimes"
+    return result
 
 @router.post("/payments/process-square")
 async def process_square_payment(request: Request, current_user: dict = Depends(get_current_user)):

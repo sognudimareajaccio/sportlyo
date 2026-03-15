@@ -1,0 +1,91 @@
+{
+  "summary": "Tested SportLyo Sponsors & Donateurs commission (5% platform fee) and fiscal receipt (Cerfa 11580) features. All 17 backend tests pass. Frontend displays fee breakdown, payment statuses, and action buttons correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Hub dashboard", "issues": ["Console warnings about chart width/height - non-blocking cosmetic issue"]}
+    ]
+  },
+  "test_results": {
+    "backend_payment_link_commission": {
+      "POST /api/payments/create-link - 5% fee calculation": "PASS - base_amount + (5% platform_fee) = total_amount",
+      "POST /api/payments/create-link - updates sponsor fields": "PASS - base_amount, platform_fee, total_amount, payment_link, payment_status stored",
+      "POST /api/payments/create-link - creates commission entry": "PASS - commission stored in commissions collection with status 'pending'",
+      "POST /api/payments/create-link - Square order line items": "PASS - 2 line items (donation + platform fee)",
+      "POST /api/payments/create-link - validation": "PASS - rejects missing source_id, zero/negative amounts",
+      "POST /api/payments/create-link - auth": "PASS - requires organizer role"
+    },
+    "backend_confirm_payment": {
+      "POST /api/payments/confirm-payment/{sponsor_id}": "PASS - marks payment as paid, generates receipt",
+      "POST /api/payments/confirm-payment - fiscal_receipts collection": "PASS - creates entry with receipt_number RF-YYYYMMDD-XXXXXX",
+      "POST /api/payments/confirm-payment - sponsor update": "PASS - updates payment_status to 'paid', adds receipt_number, paid_at",
+      "POST /api/payments/confirm-payment - commission status": "PASS - updates commission status to 'collected'",
+      "POST /api/payments/confirm-payment - email notification": "PASS - sends via Resend (sandbox mode)",
+      "POST /api/payments/confirm-payment - 404 handling": "PASS - returns 404 for non-existent sponsor"
+    },
+    "backend_pdf_receipt": {
+      "GET /api/payments/receipt/{sponsor_id}/pdf": "PASS - returns valid PDF with Cerfa 11580 format",
+      "PDF Content-Type": "PASS - application/pdf",
+      "PDF Content-Disposition": "PASS - attachment; filename=\"recu_fiscal_RF-xxx.pdf\"",
+      "PDF format verification": "PASS - starts with %PDF magic number",
+      "PDF sections": "PASS - includes organisme beneficiaire, donateur, don details, cadre fiscal (articles 200/238 bis CGI)"
+    },
+    "frontend_sponsors_section": {
+      "Hub card 'Sponsors & Donateurs'": "PASS - visible with Heart icon, rose-500 background",
+      "Section title": "PASS - 'SPONSORS & DONATEURS' displayed",
+      "Summary cards": "PASS - Total sponsors, Montant total, Donateurs count",
+      "Fee breakdown display": "PASS - Shows 'Frais plateforme 5%' and 'Total facture' for sponsors with payment links",
+      "Payment status 'En attente'": "PASS - amber colored for pending payments",
+      "Payment status 'Paye'": "PASS - green with CheckCircle2 icon for paid sponsors",
+      "Receipt number display": "PASS - Shows 'Recu RF-xxx' for paid sponsors"
+    },
+    "frontend_action_buttons": {
+      "Generer lien de paiement": "PASS - data-testid='pay-link-sponsor-{id}' visible when no link exists",
+      "Copier lien": "PASS - data-testid='copy-link-sponsor-{id}' visible when link exists and not paid",
+      "Confirmer paiement": "PASS - data-testid='confirm-pay-{id}' visible when link exists and not paid",
+      "Telecharger recu fiscal": "PASS - data-testid='download-receipt-{id}' visible when payment confirmed"
+    },
+    "frontend_add_sponsor_dialog": {
+      "Montant field": "PASS - data-testid='sponsor-amount-input' present in form"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_payment_commission_receipt.py",
+    "/app/test_reports/pytest/pytest_payment_commission.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_payment_commission_receipt.py"
+  ],
+  "success_rate": {
+    "backend": "100% (17/17 tests passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+  "test_credentials": {
+    "organizer": "club@paris-sport.fr / club123"
+  },
+  "seed_data_creation": "Test sponsors (TEST_FeeVerify Corp, etc.) created and cleaned up",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Commission & receipt features fully tested. PLATFORM_COMMISSION = 0.05 in deps.py. Payment link creates 2 line items in Square order. Confirm payment: updates sponsor.payment_status to 'paid', creates fiscal_receipts entry, updates commission.status to 'collected', sends email via Resend. PDF uses fpdf2 library with Cerfa 11580 format. Fee breakdown only shows on UI when sponsor has platform_fee > 0 (i.e., after payment link generation).",
+  "mocked_apis": {
+    "Square payments": "MOCKED - simulated checkout URLs used (no real Square transactions)",
+    "Resend email": "SANDBOX - emails sent to sandbox, not actually delivered",
+    "Twilio SMS": "MOCKED - saves to queue only"
+  },
+  "feature_verification_summary": {
+    "5% commission on payment links": "IMPLEMENTED & VERIFIED",
+    "Fiscal receipt Cerfa 11580 generation": "IMPLEMENTED & VERIFIED",
+    "PDF download with legal mentions": "IMPLEMENTED & VERIFIED",
+    "Commission tracking in DB": "IMPLEMENTED & VERIFIED",
+    "UI fee breakdown display": "IMPLEMENTED & VERIFIED",
+    "UI payment status colors": "IMPLEMENTED & VERIFIED",
+    "UI action buttons conditional display": "IMPLEMENTED & VERIFIED"
+  }
+}
