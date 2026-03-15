@@ -656,7 +656,15 @@ const OrganizerDashboard = () => {
     return s.name?.toLowerCase().includes(q) || s.contact_name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q) || s.contribution_type?.toLowerCase().includes(q);
   });
 
-  const defaultCategories = ['Chronometreur', 'Buvette', 'Stand', 'Chapiteau', 'Location de materiel', 'Securite', 'Signaletique', 'Animation', 'Restauration', 'Transport', 'Medical', 'Communication'];
+  const defaultCategories = [
+    'Location de tentes & chapiteaux', 'Installation de stands', 'Podium & scene',
+    'Barrieres de securite', 'Signaletique', 'Tables et chaises', 'Zones d accueil',
+    'Balisage du parcours', 'Installation departs & arrivees', 'Zones de ravitaillement',
+    'Chronometrage', 'Zones spectateurs', 'Zones techniques',
+    'Societe de securite', 'Nettoyage du site', 'Gestion des dechets',
+    'Sanitaires mobiles', 'Sono & eclairage', 'Alimentation electrique',
+    'Animation', 'Medical', 'Restauration', 'Transport'
+  ];
   const allCategories = [...new Set([...defaultCategories, ...partnerCategories])].sort();
 
   const filteredPartners = partners.filter(p => {
@@ -683,7 +691,7 @@ const OrganizerDashboard = () => {
     { id: 'chronometrage', label: 'Chronometrage', icon: Timer, desc: 'Import temps & export dossards', color: 'bg-teal-600' },
     { id: 'results', label: 'Resultats', icon: Trophy, desc: 'Classements & performances', color: 'bg-amber-500' },
     { id: 'volunteers', label: 'Benevoles', icon: HeartHandshake, desc: 'Gestion des benevoles', color: 'bg-fuchsia-500' },
-    { id: 'partners', label: 'Partenaires', icon: Handshake, desc: 'Annuaire & contacts', color: 'bg-indigo-500' },
+    { id: 'partners', label: 'Prestations Externes', icon: Handshake, desc: 'Prestataires evenementiels', color: 'bg-indigo-500' },
     { id: 'bookings', label: 'Reservation Entreprises', icon: Building2, desc: 'Equipes & tarifs groupe', color: 'bg-cyan-600' },
     { id: 'sponsors', label: 'Sponsors & Donateurs', icon: Heart, desc: 'Sponsoring & mecenat', color: 'bg-rose-500' },
     { id: 'boutique', label: 'Boutique Produits', icon: ShoppingBag, desc: 'Catalogue & ventes', color: 'bg-violet-500' },
@@ -807,7 +815,7 @@ const OrganizerDashboard = () => {
 
         {activeSection === 'partners' && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-            <SectionHeader title="Partenaires" onBack={() => setActiveSection('hub')} />
+            <SectionHeader title="Prestations Externes" onBack={() => setActiveSection('hub')} />
             <PartnersSection filteredPartners={filteredPartners} partnersLoading={partnersLoading} partnerFilter={partnerFilter} partnerSearch={partnerSearch} allCategories={allCategories} onFilterChange={(v) => { setPartnerFilter(v); fetchPartners(v !== 'all' ? v : undefined); }} onSearchChange={setPartnerSearch} onOpenNew={openNewPartner} onOpenEdit={openEditPartner} onDelete={handleDeletePartner} showPartnerDialog={showPartnerDialog} setShowPartnerDialog={setShowPartnerDialog} editingPartner={editingPartner} setEditingPartner={setEditingPartner} partnerForm={partnerForm} setPartnerForm={setPartnerForm} customCategory={customCategory} setCustomCategory={setCustomCategory} partnerSaving={partnerSaving} onSave={handleSavePartner} />
           </motion.div>
         )}
