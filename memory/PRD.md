@@ -48,6 +48,17 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 - Notification email au donateur via Resend
 - 3 etats visuels : "Generer lien" → "Confirmer paiement" / "Copier lien" → "Telecharger recu fiscal" / "Paye"
 
+**Dashboard Finances & Revenus Organisateur (P0) - COMPLETE:**
+- Endpoint GET /api/organizer/revenue-breakdown avec 5 sources dissociees
+- Sources: Inscriptions, Dons, Sponsors & Mecenes, Produits derives, Reservations entreprises
+- Chaque source affiche: total, frais plateforme, net, nombre de transactions, en attente
+- Banner: CA total, Frais plateforme (5%), Revenu net + boutons CSV/PDF
+- Graphique AreaChart evolution 12 mois (5 courbes colorees)
+- Camembert repartition des revenus
+- BarChart revenus mensuels totaux
+- Tableau detail par evenement (inscrits, prix, brut, frais, net)
+- Tableau dernieres transactions toutes sources (avec badges colores par type)
+
 **Ameliorations UI:**
 - Boutons Publier/Depublier: rond vert clignotant (en ligne) + rond rouge fixe (brouillon)
 - Badges statut: "EN LIGNE" avec animation ping verte, "BROUILLON" avec point rouge
