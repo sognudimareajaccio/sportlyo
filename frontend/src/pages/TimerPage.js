@@ -105,7 +105,7 @@ const TimerPage = () => {
           Retour
         </Link>
         <h1 className="font-heading text-2xl font-bold uppercase">{registration.event?.title}</h1>
-        <p className="text-slate-400">Dossard: <span className="text-brand font-bold">{registration.bib_number}</span></p>
+        <p className="text-slate-400">N° d'inscrit: <span className="text-brand font-bold">{registration.bib_number}</span></p>
       </div>
 
       {/* Timer Display */}

@@ -830,7 +830,7 @@ const EventDetailPage = () => {
                     {registrationSuccess.bib_number}
                   </div>
                   <p className="text-sm text-slate-500">
-                    Votre numéro de dossard
+                    Votre numéro d'inscrit
                   </p>
                   {registrationSuccess.qr_code && (
                     <div className="p-4 bg-slate-50 rounded-sm">

@@ -115,6 +115,7 @@ class EventCreate(BaseModel):
     regulations_pdf_url: Optional[str] = None
     published: bool = False
     provides_tshirt: bool = True
+    provided_items: Optional[List[str]] = None
     themes: Optional[List[str]] = None
     circuit_type: Optional[str] = None
     has_timer: Optional[bool] = None

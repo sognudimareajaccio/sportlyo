@@ -136,7 +136,7 @@ const MyRegistrationsPage = () => {
 
                       <div className="flex items-center gap-6">
                         <div>
-                          <p className="text-xs text-slate-500 uppercase tracking-wider">Dossard</p>
+                          <p className="text-xs text-slate-500 uppercase tracking-wider">N° d'inscrit</p>
                           <p className="bib-number text-lg py-1 px-3">{reg.bib_number}</p>
                         </div>
                         <div>
@@ -241,7 +241,7 @@ const MyRegistrationsPage = () => {
                   <span className="font-medium">{ticketReg.first_name || ticketReg.user_name?.split(' ')[0]} {ticketReg.last_name || ticketReg.user_name?.split(' ').slice(1).join(' ')}</span>
                 </div>
                 <div className="flex justify-between border-b pb-2">
-                  <span className="text-slate-500">Dossard</span>
+                  <span className="text-slate-500">N° d'inscrit</span>
                   <span className="font-heading font-bold">{ticketReg.bib_number}</span>
                 </div>
                 {ticketReg.selected_race && (

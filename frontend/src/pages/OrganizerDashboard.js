@@ -435,7 +435,7 @@ const OrganizerDashboard = () => {
     setCreating(true);
     try {
       let eventDate; try { eventDate = new Date(newEvent.date).toISOString(); } catch { toast.error('Date invalide'); setCreating(false); return; }
-      const eventData = { ...newEvent, date: eventDate, distances: (newEvent.distances || '').split(',').map(d => d.trim()).filter(Boolean), elevation_gain: newEvent.elevation_gain ? parseInt(newEvent.elevation_gain) : null, min_age: newEvent.min_age ? parseInt(newEvent.min_age) : null, max_age: newEvent.max_age ? parseInt(newEvent.max_age) : null, provides_tshirt: (newEvent.provided_items || []).includes('tshirt') };
+      const eventData = { ...newEvent, date: eventDate, distances: (newEvent.distances || '').split(',').map(d => d.trim()).filter(Boolean), elevation_gain: newEvent.elevation_gain ? parseInt(newEvent.elevation_gain) : null, min_age: newEvent.min_age ? parseInt(newEvent.min_age) : null, max_age: newEvent.max_age ? parseInt(newEvent.max_age) : null, provides_tshirt: (newEvent.provided_items || []).includes('tshirt'), provided_items: newEvent.provided_items || [] };
       delete eventData.custom_provided_item;
       await eventsApi.create(eventData); toast.success('Evenement cree !');
       setShowCreateDialog(false); setCreateStep(1);

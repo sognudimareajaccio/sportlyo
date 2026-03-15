@@ -137,6 +137,7 @@ async def create_event(event_data: EventCreate, current_user: dict = Depends(get
         "regulations_pdf_url": event_data.regulations_pdf_url,
         "published": event_data.published,
         "provides_tshirt": event_data.provides_tshirt,
+        "provided_items": event_data.provided_items or [],
         "themes": event_data.themes,
         "circuit_type": event_data.circuit_type,
         "has_timer": event_data.has_timer,
