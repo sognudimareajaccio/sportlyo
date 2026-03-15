@@ -6,11 +6,13 @@ import {
   Users, Calendar, Euro, TrendingUp, BarChart3,
   Settings, Search, ChevronLeft, ChevronRight, Download, FileText, MessageSquare, ShoppingBag, Check, X,
   CheckCircle, XCircle, Radio, Plus, Trash2, Edit, Package, Loader2,
-  CreditCard, Heart, Gift, Crown, Wallet
+  CreditCard, Heart, Gift, Crown, Wallet, Eye, ArrowLeft, Clock, AlertTriangle, Ban, Play, Pause, ArrowRight
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Label } from '../components/ui/label';
 import { useAuth } from '../context/AuthContext';
 import { adminApi } from '../services/api';
 import api from '../services/api';
@@ -50,6 +52,17 @@ const AdminDashboard = () => {
   const [refundFilter, setRefundFilter] = useState('all');
   const [revenueData, setRevenueData] = useState(null);
   const [revenueLoading, setRevenueLoading] = useState(false);
+  // Provider management
+  const [detailedProviders, setDetailedProviders] = useState([]);
+  const [providerStats, setProviderStats] = useState(null);
+  const [selectedProvider, setSelectedProvider] = useState(null);
+  const [providerDetail, setProviderDetail] = useState(null);
+  const [providerDetailLoading, setProviderDetailLoading] = useState(false);
+  const [providerSearch, setProviderSearch] = useState('');
+  const [providerStatusFilter, setProviderStatusFilter] = useState('all');
+  const [showSubActionDialog, setShowSubActionDialog] = useState(false);
+  const [subAction, setSubAction] = useState({ action: '', days: 30, months: 1, reason: '' });
+  const [suspendReason, setSuspendReason] = useState('');
 
   const filteredRefunds = refundFilter === 'all' ? refundRequests : refundRequests.filter(r => r.status === refundFilter);
 
@@ -100,6 +113,43 @@ const AdminDashboard = () => {
       setRevenueData(res.data);
     } catch { toast.error('Erreur chargement revenus'); }
     finally { setRevenueLoading(false); }
+  };
+
+  const fetchDetailedProviders = async () => {
+    try {
+      const res = await api.get('/admin/providers/detailed');
+      setDetailedProviders(res.data.providers || []);
+      setProviderStats(res.data.stats || null);
+    } catch { toast.error('Erreur chargement partenaires'); }
+  };
+
+  const fetchProviderDetail = async (userId) => {
+    setProviderDetailLoading(true);
+    try {
+      const res = await api.get(`/admin/providers/${userId}/detail`);
+      setProviderDetail(res.data);
+    } catch { toast.error('Erreur chargement detail partenaire'); }
+    finally { setProviderDetailLoading(false); }
+  };
+
+  const handleProviderStatusChange = async (userId, status, reason) => {
+    try {
+      await api.put(`/admin/providers/${userId}/status`, { status, reason });
+      toast.success(`Statut mis a jour: ${status}`);
+      fetchDetailedProviders();
+      if (providerDetail?.provider?.user_id === userId) fetchProviderDetail(userId);
+    } catch (e) { toast.error(e.response?.data?.detail || 'Erreur'); }
+  };
+
+  const handleSubAction = async () => {
+    if (!selectedProvider) return;
+    try {
+      await api.put(`/admin/providers/${selectedProvider}/subscription`, subAction);
+      toast.success('Abonnement modifie !');
+      setShowSubActionDialog(false);
+      fetchDetailedProviders();
+      if (providerDetail?.provider?.user_id === selectedProvider) fetchProviderDetail(selectedProvider);
+    } catch (e) { toast.error(e.response?.data?.detail || 'Erreur'); }
   };
 
   const fetchRfidData = async () => {
@@ -263,7 +313,7 @@ const AdminDashboard = () => {
                   key={tab}
                   variant={activeTab === tab ? 'default' : 'outline'}
                   className={activeTab === tab ? 'bg-brand' : 'border-white text-white'}
-                  onClick={() => { setActiveTab(tab); if (tab === 'rfid') fetchRfidData(); if (tab === 'revenus') fetchRevenueData(); }}
+                  onClick={() => { setActiveTab(tab); if (tab === 'rfid') fetchRfidData(); if (tab === 'revenus') fetchRevenueData(); if (tab === 'providers') fetchDetailedProviders(); }}
                   data-testid={`tab-${tab}`}
                 >
                   {tab === 'overview' ? 'Vue d\'ensemble' : tab === 'users' ? 'Utilisateurs' : tab === 'payments' ? 'Paiements' : tab === 'revenus' ? 'Revenus' : tab === 'commissions' ? 'Commissions' : tab === 'invoices' ? 'Factures' : tab === 'refunds' ? 'Remboursements' : tab === 'providers' ? `Prestataires${providers.filter(p => p.status === 'pending').length > 0 ? ` (${providers.filter(p => p.status === 'pending').length})` : ''}` : tab === 'rfid' ? 'RFID' : 'Messages'}
@@ -1147,41 +1197,351 @@ const AdminDashboard = () => {
         )}
 
         {activeTab === 'providers' && (
-          <div data-testid="providers-tab">
-            <h2 className="font-heading text-xl font-bold uppercase mb-4">Gestion des prestataires</h2>
-            {providers.length > 0 ? (
-              <div className="space-y-3">
-                {providers.map(p => (
-                  <div key={p.user_id} className="bg-white border border-slate-200 p-4 flex items-center justify-between" data-testid={`provider-${p.user_id}`}>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-heading font-bold text-base">{p.company_name || p.name}</h3>
-                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase ${p.status === 'active' ? 'bg-green-100 text-green-700' : p.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{p.status === 'active' ? 'Validé' : p.status === 'pending' ? 'En attente' : 'Refusé'}</span>
-                      </div>
-                      <p className="text-sm text-slate-500">{p.email}</p>
-                      {p.phone && <p className="text-xs text-slate-400">{p.phone}</p>}
-                      <p className="text-[10px] text-slate-400 mt-1">Inscrit le {p.created_at && format(new Date(p.created_at), 'd MMM yyyy', { locale: fr })}</p>
+          <div data-testid="providers-tab" className="space-y-6">
+            {/* Provider Detail View */}
+            {providerDetail && !providerDetailLoading ? (
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <Button variant="outline" size="sm" className="gap-1" onClick={() => { setProviderDetail(null); setSelectedProvider(null); }} data-testid="back-to-providers">
+                    <ArrowLeft className="w-4 h-4" /> Retour
+                  </Button>
+                  <h2 className="font-heading text-xl font-bold uppercase">{providerDetail.provider.company_name || providerDetail.provider.name}</h2>
+                  <span className={`px-2 py-0.5 text-[10px] font-bold uppercase ${providerDetail.provider.status === 'active' ? 'bg-green-100 text-green-700' : providerDetail.provider.status === 'suspended' ? 'bg-red-100 text-red-700' : providerDetail.provider.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{providerDetail.provider.status === 'active' ? 'Actif' : providerDetail.provider.status === 'pending' ? 'En attente' : providerDetail.provider.status === 'suspended' ? 'Suspendu' : 'Refuse'}</span>
+                </div>
+
+                {/* Info + Actions row */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  {/* Profile */}
+                  <div className="bg-white border border-slate-200 p-5">
+                    <h3 className="font-heading font-bold uppercase text-xs text-slate-500 mb-3">Profil</h3>
+                    <div className="space-y-2 text-sm">
+                      <p><span className="text-slate-400">Nom:</span> <strong>{providerDetail.provider.name}</strong></p>
+                      <p><span className="text-slate-400">Email:</span> {providerDetail.provider.email}</p>
+                      {providerDetail.provider.phone && <p><span className="text-slate-400">Tel:</span> {providerDetail.provider.phone}</p>}
+                      {providerDetail.provider.company_name && <p><span className="text-slate-400">Societe:</span> {providerDetail.provider.company_name}</p>}
+                      <p><span className="text-slate-400">Inscrit le:</span> {providerDetail.provider.created_at ? format(new Date(providerDetail.provider.created_at), 'd MMM yyyy', { locale: fr }) : '—'}</p>
                     </div>
-                    <div className="flex gap-2">
-                      {p.status === 'pending' && (
+                    <div className="flex gap-2 mt-4 pt-4 border-t">
+                      {providerDetail.provider.status === 'active' && (
+                        <Button size="sm" variant="outline" className="text-red-600 border-red-200 gap-1 text-xs" onClick={() => { const r = prompt('Raison de la suspension:'); if (r) handleProviderStatusChange(providerDetail.provider.user_id, 'suspended', r); }} data-testid="suspend-provider-btn"><Ban className="w-3 h-3" /> Suspendre</Button>
+                      )}
+                      {(providerDetail.provider.status === 'suspended' || providerDetail.provider.status === 'rejected') && (
+                        <Button size="sm" className="bg-green-600 text-white gap-1 text-xs" onClick={() => handleProviderStatusChange(providerDetail.provider.user_id, 'active', 'Reactivation admin')} data-testid="reactivate-provider-btn"><Play className="w-3 h-3" /> Reactiver</Button>
+                      )}
+                      {providerDetail.provider.status === 'pending' && (
                         <>
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white font-heading font-bold text-xs" onClick={() => handleProviderStatus(p.user_id, 'active')} data-testid={`approve-${p.user_id}`}>Valider</Button>
-                          <Button size="sm" variant="outline" className="text-red-600 border-red-200" onClick={() => handleProviderStatus(p.user_id, 'rejected')} data-testid={`reject-${p.user_id}`}>Refuser</Button>
+                          <Button size="sm" className="bg-green-600 text-white gap-1 text-xs" onClick={() => handleProviderStatusChange(providerDetail.provider.user_id, 'active', 'Validation admin')} data-testid="approve-provider-btn"><Check className="w-3 h-3" /> Valider</Button>
+                          <Button size="sm" variant="outline" className="text-red-600 border-red-200 gap-1 text-xs" onClick={() => handleProviderStatusChange(providerDetail.provider.user_id, 'rejected', 'Refus admin')} data-testid="reject-provider-btn"><X className="w-3 h-3" /> Refuser</Button>
                         </>
-                      )}
-                      {p.status === 'active' && (
-                        <Button size="sm" variant="outline" className="text-red-600 border-red-200" onClick={() => handleProviderStatus(p.user_id, 'rejected')}>Suspendre</Button>
-                      )}
-                      {p.status === 'rejected' && (
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white text-xs" onClick={() => handleProviderStatus(p.user_id, 'active')}>Réactiver</Button>
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
+
+                  {/* Subscription */}
+                  <div className="bg-white border border-slate-200 p-5">
+                    <h3 className="font-heading font-bold uppercase text-xs text-slate-500 mb-3">Abonnement</h3>
+                    {providerDetail.subscription ? (
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 text-[10px] font-bold uppercase ${
+                            providerDetail.subscription.status === 'active' ? 'bg-green-100 text-green-700' :
+                            providerDetail.subscription.status === 'trial' ? 'bg-blue-100 text-blue-700' :
+                            providerDetail.subscription.status === 'suspended' ? 'bg-red-100 text-red-700' :
+                            'bg-amber-100 text-amber-700'
+                          }`}>{providerDetail.subscription.status}</span>
+                          <span className="font-heading font-bold text-brand">{providerDetail.subscription.price}€/mois</span>
+                        </div>
+                        {providerDetail.subscription.trial_end && providerDetail.subscription.status === 'trial' && (
+                          <p className="text-xs text-blue-600"><Clock className="w-3 h-3 inline mr-1" />Essai jusqu'au {format(new Date(providerDetail.subscription.trial_end), 'd MMM yyyy', { locale: fr })}</p>
+                        )}
+                        {providerDetail.subscription.current_period_end && (
+                          <p className="text-xs text-slate-500">Fin de periode: {format(new Date(providerDetail.subscription.current_period_end), 'd MMM yyyy', { locale: fr })}</p>
+                        )}
+                        <p className="text-xs text-slate-500">Mensualites payees: <strong>{providerDetail.subscription.payments_made || 0}</strong>/{providerDetail.subscription.commitment_months || 12}</p>
+                        <p className="text-xs text-slate-500">Total paye: <strong className="text-brand">{(providerDetail.subscription.total_paid || 0).toFixed(2)}€</strong></p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-400">Aucun abonnement</p>
+                    )}
+                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
+                      <Button size="sm" className="bg-brand text-white gap-1 text-xs" onClick={() => { setSelectedProvider(providerDetail.provider.user_id); setSubAction({ action: 'activate', days: 30, months: 1, reason: '' }); setShowSubActionDialog(true); }} data-testid="activate-sub-btn"><Play className="w-3 h-3" /> Activer</Button>
+                      <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => { setSelectedProvider(providerDetail.provider.user_id); setSubAction({ action: 'extend', days: 30, months: 1, reason: '' }); setShowSubActionDialog(true); }} data-testid="extend-sub-btn"><ArrowRight className="w-3 h-3" /> Prolonger</Button>
+                      <Button size="sm" variant="outline" className="gap-1 text-xs text-green-600" onClick={() => { setSelectedProvider(providerDetail.provider.user_id); setSubAction({ action: 'gift', days: 30, months: 1, reason: '' }); setShowSubActionDialog(true); }} data-testid="gift-sub-btn"><Gift className="w-3 h-3" /> Offrir</Button>
+                      <Button size="sm" variant="outline" className="gap-1 text-xs text-red-600" onClick={() => { setSelectedProvider(providerDetail.provider.user_id); setSubAction({ action: 'cancel', days: 30, months: 1, reason: '' }); setShowSubActionDialog(true); }} data-testid="cancel-sub-btn"><X className="w-3 h-3" /> Resilier</Button>
+                    </div>
+                  </div>
+
+                  {/* KPIs */}
+                  <div className="bg-white border border-slate-200 p-5">
+                    <h3 className="font-heading font-bold uppercase text-xs text-slate-500 mb-3">Activite</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { label: 'Produits', value: providerDetail.products_count, icon: Package, color: 'text-violet-600' },
+                        { label: 'Commandes', value: providerDetail.orders_count, icon: ShoppingBag, color: 'text-blue-600' },
+                        { label: 'Payees', value: providerDetail.paid_orders_count, icon: CheckCircle, color: 'text-green-600' },
+                        { label: 'CA Total', value: `${providerDetail.total_revenue}€`, icon: Euro, color: 'text-brand' }
+                      ].map((kpi, i) => (
+                        <div key={i} className="text-center p-3 bg-slate-50 rounded">
+                          <kpi.icon className={`w-4 h-4 mx-auto mb-1 ${kpi.color}`} />
+                          <p className={`font-heading font-extrabold text-lg ${kpi.color}`}>{kpi.value}</p>
+                          <p className="text-[10px] text-slate-400 uppercase">{kpi.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Charts */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="bg-white border border-slate-200 p-4" data-testid="provider-revenue-chart">
+                    <h3 className="font-heading font-bold uppercase text-sm mb-4">Revenus mensuels (12 mois)</h3>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={providerDetail.monthly_revenue}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${v}€`} />
+                        <Tooltip formatter={(v) => `${v}€`} />
+                        <Bar dataKey="revenue" fill="#FF5A1F" radius={[4, 4, 0, 0]} name="Revenus" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="bg-white border border-slate-200 p-4" data-testid="provider-orders-chart">
+                    <h3 className="font-heading font-bold uppercase text-sm mb-4">Commandes mensuelles</h3>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <AreaChart data={providerDetail.monthly_revenue}>
+                        <defs>
+                          <linearGradient id="gradOrders" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} /><stop offset="100%" stopColor="#3b82f6" stopOpacity={0} /></linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip />
+                        <Area type="monotone" dataKey="orders" name="Commandes" stroke="#3b82f6" fill="url(#gradOrders)" strokeWidth={2} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Subscription Payments + Recent Orders */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="bg-white border border-slate-200" data-testid="sub-payments-table">
+                    <div className="p-4 border-b"><h3 className="font-heading font-bold uppercase text-sm">Paiements abonnement</h3></div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50"><tr>
+                          <th className="text-left p-3 text-xs font-heading font-bold uppercase">Date</th>
+                          <th className="text-right p-3 text-xs font-heading font-bold uppercase">Montant</th>
+                          <th className="text-center p-3 text-xs font-heading font-bold uppercase">Statut</th>
+                        </tr></thead>
+                        <tbody>
+                          {(providerDetail.subscription_payments || []).map((sp, i) => (
+                            <tr key={i} className="border-b hover:bg-slate-50">
+                              <td className="p-3 text-xs">{sp.created_at ? format(new Date(sp.created_at), 'd MMM yyyy HH:mm', { locale: fr }) : '—'}</td>
+                              <td className="p-3 text-right font-heading font-bold text-brand">{sp.amount}€</td>
+                              <td className="p-3 text-center"><span className={`px-2 py-0.5 text-[10px] font-bold uppercase ${sp.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{sp.status === 'completed' ? 'Paye' : 'En attente'}</span></td>
+                            </tr>
+                          ))}
+                          {(!providerDetail.subscription_payments || providerDetail.subscription_payments.length === 0) && <tr><td colSpan="3" className="p-4 text-center text-slate-400 text-xs">Aucun paiement</td></tr>}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div className="bg-white border border-slate-200" data-testid="recent-orders-table">
+                    <div className="p-4 border-b"><h3 className="font-heading font-bold uppercase text-sm">Commandes recentes</h3></div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50"><tr>
+                          <th className="text-left p-3 text-xs font-heading font-bold uppercase">Client</th>
+                          <th className="text-right p-3 text-xs font-heading font-bold uppercase">Montant</th>
+                          <th className="text-center p-3 text-xs font-heading font-bold uppercase">Statut</th>
+                          <th className="text-left p-3 text-xs font-heading font-bold uppercase">Date</th>
+                        </tr></thead>
+                        <tbody>
+                          {(providerDetail.recent_orders || []).map((o, i) => (
+                            <tr key={i} className="border-b hover:bg-slate-50">
+                              <td className="p-3 text-xs font-medium">{o.user_name || 'Anonyme'}</td>
+                              <td className="p-3 text-right font-heading font-bold">{o.total?.toFixed(2)}€</td>
+                              <td className="p-3 text-center"><span className={`px-2 py-0.5 text-[10px] font-bold uppercase ${o.status === 'completed' || o.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{o.status}</span></td>
+                              <td className="p-3 text-xs text-slate-500">{o.created_at ? format(new Date(o.created_at), 'd MMM', { locale: fr }) : '—'}</td>
+                            </tr>
+                          ))}
+                          {(!providerDetail.recent_orders || providerDetail.recent_orders.length === 0) && <tr><td colSpan="4" className="p-4 text-center text-slate-400 text-xs">Aucune commande</td></tr>}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Log */}
+                <div className="bg-white border border-slate-200" data-testid="action-log">
+                  <div className="p-4 border-b"><h3 className="font-heading font-bold uppercase text-sm">Historique des actions admin</h3></div>
+                  <div className="divide-y">
+                    {(providerDetail.action_log || []).map((log, i) => (
+                      <div key={i} className="p-3 flex items-start gap-3">
+                        <div className="w-2 h-2 rounded-full bg-brand mt-1.5 shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium">{log.details}</p>
+                          {log.reason && <p className="text-xs text-slate-500">Raison: {log.reason}</p>}
+                          <p className="text-[10px] text-slate-400">{log.admin_name} — {log.created_at ? format(new Date(log.created_at), 'd MMM yyyy HH:mm', { locale: fr }) : ''}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {(!providerDetail.action_log || providerDetail.action_log.length === 0) && <div className="p-4 text-center text-slate-400 text-xs">Aucune action enregistree</div>}
+                  </div>
+                </div>
+              </motion.div>
+            ) : providerDetailLoading ? (
+              <div className="p-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-brand" /></div>
             ) : (
-              <div className="bg-white border border-slate-200 p-8 text-center text-slate-400">Aucun prestataire inscrit</div>
+              /* Provider List View */
+              <>
+                <h2 className="font-heading text-xl font-bold uppercase">Gestion des partenaires</h2>
+
+                {/* Stats Cards */}
+                {providerStats && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                    {[
+                      { label: 'Total', value: providerStats.total, color: 'text-slate-800', bg: 'border-slate-300' },
+                      { label: 'Actifs', value: providerStats.active, color: 'text-green-600', bg: 'border-green-500' },
+                      { label: 'En attente', value: providerStats.pending, color: 'text-amber-600', bg: 'border-amber-500' },
+                      { label: 'Suspendus', value: providerStats.suspended, color: 'text-red-600', bg: 'border-red-500' },
+                      { label: 'Abo Essai', value: providerStats.sub_trial, color: 'text-blue-600', bg: 'border-blue-500' },
+                      { label: 'Abo Actif', value: providerStats.sub_active, color: 'text-emerald-600', bg: 'border-emerald-500' },
+                      { label: 'Rev. Abo', value: `${providerStats.total_sub_revenue}€`, color: 'text-brand', bg: 'border-brand' }
+                    ].map((s, i) => (
+                      <div key={i} className={`bg-white border-l-4 ${s.bg} p-3 text-center`} data-testid={`prov-stat-${i}`}>
+                        <p className={`font-heading font-extrabold text-xl ${s.color}`}>{s.value}</p>
+                        <p className="text-[10px] text-slate-400 uppercase font-heading">{s.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Search + Filter */}
+                <div className="flex gap-3 items-center">
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input placeholder="Rechercher un partenaire..." className="pl-9" value={providerSearch} onChange={e => setProviderSearch(e.target.value)} data-testid="provider-search" />
+                  </div>
+                  <Select value={providerStatusFilter} onValueChange={setProviderStatusFilter}>
+                    <SelectTrigger className="w-40" data-testid="provider-filter"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous</SelectItem>
+                      <SelectItem value="active">Actifs</SelectItem>
+                      <SelectItem value="pending">En attente</SelectItem>
+                      <SelectItem value="suspended">Suspendus</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Providers Table */}
+                <div className="bg-white border border-slate-200" data-testid="providers-table">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="text-left p-3 font-heading text-xs font-bold uppercase">Partenaire</th>
+                          <th className="text-center p-3 font-heading text-xs font-bold uppercase">Statut</th>
+                          <th className="text-center p-3 font-heading text-xs font-bold uppercase">Abonnement</th>
+                          <th className="text-right p-3 font-heading text-xs font-bold uppercase">Produits</th>
+                          <th className="text-right p-3 font-heading text-xs font-bold uppercase">Commandes</th>
+                          <th className="text-right p-3 font-heading text-xs font-bold uppercase">CA</th>
+                          <th className="text-center p-3 font-heading text-xs font-bold uppercase">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {detailedProviders
+                          .filter(p => {
+                            if (providerStatusFilter !== 'all' && p.status !== providerStatusFilter) return false;
+                            if (providerSearch) {
+                              const q = providerSearch.toLowerCase();
+                              return (p.name || '').toLowerCase().includes(q) || (p.company_name || '').toLowerCase().includes(q) || (p.email || '').toLowerCase().includes(q);
+                            }
+                            return true;
+                          })
+                          .map(p => (
+                          <tr key={p.user_id} className="border-b hover:bg-slate-50 cursor-pointer" onClick={() => { setSelectedProvider(p.user_id); fetchProviderDetail(p.user_id); }} data-testid={`provider-row-${p.user_id}`}>
+                            <td className="p-3">
+                              <p className="font-heading font-bold text-sm">{p.company_name || p.name}</p>
+                              <p className="text-xs text-slate-400">{p.email}</p>
+                            </td>
+                            <td className="p-3 text-center">
+                              <span className={`px-2 py-0.5 text-[10px] font-bold uppercase ${p.status === 'active' ? 'bg-green-100 text-green-700' : p.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                                {p.status === 'active' ? 'Actif' : p.status === 'pending' ? 'En attente' : 'Suspendu'}
+                              </span>
+                            </td>
+                            <td className="p-3 text-center">
+                              {p.subscription ? (
+                                <span className={`px-2 py-0.5 text-[10px] font-bold uppercase ${
+                                  p.subscription.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+                                  p.subscription.status === 'trial' ? 'bg-blue-100 text-blue-700' :
+                                  p.subscription.status === 'suspended' ? 'bg-red-100 text-red-700' :
+                                  'bg-slate-100 text-slate-600'
+                                }`}>{p.subscription.status}</span>
+                              ) : <span className="text-xs text-slate-400">—</span>}
+                            </td>
+                            <td className="p-3 text-right font-heading font-bold">{p.products_count}</td>
+                            <td className="p-3 text-right font-heading font-bold">{p.orders_count}</td>
+                            <td className="p-3 text-right font-heading font-bold text-brand">{p.total_revenue}€</td>
+                            <td className="p-3 text-center" onClick={e => e.stopPropagation()}>
+                              <div className="flex items-center justify-center gap-1">
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => { setSelectedProvider(p.user_id); fetchProviderDetail(p.user_id); }} data-testid={`view-provider-${p.user_id}`}><Eye className="w-3.5 h-3.5" /></Button>
+                                {p.status === 'active' && (
+                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500" onClick={() => { const r = prompt('Raison de la suspension:'); if (r) handleProviderStatusChange(p.user_id, 'suspended', r); }} data-testid={`quick-suspend-${p.user_id}`}><Ban className="w-3.5 h-3.5" /></Button>
+                                )}
+                                {p.status === 'pending' && (
+                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-green-500" onClick={() => handleProviderStatusChange(p.user_id, 'active', 'Validation admin')} data-testid={`quick-approve-${p.user_id}`}><Check className="w-3.5 h-3.5" /></Button>
+                                )}
+                                {(p.status === 'suspended' || p.status === 'rejected') && (
+                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-green-500" onClick={() => handleProviderStatusChange(p.user_id, 'active', 'Reactivation admin')} data-testid={`quick-reactivate-${p.user_id}`}><Play className="w-3.5 h-3.5" /></Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        {detailedProviders.length === 0 && <tr><td colSpan="7" className="p-8 text-center text-slate-400">Aucun partenaire inscrit</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
             )}
+
+            {/* Subscription Action Dialog */}
+            <Dialog open={showSubActionDialog} onOpenChange={setShowSubActionDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="font-heading uppercase">
+                    {subAction.action === 'activate' ? 'Activer l\'abonnement' :
+                     subAction.action === 'extend' ? 'Prolonger l\'abonnement' :
+                     subAction.action === 'gift' ? 'Offrir des mois' :
+                     'Resilier l\'abonnement'}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {subAction.action === 'extend' && (
+                    <div>
+                      <Label>Nombre de jours</Label>
+                      <Input type="number" value={subAction.days} onChange={e => setSubAction(prev => ({ ...prev, days: parseInt(e.target.value) || 30 }))} />
+                    </div>
+                  )}
+                  {subAction.action === 'gift' && (
+                    <div>
+                      <Label>Nombre de mois offerts</Label>
+                      <Input type="number" value={subAction.months} onChange={e => setSubAction(prev => ({ ...prev, months: parseInt(e.target.value) || 1 }))} />
+                    </div>
+                  )}
+                  <div>
+                    <Label>Raison (optionnel)</Label>
+                    <Input value={subAction.reason} onChange={e => setSubAction(prev => ({ ...prev, reason: e.target.value }))} placeholder="Motif de l'action..." />
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="outline" onClick={() => setShowSubActionDialog(false)}>Annuler</Button>
+                    <Button className="bg-brand text-white" onClick={handleSubAction} data-testid="confirm-sub-action">Confirmer</Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
 

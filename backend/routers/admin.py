@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from deps import db, get_current_user
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 router = APIRouter(prefix="/api")
 
@@ -242,7 +242,6 @@ async def get_revenue_breakdown(current_user: dict = Depends(get_current_user)):
     grand_fees = inscriptions_fees + donations_fees + sponsors_fees + products_commission
 
     # Monthly evolution (last 12 months)
-    from datetime import timedelta
     now = datetime.now(timezone.utc)
     monthly = []
     for i in range(11, -1, -1):
@@ -303,3 +302,210 @@ async def get_revenue_breakdown(current_user: dict = Depends(get_current_user)):
         "monthly": monthly,
         "recent_transactions": recent[:20]
     }
+
+
+
+# ===== ADMIN PARTNER MANAGEMENT =====
+
+@router.get("/admin/providers/detailed")
+async def get_providers_detailed(current_user: dict = Depends(get_current_user)):
+    """Get all providers with subscription, stats, and activity data."""
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin only")
+    providers = await db.users.find({"role": "provider"}, {"_id": 0, "password": 0}).to_list(500)
+    result = []
+    for p in providers:
+        uid = p["user_id"]
+        sub = await db.subscriptions.find_one({"user_id": uid}, {"_id": 0})
+        products_count = await db.products.count_documents({"provider_id": uid})
+        orders = await db.orders.find({"provider_ids": uid, "payment_status": {"$in": ["completed", "paid"]}}, {"_id": 0, "total": 1, "created_at": 1}).to_list(10000)
+        total_revenue = round(sum(o.get("total", 0) for o in orders), 2)
+        orders_count = len(orders)
+        conversations = await db.messages.count_documents({"$or": [{"sender_id": uid}, {"receiver_id": uid}]})
+        result.append({
+            **p,
+            "subscription": sub,
+            "products_count": products_count,
+            "orders_count": orders_count,
+            "total_revenue": total_revenue,
+            "conversations_count": conversations
+        })
+    # Global stats
+    total = len(result)
+    active = len([r for r in result if r.get("status") == "active"])
+    pending = len([r for r in result if r.get("status") == "pending"])
+    suspended = len([r for r in result if r.get("status") in ["rejected", "suspended"]])
+    sub_trial = len([r for r in result if r.get("subscription", {}) and r.get("subscription", {}).get("status") == "trial"])
+    sub_active = len([r for r in result if r.get("subscription", {}) and r.get("subscription", {}).get("status") == "active"])
+    sub_expired = len([r for r in result if r.get("subscription", {}) and r.get("subscription", {}).get("status") in ["expired", "trial_expired"]])
+    total_sub_revenue = round(sum(r.get("subscription", {}).get("total_paid", 0) for r in result if r.get("subscription")), 2)
+    return {
+        "providers": result,
+        "stats": {
+            "total": total, "active": active, "pending": pending, "suspended": suspended,
+            "sub_trial": sub_trial, "sub_active": sub_active, "sub_expired": sub_expired,
+            "total_sub_revenue": total_sub_revenue
+        }
+    }
+
+
+@router.get("/admin/providers/{user_id}/detail")
+async def get_provider_detail(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Get detailed analytics for a single provider."""
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin only")
+    provider = await db.users.find_one({"user_id": user_id, "role": "provider"}, {"_id": 0, "password": 0})
+    if not provider:
+        raise HTTPException(status_code=404, detail="Partenaire non trouve")
+    sub = await db.subscriptions.find_one({"user_id": user_id}, {"_id": 0})
+    products = await db.products.find({"provider_id": user_id}, {"_id": 0}).to_list(100)
+    orders = await db.orders.find({"provider_ids": user_id}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    action_log = await db.admin_action_log.find({"target_user_id": user_id}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    sub_payments = await db.subscription_payments.find({"user_id": user_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    # Monthly revenue for last 12 months
+    now = datetime.now(timezone.utc)
+    monthly = []
+    for i in range(11, -1, -1):
+        month_start = (now.replace(day=1) - timedelta(days=i * 30)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month_end = (month_start + timedelta(days=32)).replace(day=1) if i > 0 else now
+        m_label = month_start.strftime("%b %Y")
+        m_iso_start = month_start.isoformat()
+        m_iso_end = month_end.isoformat()
+        m_orders = [o for o in orders if m_iso_start <= o.get("created_at", "") < m_iso_end]
+        m_revenue = round(sum(o.get("total", 0) for o in m_orders), 2)
+        m_count = len(m_orders)
+        monthly.append({"month": m_label, "revenue": m_revenue, "orders": m_count})
+    total_revenue = round(sum(o.get("total", 0) for o in orders), 2)
+    paid_orders = [o for o in orders if o.get("payment_status") in ["completed", "paid"]]
+    return {
+        "provider": provider,
+        "subscription": sub,
+        "subscription_payments": sub_payments,
+        "products": products,
+        "products_count": len(products),
+        "orders_count": len(orders),
+        "paid_orders_count": len(paid_orders),
+        "total_revenue": total_revenue,
+        "monthly_revenue": monthly,
+        "action_log": action_log,
+        "recent_orders": [{"order_id": o.get("order_id"), "total": o.get("total", 0), "status": o.get("payment_status", ""), "user_name": o.get("user_name", ""), "created_at": o.get("created_at", "")} for o in orders[:10]]
+    }
+
+
+@router.put("/admin/providers/{user_id}/status")
+async def update_provider_status(user_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    """Suspend or reactivate a provider account."""
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin only")
+    data = await request.json()
+    new_status = data.get("status")
+    reason = data.get("reason", "")
+    if new_status not in ["active", "suspended", "pending", "rejected"]:
+        raise HTTPException(status_code=400, detail="Statut invalide")
+    provider = await db.users.find_one({"user_id": user_id, "role": "provider"}, {"_id": 0})
+    if not provider:
+        raise HTTPException(status_code=404, detail="Partenaire non trouve")
+    old_status = provider.get("status", "unknown")
+    await db.users.update_one({"user_id": user_id}, {"$set": {"status": new_status}})
+    # If suspended, also pause subscription
+    if new_status == "suspended":
+        await db.subscriptions.update_one({"user_id": user_id}, {"$set": {"status": "suspended"}})
+    elif new_status == "active":
+        sub = await db.subscriptions.find_one({"user_id": user_id}, {"_id": 0})
+        if sub and sub.get("status") == "suspended":
+            # Restore to previous valid status
+            if sub.get("current_period_end"):
+                now = datetime.now(timezone.utc)
+                period_end = datetime.fromisoformat(sub["current_period_end"].replace("Z", "+00:00"))
+                new_sub_status = "active" if now < period_end else "expired"
+            elif sub.get("trial_end"):
+                now = datetime.now(timezone.utc)
+                trial_end = datetime.fromisoformat(sub["trial_end"].replace("Z", "+00:00"))
+                new_sub_status = "trial" if now < trial_end else "trial_expired"
+            else:
+                new_sub_status = "trial_expired"
+            await db.subscriptions.update_one({"user_id": user_id}, {"$set": {"status": new_sub_status}})
+    # Log action
+    await db.admin_action_log.insert_one({
+        "action_id": f"act_{uuid.uuid4().hex[:12]}",
+        "admin_id": current_user["user_id"],
+        "admin_name": current_user.get("name", "Admin"),
+        "target_user_id": user_id,
+        "target_user_name": provider.get("name", ""),
+        "action": "status_change",
+        "details": f"Statut: {old_status} → {new_status}",
+        "reason": reason,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    return {"message": f"Statut mis a jour: {new_status}"}
+
+
+@router.put("/admin/providers/{user_id}/subscription")
+async def admin_modify_subscription(user_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    """Admin can modify a provider's subscription (extend, cancel, gift months)."""
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin only")
+    data = await request.json()
+    action = data.get("action")  # extend, cancel, gift, activate
+    sub = await db.subscriptions.find_one({"user_id": user_id}, {"_id": 0})
+    if not sub:
+        raise HTTPException(status_code=404, detail="Aucun abonnement")
+    now = datetime.now(timezone.utc)
+    log_details = ""
+    if action == "extend":
+        days = data.get("days", 30)
+        if sub.get("current_period_end"):
+            current_end = datetime.fromisoformat(sub["current_period_end"].replace("Z", "+00:00"))
+            new_end = current_end + timedelta(days=days)
+        else:
+            new_end = now + timedelta(days=days)
+        await db.subscriptions.update_one(
+            {"user_id": user_id},
+            {"$set": {"current_period_end": new_end.isoformat(), "status": "active"}}
+        )
+        log_details = f"Abonnement prolonge de {days} jours (nouvelle fin: {new_end.strftime('%d/%m/%Y')})"
+    elif action == "cancel":
+        await db.subscriptions.update_one(
+            {"user_id": user_id},
+            {"$set": {"status": "cancelled", "cancelled_at": now.isoformat()}}
+        )
+        log_details = "Abonnement annule par l'admin"
+    elif action == "activate":
+        period_end = now + timedelta(days=30)
+        await db.subscriptions.update_one(
+            {"user_id": user_id},
+            {"$set": {
+                "status": "active",
+                "subscription_start": now.isoformat(),
+                "current_period_end": period_end.isoformat()
+            }}
+        )
+        log_details = "Abonnement active par l'admin"
+    elif action == "gift":
+        months = data.get("months", 1)
+        days = months * 30
+        if sub.get("current_period_end"):
+            current_end = datetime.fromisoformat(sub["current_period_end"].replace("Z", "+00:00"))
+            new_end = current_end + timedelta(days=days)
+        else:
+            new_end = now + timedelta(days=days)
+        await db.subscriptions.update_one(
+            {"user_id": user_id},
+            {"$set": {"current_period_end": new_end.isoformat(), "status": "active"}}
+        )
+        log_details = f"{months} mois offert(s) par l'admin (nouvelle fin: {new_end.strftime('%d/%m/%Y')})"
+    else:
+        raise HTTPException(status_code=400, detail="Action invalide")
+    # Log
+    await db.admin_action_log.insert_one({
+        "action_id": f"act_{uuid.uuid4().hex[:12]}",
+        "admin_id": current_user["user_id"],
+        "admin_name": current_user.get("name", "Admin"),
+        "target_user_id": user_id,
+        "target_user_name": (await db.users.find_one({"user_id": user_id}, {"_id": 0, "name": 1}) or {}).get("name", ""),
+        "action": f"subscription_{action}",
+        "details": log_details,
+        "reason": data.get("reason", ""),
+        "created_at": now.isoformat()
+    })
+    return {"message": log_details}
