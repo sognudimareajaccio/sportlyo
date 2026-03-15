@@ -585,3 +585,108 @@ async def delete_volunteer(volunteer_id: str, current_user: dict = Depends(get_c
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Benevole non trouve")
     return {"message": "Benevole supprime"}
+
+
+# ============== ORGANIZER REVENUE BREAKDOWN ==============
+
+@router.get("/organizer/revenue-breakdown")
+async def get_organizer_revenue_breakdown(current_user: dict = Depends(get_current_user)):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    org_id = current_user['user_id']
+
+    # Get organizer events
+    org_events = await db.events.find({"organizer_id": org_id}, {"_id": 0}).to_list(500)
+    event_ids = [e["event_id"] for e in org_events]
+
+    # 1. Inscriptions
+    reg_payments = await db.payment_transactions.find(
+        {"event_id": {"$in": event_ids}, "payment_status": "completed", "registration_id": {"$exists": True, "$ne": ""}},
+        {"_id": 0}
+    ).to_list(10000)
+    inscriptions_total = round(sum(p.get("amount", 0) for p in reg_payments), 2)
+    inscriptions_fees = round(sum(p.get("service_fee", 0) for p in reg_payments), 2)
+    inscriptions_net = round(inscriptions_total - inscriptions_fees, 2)
+
+    # 2. Dons (sponsor_type = Donateur)
+    donations = await db.sponsors.find({"organizer_id": org_id, "sponsor_type": "Donateur", "payment_status": "paid"}, {"_id": 0}).to_list(1000)
+    donations_total = round(sum(d.get("base_amount", d.get("amount", 0)) for d in donations), 2)
+    donations_fees = round(sum(d.get("platform_fee", 0) for d in donations), 2)
+    donations_pending = await db.sponsors.find({"organizer_id": org_id, "sponsor_type": "Donateur", "payment_link": {"$exists": True, "$ne": ""}, "payment_status": {"$ne": "paid"}}, {"_id": 0}).to_list(1000)
+    donations_pending_total = round(sum(d.get("base_amount", d.get("amount", 0)) for d in donations_pending), 2)
+
+    # 3. Sponsors
+    sponsors = await db.sponsors.find({"organizer_id": org_id, "sponsor_type": {"$in": ["Sponsor", "Mecene"]}, "payment_status": "paid"}, {"_id": 0}).to_list(1000)
+    sponsors_total = round(sum(s.get("base_amount", s.get("amount", 0)) for s in sponsors), 2)
+    sponsors_fees = round(sum(s.get("platform_fee", 0) for s in sponsors), 2)
+    sponsors_pending = await db.sponsors.find({"organizer_id": org_id, "sponsor_type": {"$in": ["Sponsor", "Mecene"]}, "payment_link": {"$exists": True, "$ne": ""}, "payment_status": {"$ne": "paid"}}, {"_id": 0}).to_list(1000)
+    sponsors_pending_total = round(sum(s.get("base_amount", s.get("amount", 0)) for s in sponsors_pending), 2)
+
+    # 4. Produits derives (orders for this organizer's events)
+    orders = await db.orders.find({"organizer_id": org_id, "payment_status": {"$in": ["completed", "paid"]}}, {"_id": 0}).to_list(10000)
+    products_total = round(sum(o.get("total", 0) for o in orders), 2)
+    products_commission = round(sum(o.get("admin_commission_total", 0) for o in orders), 2)
+
+    # 5. Reservations entreprises
+    bookings = await db.corporate_bookings.find({"organizer_id": org_id, "payment_status": "paid"}, {"_id": 0}).to_list(1000)
+    bookings_total = round(sum(b.get("base_amount", b.get("total_amount", 0)) for b in bookings), 2)
+    bookings_fees = round(sum(b.get("platform_fee", 0) for b in bookings), 2)
+
+    grand_total = inscriptions_total + donations_total + sponsors_total + products_total + bookings_total
+    grand_fees = inscriptions_fees + donations_fees + sponsors_fees + products_commission + bookings_fees
+    grand_net = round(grand_total - grand_fees, 2)
+
+    # Monthly evolution (12 months)
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    monthly = []
+    for i in range(11, -1, -1):
+        month_start = (now.replace(day=1) - timedelta(days=i * 30)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month_end = (month_start + timedelta(days=32)).replace(day=1) if i > 0 else now
+        m_label = month_start.strftime("%b %Y")
+        m_start = month_start.isoformat()
+        m_end = month_end.isoformat()
+        m_insc = sum(p.get("amount", 0) for p in reg_payments if m_start <= p.get("created_at", "") < m_end)
+        m_don = sum(d.get("base_amount", d.get("amount", 0)) for d in donations if m_start <= d.get("paid_at", d.get("created_at", "")) < m_end)
+        m_spon = sum(s.get("base_amount", s.get("amount", 0)) for s in sponsors if m_start <= s.get("paid_at", s.get("created_at", "")) < m_end)
+        m_prod = sum(o.get("total", 0) for o in orders if m_start <= o.get("created_at", "") < m_end)
+        m_book = sum(b.get("base_amount", b.get("total_amount", 0)) for b in bookings if m_start <= b.get("paid_at", b.get("created_at", "")) < m_end)
+        monthly.append({"month": m_label, "inscriptions": round(m_insc, 2), "dons": round(m_don, 2), "sponsors": round(m_spon, 2), "produits": round(m_prod, 2), "reservations": round(m_book, 2), "total": round(m_insc + m_don + m_spon + m_prod + m_book, 2)})
+
+    # Per-event breakdown
+    events_breakdown = []
+    for evt in org_events:
+        eid = evt["event_id"]
+        e_insc = round(sum(p.get("amount", 0) for p in reg_payments if p.get("event_id") == eid), 2)
+        e_fees = round(sum(p.get("service_fee", 0) for p in reg_payments if p.get("event_id") == eid), 2)
+        e_count = len([p for p in reg_payments if p.get("event_id") == eid])
+        events_breakdown.append({"event_id": eid, "title": evt.get("title", ""), "inscriptions_total": e_insc, "inscriptions_fees": e_fees, "inscriptions_count": e_count, "price": evt.get("price", 0), "current_participants": evt.get("current_participants", 0), "max_participants": evt.get("max_participants", 0)})
+
+    # Recent transactions
+    recent = []
+    for p in sorted(reg_payments, key=lambda x: x.get("created_at", ""), reverse=True)[:5]:
+        evt = next((e for e in org_events if e["event_id"] == p.get("event_id")), None)
+        recent.append({"type": "inscription", "label": f"Inscription - {evt['title'] if evt else p.get('event_id','')}", "amount": p.get("amount", 0), "fee": p.get("service_fee", 0), "date": p.get("created_at", ""), "status": "completed"})
+    for d in sorted(donations + donations_pending, key=lambda x: x.get("paid_at", x.get("created_at", "")), reverse=True)[:3]:
+        recent.append({"type": "don", "label": f"Don - {d.get('name','')}", "amount": d.get("base_amount", d.get("amount", 0)), "fee": d.get("platform_fee", 0), "date": d.get("paid_at", d.get("created_at", "")), "status": d.get("payment_status", "pending")})
+    for s in sorted(sponsors + sponsors_pending, key=lambda x: x.get("paid_at", x.get("created_at", "")), reverse=True)[:3]:
+        recent.append({"type": "sponsor", "label": f"Sponsor - {s.get('name','')}", "amount": s.get("base_amount", s.get("amount", 0)), "fee": s.get("platform_fee", 0), "date": s.get("paid_at", s.get("created_at", "")), "status": s.get("payment_status", "pending")})
+    for o in sorted(orders, key=lambda x: x.get("created_at", ""), reverse=True)[:3]:
+        recent.append({"type": "produit", "label": f"Vente - {o.get('order_id','')[:12]}", "amount": o.get("total", 0), "fee": o.get("admin_commission_total", 0), "date": o.get("created_at", ""), "status": "completed"})
+    recent.sort(key=lambda x: x.get("date", ""), reverse=True)
+
+    return {
+        "sources": {
+            "inscriptions": {"total": inscriptions_total, "fees": inscriptions_fees, "net": inscriptions_net, "count": len(reg_payments), "label": "Inscriptions evenements"},
+            "dons": {"total": donations_total, "fees": donations_fees, "net": round(donations_total - donations_fees, 2), "count": len(donations), "pending_total": donations_pending_total, "pending_count": len(donations_pending), "label": "Dons"},
+            "sponsors": {"total": sponsors_total, "fees": sponsors_fees, "net": round(sponsors_total - sponsors_fees, 2), "count": len(sponsors), "pending_total": sponsors_pending_total, "pending_count": len(sponsors_pending), "label": "Sponsors & Mecenes"},
+            "produits": {"total": products_total, "fees": products_commission, "net": round(products_total - products_commission, 2), "count": len(orders), "label": "Produits derives"},
+            "reservations": {"total": bookings_total, "fees": bookings_fees, "net": round(bookings_total - bookings_fees, 2), "count": len(bookings), "label": "Reservations entreprises"}
+        },
+        "grand_total": round(grand_total, 2),
+        "grand_fees": round(grand_fees, 2),
+        "grand_net": grand_net,
+        "monthly": monthly,
+        "events_breakdown": events_breakdown,
+        "recent_transactions": recent[:20]
+    }

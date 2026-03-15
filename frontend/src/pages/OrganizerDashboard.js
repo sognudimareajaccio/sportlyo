@@ -185,6 +185,10 @@ const OrganizerDashboard = () => {
   const [bookingSearch, setBookingSearch] = useState('');
   const [providersList, setProvidersList] = useState([]);
 
+  // Revenue
+  const [revenueData, setRevenueData] = useState(null);
+  const [revenueLoading, setRevenueLoading] = useState(false);
+
   // Volunteers
   const [volunteers, setVolunteers] = useState([]);
   const [volunteersLoading, setVolunteersLoading] = useState(false);
@@ -278,6 +282,15 @@ const OrganizerDashboard = () => {
     finally { setVolunteersLoading(false); }
   };
 
+  const fetchRevenueData = async () => {
+    setRevenueLoading(true);
+    try {
+      const res = await api.get('/organizer/revenue-breakdown');
+      setRevenueData(res.data);
+    } catch { toast.error('Erreur chargement revenus'); }
+    finally { setRevenueLoading(false); }
+  };
+
   // ==================== SECTION NAVIGATION ====================
   const handleSectionChange = (section) => {
     setActiveSection(section);
@@ -289,6 +302,7 @@ const OrganizerDashboard = () => {
     if (section === 'boutique') { fetchShopData(); fetchProviderCatalog(); fetchProviderConvos(); fetchOrgLogo(); fetchProvidersList(); }
     if (section === 'bookings') fetchBookings();
     if (section === 'volunteers') fetchVolunteers();
+    if (section === 'finances') fetchRevenueData();
   };
 
   // ==================== HANDLERS ====================
@@ -751,8 +765,8 @@ const OrganizerDashboard = () => {
 
         {activeSection === 'finances' && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-            <SectionHeader title="Finances" onBack={() => setActiveSection('hub')} />
-            <FinancesSection events={events} totalRevenue={totalRevenue} totalParticipants={totalParticipants} onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
+            <SectionHeader title="Finances & Revenus" onBack={() => setActiveSection('hub')} />
+            <FinancesSection revenueData={revenueData} revenueLoading={revenueLoading} onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
           </motion.div>
         )}
 
