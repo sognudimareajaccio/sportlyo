@@ -691,7 +691,7 @@ const OrganizerDashboard = () => {
     { id: 'chronometrage', label: 'Chronometrage', icon: Timer, desc: 'Import temps & export dossards', color: 'bg-teal-600' },
     { id: 'results', label: 'Resultats', icon: Trophy, desc: 'Classements & performances', color: 'bg-amber-500' },
     { id: 'volunteers', label: 'Benevoles', icon: HeartHandshake, desc: 'Gestion des benevoles', color: 'bg-fuchsia-500' },
-    { id: 'partners', label: 'Prestations Externes', icon: Handshake, desc: 'Prestataires evenementiels', color: 'bg-indigo-500' },
+    { id: 'partners', label: 'Prestations Externes', icon: Handshake, desc: 'Partenaires evenementiels', color: 'bg-indigo-500' },
     { id: 'bookings', label: 'Reservation Entreprises', icon: Building2, desc: 'Equipes & tarifs groupe', color: 'bg-cyan-600' },
     { id: 'sponsors', label: 'Sponsors & Donateurs', icon: Heart, desc: 'Sponsoring & mecenat', color: 'bg-rose-500' },
     { id: 'boutique', label: 'Boutique Produits', icon: ShoppingBag, desc: 'Catalogue & ventes', color: 'bg-violet-500' },
