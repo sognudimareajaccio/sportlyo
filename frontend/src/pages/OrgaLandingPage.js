@@ -133,7 +133,7 @@ const OrgaLandingPage = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <Link to="/register">
+              <Link to="/register?role=organizer">
                 <Button className="btn-primary h-14 px-8 text-base gap-2" data-testid="orga-cta-register">
                   Creer mon evenement gratuitement <ArrowRight className="w-5 h-5" />
                 </Button>
@@ -218,7 +218,7 @@ const OrgaLandingPage = () => {
                 SportLyo reunit tous les outils necessaires pour gerer votre evenement de A a Z. Plus besoin de jongler entre plusieurs logiciels.
               </p>
               <div className="mt-8">
-                <Link to="/register">
+                <Link to="/register?role=organizer">
                   <Button className="btn-primary gap-2" data-testid="orga-cta-advantages">
                     Commencer gratuitement <ArrowRight className="w-4 h-4" />
                   </Button>
@@ -381,7 +381,7 @@ const OrgaLandingPage = () => {
             transition={{ delay: 0.2 }}
             viewport={{ once: true }}
           >
-            <Link to="/register">
+            <Link to="/register?role=organizer">
               <Button className="bg-white text-brand hover:bg-slate-100 h-14 px-8 text-base font-heading font-bold uppercase tracking-wider gap-2" data-testid="orga-cta-final">
                 Creer mon evenement gratuitement <ArrowRight className="w-5 h-5" />
               </Button>

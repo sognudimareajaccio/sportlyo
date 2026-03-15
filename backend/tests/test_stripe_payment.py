@@ -178,7 +178,7 @@ class TestStripeCheckoutCreation:
         # Create checkout session
         checkout_data = {
             "registration_id": registration_id,
-            "origin_url": "https://sportlyo-preview-2.preview.emergentagent.com"
+            "origin_url": "https://event-booking-34.preview.emergentagent.com"
         }
         
         response = requests.post(f"{BASE_URL}/api/payments/create-checkout",
@@ -252,7 +252,7 @@ class TestPaymentStatus:
                     headers=auth_headers,
                     json={
                         "registration_id": pending_reg["registration_id"],
-                        "origin_url": "https://sportlyo-preview-2.preview.emergentagent.com"
+                        "origin_url": "https://event-booking-34.preview.emergentagent.com"
                     }
                 )
                 if checkout_response.status_code == 200:

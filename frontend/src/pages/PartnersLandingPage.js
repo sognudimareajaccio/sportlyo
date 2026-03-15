@@ -68,7 +68,7 @@ const PartnersLandingPage = () => {
               Tentes, podiums, securite, chronometrage, nettoyage... Proposez vos services aux organisateurs d evenements sportifs de votre region. Zero prospection, des missions toute l annee.
             </motion.p>
             <motion.div className="flex flex-wrap gap-4 mt-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}>
-              <Link to="/register">
+              <Link to="/register?role=provider">
                 <Button className="btn-primary h-14 px-8 text-base gap-2" data-testid="partner-cta-register">
                   Devenir partenaire <ArrowRight className="w-5 h-5" />
                 </Button>
@@ -197,7 +197,7 @@ const PartnersLandingPage = () => {
             Rejoignez le reseau de partenaires evenementiels SportLyo et developpez votre activite toute l annee.
           </motion.p>
           <motion.div className="mt-10" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} viewport={{ once: true }}>
-            <Link to="/register">
+            <Link to="/register?role=provider">
               <Button className="bg-white text-brand hover:bg-slate-100 h-14 px-8 text-base font-heading font-bold uppercase tracking-wider gap-2" data-testid="partner-cta-final">
                 Devenir partenaire gratuitement <ArrowRight className="w-5 h-5" />
               </Button>

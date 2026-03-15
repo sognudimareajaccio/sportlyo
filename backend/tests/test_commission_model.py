@@ -330,7 +330,7 @@ class TestCheckoutSessionAmount:
         # Create checkout session
         checkout_response = api_client.post(f"{BASE_URL}/api/payments/create-checkout", json={
             "registration_id": registration_id,
-            "origin_url": "https://sportlyo-preview-2.preview.emergentagent.com"
+            "origin_url": "https://event-booking-34.preview.emergentagent.com"
         })
         
         assert checkout_response.status_code == 200, f"Checkout creation failed: {checkout_response.text}"

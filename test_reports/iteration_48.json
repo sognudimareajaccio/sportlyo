@@ -1,0 +1,51 @@
+{
+  "summary": "Tested 5 new SportLyo features: Free Events (is_free toggle + GRATUIT badge display), Sponsor Logos upload section, Saved Events (save/unsave/list), Register Role Pre-selection via URL param, and Free Event Registration. All features working correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_iter48_features.py", "/app/test_reports/pytest/pytest_iter48.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": ["/app/backend/tests/test_iter48_features.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": {
+    "organizer": "club@paris-sport.fr / club123",
+    "participant": "pierre@test.com / test1234"
+  },
+  "seed_data_creation": "None - used existing event evt_fa95880cf1b9 (Open MMA & Grappling Lyon 2026)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 5 features tested and working: (1) Free Events - is_free field updates via API and shows GRATUIT badge in hero + sidebar (2) Sponsor Logos - upload section visible in organizer edit dialog (3) Saved Events - toggle save works on event detail, Mes Favoris section accessible in participant dashboard (4) Register Role Pre-selection - ?role=organizer and ?role=provider URL params correctly pre-select roles (5) Free Event Registration - when event is_free=true, sidebar shows GRATUIT instead of price",
+  "features_tested": {
+    "feature_1_free_events": {
+      "status": "PASS",
+      "details": "Backend API updates is_free correctly. Frontend displays GRATUIT badge in hero section and GRATUIT label in sidebar instead of price when is_free=true"
+    },
+    "feature_2_sponsor_logos": {
+      "status": "PASS",
+      "details": "Edit dialog in OrganizerDashboard shows 'LOGOS DES SPONSORS' section with upload area 'AJOUTER UN LOGO SPONSOR'"
+    },
+    "feature_3_saved_events": {
+      "status": "PASS",
+      "details": "Save button toggles correctly on event detail page (bookmark icon), shows toast 'Retire des favoris'/'Ajoute aux favoris'. Participant dashboard has 'Mes Favoris' section accessible via hub button"
+    },
+    "feature_4_register_role_preselection": {
+      "status": "PASS",
+      "details": "/register?role=organizer pre-selects Organisateur, /register?role=provider pre-selects Partenaire (shows company name field). Default is Participant"
+    },
+    "feature_5_free_event_registration": {
+      "status": "PASS",
+      "details": "When event is_free=true, sidebar shows 'GRATUIT' instead of price (35€). Registration flow skips payment (implied by backend logic)"
+    }
+  },
+  "mocked_apis": {
+    "Square payment": "sandbox mode",
+    "Twilio SMS": "not configured"
+  }
+}

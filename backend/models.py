@@ -116,6 +116,8 @@ class EventCreate(BaseModel):
     published: bool = False
     provides_tshirt: bool = True
     provided_items: Optional[List[str]] = None
+    is_free: bool = False
+    sponsor_logos: Optional[List[dict]] = None
     themes: Optional[List[str]] = None
     circuit_type: Optional[str] = None
     has_timer: Optional[bool] = None

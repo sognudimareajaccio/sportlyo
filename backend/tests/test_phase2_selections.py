@@ -15,7 +15,7 @@ import uuid
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://sportlyo-preview-2.preview.emergentagent.com"
+    BASE_URL = "https://event-booking-34.preview.emergentagent.com"
 
 # Test credentials
 ORGANIZER_EMAIL = "club@paris-sport.fr"
@@ -196,8 +196,8 @@ class TestSelectionWorkflow:
         
         # Test customization with sample images
         test_images = [
-            "https://sportlyo-preview-2.preview.emergentagent.com/uploads/test_custom_1.jpg",
-            "https://sportlyo-preview-2.preview.emergentagent.com/uploads/test_custom_2.jpg"
+            "https://event-booking-34.preview.emergentagent.com/uploads/test_custom_1.jpg",
+            "https://event-booking-34.preview.emergentagent.com/uploads/test_custom_2.jpg"
         ]
         
         customize_response = provider_client.put(

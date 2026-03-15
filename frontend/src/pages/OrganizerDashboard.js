@@ -92,6 +92,7 @@ const OrganizerDashboard = () => {
     requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '',
     races: [], route_url: '', exact_address: '', regulations: '',
     regulations_pdf_url: '', published: false, provided_items: ['tshirt'],
+    is_free: false, sponsor_logos: [],
     themes: [], circuit_type: '', has_timer: null,
     custom_provided_item: '',
     website_url: '', facebook_url: '', instagram_url: '', twitter_url: '', youtube_url: ''
@@ -530,11 +531,11 @@ const OrganizerDashboard = () => {
     setCreating(true);
     try {
       let eventDate; try { eventDate = new Date(newEvent.date).toISOString(); } catch { toast.error('Date invalide'); setCreating(false); return; }
-      const eventData = { ...newEvent, date: eventDate, distances: (newEvent.distances || '').split(',').map(d => d.trim()).filter(Boolean), elevation_gain: newEvent.elevation_gain ? parseInt(newEvent.elevation_gain) : null, min_age: newEvent.min_age ? parseInt(newEvent.min_age) : null, max_age: newEvent.max_age ? parseInt(newEvent.max_age) : null, provides_tshirt: (newEvent.provided_items || []).includes('tshirt'), provided_items: newEvent.provided_items || [] };
+      const eventData = { ...newEvent, date: eventDate, distances: (newEvent.distances || '').split(',').map(d => d.trim()).filter(Boolean), elevation_gain: newEvent.elevation_gain ? parseInt(newEvent.elevation_gain) : null, min_age: newEvent.min_age ? parseInt(newEvent.min_age) : null, max_age: newEvent.max_age ? parseInt(newEvent.max_age) : null, provides_tshirt: (newEvent.provided_items || []).includes('tshirt'), provided_items: newEvent.provided_items || [], is_free: newEvent.is_free || false, sponsor_logos: newEvent.sponsor_logos || [] };
       delete eventData.custom_provided_item;
       await eventsApi.create(eventData); toast.success('Evenement cree !');
       setShowCreateDialog(false); setCreateStep(1);
-      setNewEvent({ title: '', description: '', sport_type: 'running', location: '', date: '', max_participants: 100, price: 25, distances: '', elevation_gain: '', image_url: '', requires_pps: false, requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '', races: [], route_url: '', exact_address: '', regulations: '', regulations_pdf_url: '', published: false, provided_items: ['tshirt'], custom_provided_item: '', themes: [], circuit_type: '', has_timer: null, website_url: '', facebook_url: '', instagram_url: '', twitter_url: '', youtube_url: '' });
+      setNewEvent({ title: '', description: '', sport_type: 'running', location: '', date: '', max_participants: 100, price: 25, distances: '', elevation_gain: '', image_url: '', requires_pps: false, requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '', races: [], route_url: '', exact_address: '', regulations: '', regulations_pdf_url: '', published: false, provided_items: ['tshirt'], custom_provided_item: '', is_free: false, sponsor_logos: [], themes: [], circuit_type: '', has_timer: null, website_url: '', facebook_url: '', instagram_url: '', twitter_url: '', youtube_url: '' });
       setImagePreview(null); fetchEvents();
     } catch (error) { toast.error(error.response?.data?.detail || 'Erreur creation'); }
     finally { setCreating(false); }
@@ -546,7 +547,7 @@ const OrganizerDashboard = () => {
     if (!editingEvent.title || !editingEvent.location) { toast.error('Champs obligatoires'); return; }
     setEditing(true);
     try {
-      const updateData = { title: editingEvent.title, description: editingEvent.description, sport_type: editingEvent.sport_type, date: editingEvent.date, location: editingEvent.location, max_participants: editingEvent.max_participants, price: editingEvent.price, distances: editingEvent.distances, elevation_gain: editingEvent.elevation_gain, image_url: editingEvent.image_url, requires_pps: editingEvent.requires_pps, races: editingEvent.races || [], regulations_pdf_url: editingEvent.regulations_pdf_url || '', published: editingEvent.published, provided_items: editingEvent.provided_items || [], provides_tshirt: (editingEvent.provided_items || []).includes('tshirt') };
+      const updateData = { title: editingEvent.title, description: editingEvent.description, sport_type: editingEvent.sport_type, date: editingEvent.date, location: editingEvent.location, max_participants: editingEvent.max_participants, price: editingEvent.price, distances: editingEvent.distances, elevation_gain: editingEvent.elevation_gain, image_url: editingEvent.image_url, requires_pps: editingEvent.requires_pps, races: editingEvent.races || [], regulations_pdf_url: editingEvent.regulations_pdf_url || '', published: editingEvent.published, provided_items: editingEvent.provided_items || [], provides_tshirt: (editingEvent.provided_items || []).includes('tshirt'), is_free: editingEvent.is_free || false, sponsor_logos: editingEvent.sponsor_logos || [] };
       await eventsApi.update(editingEvent.event_id, updateData); toast.success('Evenement mis a jour !');
       setShowEditDialog(false); setEditingEvent(null); setImagePreview(null); fetchEvents();
     } catch (error) { toast.error(error.response?.data?.detail || 'Erreur mise a jour'); }
@@ -898,7 +899,7 @@ const OrganizerDashboard = () => {
       </div>
 
       {/* CREATE EVENT DIALOG */}
-      <Dialog open={showCreateDialog} onOpenChange={(open) => { setShowCreateDialog(open); if (!open) { setCreateStep(1); setNewEvent({ title: '', description: '', sport_type: 'running', location: '', date: '', max_participants: 100, price: 25, distances: '', elevation_gain: '', image_url: '', requires_pps: false, requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '', races: [], route_url: '', exact_address: '', regulations: '', regulations_pdf_url: '', published: false, provided_items: ['tshirt'], custom_provided_item: '', themes: [], circuit_type: '', has_timer: null, website_url: '', facebook_url: '', instagram_url: '', twitter_url: '', youtube_url: '' }); setImagePreview(null); } }}>
+      <Dialog open={showCreateDialog} onOpenChange={(open) => { setShowCreateDialog(open); if (!open) { setCreateStep(1); setNewEvent({ title: '', description: '', sport_type: 'running', location: '', date: '', max_participants: 100, price: 25, distances: '', elevation_gain: '', image_url: '', requires_pps: false, requires_medical_cert: false, allows_teams: false, min_age: '', max_age: '', races: [], route_url: '', exact_address: '', regulations: '', regulations_pdf_url: '', published: false, provided_items: ['tshirt'], custom_provided_item: '', is_free: false, sponsor_logos: [], themes: [], circuit_type: '', has_timer: null, website_url: '', facebook_url: '', instagram_url: '', twitter_url: '', youtube_url: '' }); setImagePreview(null); } }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
           <div className="p-6 pb-0">
             <DialogHeader><DialogTitle className="font-heading text-xl uppercase">Creer un evenement</DialogTitle><DialogDescription className="sr-only">Formulaire de creation</DialogDescription></DialogHeader>
@@ -945,6 +946,16 @@ const OrganizerDashboard = () => {
                 <div className="flex items-center gap-6 p-4 bg-slate-50 border">
                   <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={newEvent.requires_pps} onChange={(e) => setNewEvent(p => ({ ...p, requires_pps: e.target.checked }))} className="w-4 h-4 accent-brand" /><span className="text-sm font-medium">PPS obligatoire</span></label>
                   <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={newEvent.allows_teams} onChange={(e) => setNewEvent(p => ({ ...p, allows_teams: e.target.checked }))} className="w-4 h-4 accent-brand" /><span className="text-sm font-medium">Equipes autorisees</span></label>
+                </div>
+                {/* Free event toggle */}
+                <div className="flex items-center justify-between p-4 border border-emerald-200 bg-emerald-50 rounded" data-testid="is-free-toggle-create">
+                  <div>
+                    <p className="font-heading font-bold text-sm uppercase text-emerald-800">Evenement gratuit</p>
+                    <p className="text-xs text-emerald-600">Desactive le paiement lors de l'inscription</p>
+                  </div>
+                  <button type="button" onClick={() => setNewEvent(p => ({ ...p, is_free: !p.is_free }))} className="flex items-center">
+                    {newEvent.is_free ? <ToggleRight className="w-10 h-10 text-emerald-500" /> : <ToggleLeft className="w-10 h-10 text-slate-300" />}
+                  </button>
                 </div>
                 {/* Dotation participant */}
                 <div className="border border-slate-200 p-4 bg-slate-50 space-y-3" data-testid="provided-items-section">
@@ -1073,6 +1084,52 @@ const OrganizerDashboard = () => {
                 <div><Label>Participants max</Label><Input type="number" value={editingEvent.max_participants} onChange={(e) => setEditingEvent(p => ({ ...p, max_participants: parseInt(e.target.value) }))} /></div>
                 <div><Label>Lieu</Label><Input value={editingEvent.location} onChange={(e) => setEditingEvent(p => ({ ...p, location: e.target.value }))} /></div>
                 <div><Label>Prix (€)</Label><Input type="number" value={editingEvent.price} onChange={(e) => setEditingEvent(p => ({ ...p, price: parseFloat(e.target.value) }))} /></div>
+                {/* Free event toggle */}
+                <div className="col-span-2 flex items-center justify-between p-4 border border-emerald-200 bg-emerald-50 rounded" data-testid="is-free-toggle-edit">
+                  <div>
+                    <p className="font-heading font-bold text-sm uppercase text-emerald-800">Evenement gratuit</p>
+                    <p className="text-xs text-emerald-600">Desactive le paiement lors de l'inscription</p>
+                  </div>
+                  <button type="button" onClick={() => setEditingEvent(p => ({ ...p, is_free: !p.is_free }))} className="flex items-center">
+                    {editingEvent.is_free ? <ToggleRight className="w-10 h-10 text-emerald-500" /> : <ToggleLeft className="w-10 h-10 text-slate-300" />}
+                  </button>
+                </div>
+                {/* Sponsor logos */}
+                <div className="col-span-2 border border-slate-200 p-4 rounded space-y-3" data-testid="sponsor-logos-edit">
+                  <Label className="text-sm font-heading uppercase text-slate-500">Logos des sponsors</Label>
+                  <div className="flex flex-wrap gap-3">
+                    {(editingEvent.sponsor_logos || []).map((logo, idx) => (
+                      <div key={idx} className="relative group border border-slate-200 rounded p-2 bg-slate-50">
+                        <img src={logo.url} alt={logo.name || `Sponsor ${idx+1}`} className="h-12 w-auto object-contain" />
+                        {logo.name && <p className="text-[9px] text-center text-slate-400 mt-1">{logo.name}</p>}
+                        <button type="button" onClick={() => setEditingEvent(p => ({ ...p, sponsor_logos: (p.sponsor_logos || []).filter((_, i) => i !== idx) }))} className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3" /></button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <label className="block cursor-pointer">
+                        <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const fd = new FormData();
+                          fd.append('file', file);
+                          try {
+                            const res = await api.post('/upload/image', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+                            const logoName = prompt('Nom du sponsor (optionnel)') || '';
+                            setEditingEvent(p => ({ ...p, sponsor_logos: [...(p.sponsor_logos || []), { url: res.data.url, name: logoName }] }));
+                            toast.success('Logo ajoute !');
+                          } catch { toast.error('Erreur upload logo'); }
+                          e.target.value = '';
+                        }} />
+                        <div className="border-2 border-dashed border-slate-300 hover:border-brand p-3 text-center rounded transition-colors group cursor-pointer">
+                          <Upload className="w-5 h-5 mx-auto mb-1 text-slate-300 group-hover:text-brand" />
+                          <p className="text-xs font-heading uppercase text-slate-500 group-hover:text-brand">Ajouter un logo sponsor</p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
                 <div><Label>Dotation participant</Label>
                   <div className="grid grid-cols-3 gap-1.5 mt-2">
                     {[

@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "onboarding@resend.dev")
-LOGO_URL = os.environ.get("SITE_URL", "https://sportlyo-preview-2.preview.emergentagent.com") + "/logo-email.png"
-SITE_URL = os.environ.get("SITE_URL", "https://sportlyo-preview-2.preview.emergentagent.com")
+LOGO_URL = os.environ.get("SITE_URL", "https://event-booking-34.preview.emergentagent.com") + "/logo-email.png"
+SITE_URL = os.environ.get("SITE_URL", "https://event-booking-34.preview.emergentagent.com")
 
 if RESEND_API_KEY:
     resend.api_key = RESEND_API_KEY

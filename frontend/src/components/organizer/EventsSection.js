@@ -30,6 +30,9 @@ export const EventsSection = ({ events, onEdit, onDelete, onCreateNew, onToggleP
                     </span>
                     {event.published ? 'En ligne' : 'Brouillon'}
                   </span>
+                  {event.is_free && (
+                    <span className="inline-flex items-center px-2.5 py-1 text-xs font-heading font-bold uppercase tracking-wider bg-teal-500 text-white" data-testid={`free-badge-${event.event_id}`}>Gratuit</span>
+                  )}
                 </div>
                 <div className="absolute bottom-3 left-3 flex items-center gap-2">
                   <div className="bg-white text-asphalt px-2.5 py-1 text-center">

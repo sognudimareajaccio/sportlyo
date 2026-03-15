@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, User, Phone, Loader2, Building2, ShoppingBag } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, Phone, Loader2, Building2, Handshake } from 'lucide-react';
 import { Label } from '../components/ui/label';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -9,6 +9,8 @@ import AnimatedBackground from '../components/AnimatedBackground';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const defaultRole = searchParams.get('role') || 'participant';
   const { register } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -18,7 +20,7 @@ const RegisterPage = () => {
     phone: '',
     password: '',
     confirmPassword: '',
-    role: 'participant',
+    role: ['participant', 'organizer', 'provider'].includes(defaultRole) ? defaultRole : 'participant',
     company_name: ''
   });
 
@@ -67,7 +69,7 @@ const RegisterPage = () => {
   const roles = [
     { id: 'participant', label: 'Participant', desc: 'Inscrivez-vous aux courses', icon: User },
     { id: 'organizer', label: 'Organisateur', desc: 'Créez vos événements', icon: Building2 },
-    { id: 'provider', label: 'Prestataire', desc: 'Vendez vos produits', icon: ShoppingBag }
+    { id: 'provider', label: 'Partenaire', desc: 'Proposez vos services', icon: Handshake }
   ];
 
   return (
@@ -166,7 +168,7 @@ const RegisterPage = () => {
 
               {formData.role === 'provider' && (
                 <p className="text-[10px] text-amber-400/80 bg-amber-400/10 border border-amber-400/20 p-2">
-                  Les comptes prestataires nécessitent une validation par l'administrateur avant activation.
+                  Les comptes partenaires nécessitent une validation par l'administrateur avant activation.
                 </p>
               )}
 

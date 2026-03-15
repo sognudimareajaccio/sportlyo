@@ -8,7 +8,7 @@ import {
   Heart, CheckCircle, AlertCircle, Loader2, QrCode, Clock, Timer,
   Route, FileText, Navigation, ExternalLink, ChevronDown, ChevronUp,
   ArrowRight, Check, Phone, Mail, User, Globe, Shirt, Facebook, Instagram, Youtube, Twitter,
-  CreditCard, Lock, ShoppingBag, Package, ChevronRight, Copy, X, Link, Download
+  CreditCard, Lock, ShoppingBag, Package, ChevronRight, Copy, X, Link, Download, Bookmark, BookmarkCheck
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -81,6 +81,7 @@ const EventDetailPage = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   const getMapUrl = (address) => {
     if (!address) return null;
@@ -117,6 +118,22 @@ const EventDetailPage = () => {
       api.get(`/events/${eventId}/shop`).then(res => setShopProducts(res.data.products || [])).catch(() => {});
     }
   }, [eventId]);
+
+  // Check if event is saved
+  useEffect(() => {
+    if (eventId && user) {
+      api.get(`/events/${eventId}/is-saved`).then(res => setIsSaved(res.data.saved)).catch(() => {});
+    }
+  }, [eventId, user]);
+
+  const toggleSaveEvent = async () => {
+    if (!user) { toast.error('Connectez-vous pour sauvegarder'); return; }
+    try {
+      const res = await api.post(`/events/${eventId}/save`);
+      setIsSaved(res.data.saved);
+      toast.success(res.data.saved ? 'Evenement sauvegarde !' : 'Retire des favoris');
+    } catch { toast.error('Erreur'); }
+  };
 
   // Pre-fill from user account
   useEffect(() => {
@@ -233,6 +250,19 @@ const EventDetailPage = () => {
         pps_number: formData.pps_number || user?.pps_number
       });
 
+      // Free event: skip payment, show success directly
+      if (regRes.data.is_free || regRes.data.amount === 0) {
+        setRegistrationSuccess({
+          registration_id: regRes.data.registration_id,
+          bib_number: regRes.data.bib_number,
+          amount: 0
+        });
+        setShowRegisterDialog(false);
+        setRegistering(false);
+        toast.success('Inscription gratuite confirmee !');
+        return;
+      }
+
       // Show Square payment dialog
       setPendingRegistration({
         registration_id: regRes.data.registration_id,
@@ -319,8 +349,12 @@ const EventDetailPage = () => {
         </button>
 
         <div className="absolute top-6 right-6 flex gap-2">
-          <button className="bg-white/90 backdrop-blur p-2 rounded-sm hover:bg-white transition-colors">
-            <Heart className="w-5 h-5" />
+          <button
+            className={`backdrop-blur p-2 rounded-sm transition-colors ${isSaved ? 'bg-brand text-white hover:bg-brand/90' : 'bg-white/90 hover:bg-white'}`}
+            onClick={toggleSaveEvent}
+            data-testid="save-event-btn"
+          >
+            {isSaved ? <BookmarkCheck className="w-5 h-5" /> : <Bookmark className="w-5 h-5" />}
           </button>
           <button className="bg-white/90 backdrop-blur p-2 rounded-sm hover:bg-white transition-colors" onClick={() => setShowShareModal(true)} data-testid="share-btn">
             <Share2 className="w-5 h-5" />
@@ -335,6 +369,9 @@ const EventDetailPage = () => {
               </span>
               {event.requires_pps && (
                 <span className="badge bg-blue-500 text-white">PPS Requis</span>
+              )}
+              {event.is_free && (
+                <span className="badge bg-emerald-500 text-white font-heading font-bold" data-testid="free-badge">GRATUIT</span>
               )}
             </div>
             <h1 className="font-heading text-3xl md:text-5xl font-bold tracking-tight uppercase">
@@ -804,6 +841,29 @@ const EventDetailPage = () => {
               <p className="text-xl font-heading font-bold text-white" data-testid="organizer-name">{event.organizer_name}</p>
             </motion.div>
 
+            {/* Sponsor Logos */}
+            {event.sponsor_logos && event.sponsor_logos.length > 0 && (
+              <motion.div
+                className="bg-white p-6 border border-slate-200"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.47 }}
+                data-testid="sponsor-logos-section"
+              >
+                <h2 className="font-heading text-sm font-bold uppercase tracking-wider text-slate-500 mb-4">Nos sponsors & partenaires</h2>
+                <div className="flex flex-wrap items-center gap-6">
+                  {event.sponsor_logos.map((logo, idx) => (
+                    <div key={idx} className="flex flex-col items-center gap-2" data-testid={`sponsor-logo-${idx}`}>
+                      <div className="h-16 w-32 flex items-center justify-center bg-slate-50 border border-slate-100 rounded p-2">
+                        <img src={logo.url} alt={logo.name || `Sponsor ${idx + 1}`} className="max-h-full max-w-full object-contain" />
+                      </div>
+                      {logo.name && <span className="text-[10px] font-heading uppercase tracking-wider text-slate-400">{logo.name}</span>}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
             {/* Community Section */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -853,7 +913,12 @@ const EventDetailPage = () => {
                 <>
                   {/* Price */}
                   <div className="text-center pb-6 border-b">
-                    {formData.selected_race && event.races ? (
+                    {event.is_free ? (
+                      <>
+                        <p className="text-sm text-slate-500 uppercase tracking-wider mb-1">Inscription</p>
+                        <p className="font-heading text-5xl font-extrabold text-emerald-500" data-testid="free-price-label">GRATUIT</p>
+                      </>
+                    ) : formData.selected_race && event.races ? (
                       <>
                         <p className="text-sm text-slate-500 uppercase tracking-wider mb-1">
                           {event.races.find(r => r.name === formData.selected_race)?.name}

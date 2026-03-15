@@ -7,7 +7,8 @@ import {
   User, Calendar, Trophy, TrendingUp, ShoppingBag, MessageSquare,
   ChevronRight, ArrowLeft, Home, MapPin, Clock, Upload, CheckCircle,
   XCircle, ExternalLink, FileText, Loader2, Send, Package, Edit,
-  Footprints, Mountain, Euro, BarChart3, Save, Flame, Sparkles, ArrowRight, Download
+  Footprints, Mountain, Euro, BarChart3, Save, Flame, Sparkles, ArrowRight, Download,
+  Bookmark, BookmarkCheck, Heart, Trash2
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -64,6 +65,7 @@ const ParticipantDashboard = () => {
   const [myRefunds, setMyRefunds] = useState([]);
   const [refundReason, setRefundReason] = useState('');
   const [requestingRefund, setRequestingRefund] = useState(null);
+  const [savedEvents, setSavedEvents] = useState([]);
 
   const fetchInitialData = async () => {
     try {
@@ -92,6 +94,7 @@ const ParticipantDashboard = () => {
     if (section === 'bilan') fetchStats();
     if (section === 'orders') fetchOrders();
     if (section === 'messaging') fetchProviders();
+    if (section === 'saved') fetchSavedEvents();
   };
 
   const fetchProfile = async () => {
@@ -136,6 +139,22 @@ const ParticipantDashboard = () => {
       setProviders(res.data.providers || []);
     } catch { console.error('Erreur providers'); }
   };
+
+  const fetchSavedEvents = async () => {
+    try {
+      const res = await api.get('/my/saved-events');
+      setSavedEvents(res.data.events || []);
+    } catch { console.error('Erreur saved events'); }
+  };
+
+  const removeSavedEvent = async (eventId) => {
+    try {
+      await api.post(`/events/${eventId}/save`);
+      setSavedEvents(prev => prev.filter(e => e.event_id !== eventId));
+      toast.success('Evenement retire des favoris');
+    } catch { toast.error('Erreur'); }
+  };
+
 
   const openChat = async (providerId) => {
     setActiveChat(providerId);
@@ -187,6 +206,7 @@ const ParticipantDashboard = () => {
   const hubItems = [
     { id: 'profile', label: 'Mon Profil', icon: User, desc: 'Coordonnées & informations', color: 'bg-blue-500' },
     { id: 'inscriptions', label: 'Mes Inscriptions', icon: FileText, desc: `${registrations.length} inscription(s)`, color: 'bg-emerald-500' },
+    { id: 'saved', label: 'Mes Favoris', icon: Bookmark, desc: 'Événements sauvegardés', color: 'bg-rose-500' },
     { id: 'upcoming', label: 'Courses à venir', icon: Calendar, desc: `${upcomingRegistrations.length} à venir`, color: 'bg-orange-500' },
     { id: 'results', label: 'Mes Résultats', icon: Trophy, desc: 'Stats par événement', color: 'bg-purple-500' },
     { id: 'bilan', label: 'Bilan Sportif', icon: TrendingUp, desc: 'Statistiques annuelles', color: 'bg-teal-600' },
@@ -827,6 +847,60 @@ const ParticipantDashboard = () => {
               </div>
             ) : (
               <div className="p-12 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-brand" /></div>
+            )}
+          </motion.div>
+        )}
+
+        {/* ===== MES FAVORIS (SAVED EVENTS) ===== */}
+        {activeSection === 'saved' && (
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} data-testid="saved-events-section">
+            <SectionHeader title="Mes Favoris" onBack={() => setActiveSection('hub')} />
+            {savedEvents.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {savedEvents.map(ev => (
+                  <div key={ev.event_id} className="bg-white border border-slate-200 overflow-hidden group hover:shadow-md transition-shadow" data-testid={`saved-event-${ev.event_id}`}>
+                    <div className="relative h-36 bg-slate-100">
+                      {ev.image_url ? (
+                        <img src={ev.image_url} alt={ev.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand/10 to-brand/5">
+                          <Calendar className="w-10 h-10 text-brand/30" />
+                        </div>
+                      )}
+                      {ev.is_free && (
+                        <span className="absolute top-2 left-2 bg-emerald-500 text-white text-[10px] font-heading font-bold uppercase px-2 py-0.5">Gratuit</span>
+                      )}
+                      <button onClick={() => removeSavedEvent(ev.event_id)} className="absolute top-2 right-2 bg-white/90 hover:bg-red-50 p-1.5 rounded-sm transition-colors" data-testid={`unsave-event-${ev.event_id}`}>
+                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      </button>
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-heading font-bold text-sm uppercase line-clamp-1">{ev.title}</h3>
+                      <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                        <MapPin className="w-3 h-3" />{ev.location}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                        <Calendar className="w-3 h-3" />{ev.date ? format(new Date(ev.date), 'd MMMM yyyy', { locale: fr }) : 'Date TBD'}
+                      </div>
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+                        <span className="font-heading font-bold text-brand">{ev.is_free ? 'Gratuit' : `${ev.price || ev.current_price || 0}€`}</span>
+                        <a href={`/events/${ev.event_id}`} className="text-xs font-heading uppercase text-brand hover:underline flex items-center gap-1">
+                          Voir <ArrowRight className="w-3 h-3" />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white border border-slate-200 p-12 text-center">
+                <Bookmark className="w-16 h-16 text-slate-200 mx-auto mb-4" />
+                <h3 className="font-heading font-bold text-lg uppercase mb-2">Aucun favori</h3>
+                <p className="text-slate-500 text-sm mb-4">Sauvegardez des événements depuis la page détail pour les retrouver ici</p>
+                <a href="/events" className="inline-flex items-center gap-2 bg-brand text-white px-6 py-2 font-heading text-sm uppercase hover:bg-brand/90 transition-colors" data-testid="browse-events-btn">
+                  Explorer les événements <ArrowRight className="w-4 h-4" />
+                </a>
+              </div>
             )}
           </motion.div>
         )}

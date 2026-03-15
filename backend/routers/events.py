@@ -138,6 +138,8 @@ async def create_event(event_data: EventCreate, current_user: dict = Depends(get
         "published": event_data.published,
         "provides_tshirt": event_data.provides_tshirt,
         "provided_items": event_data.provided_items or [],
+        "is_free": event_data.is_free,
+        "sponsor_logos": [l for l in (event_data.sponsor_logos or []) if isinstance(l, dict)],
         "themes": event_data.themes,
         "circuit_type": event_data.circuit_type,
         "has_timer": event_data.has_timer,
@@ -301,3 +303,33 @@ async def get_categories():
     for cat in categories:
         cat['count'] = await db.events.count_documents({"sport_type": cat['id'], "status": "active"})
     return {"categories": categories}
+
+
+# ============== SAVED EVENTS ==============
+
+@router.post("/events/{event_id}/save")
+async def save_event(event_id: str, current_user: dict = Depends(get_current_user)):
+    existing = await db.saved_events.find_one({"user_id": current_user['user_id'], "event_id": event_id})
+    if existing:
+        await db.saved_events.delete_one({"user_id": current_user['user_id'], "event_id": event_id})
+        return {"saved": False, "message": "Evenement retire des favoris"}
+    await db.saved_events.insert_one({
+        "user_id": current_user['user_id'],
+        "event_id": event_id,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    return {"saved": True, "message": "Evenement sauvegarde"}
+
+
+@router.get("/events/{event_id}/is-saved")
+async def is_event_saved(event_id: str, current_user: dict = Depends(get_current_user)):
+    existing = await db.saved_events.find_one({"user_id": current_user['user_id'], "event_id": event_id})
+    return {"saved": existing is not None}
+
+
+@router.get("/my/saved-events")
+async def get_saved_events(current_user: dict = Depends(get_current_user)):
+    saved = await db.saved_events.find({"user_id": current_user['user_id']}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    event_ids = [s["event_id"] for s in saved]
+    events = await db.events.find({"event_id": {"$in": event_ids}, "status": "active"}, {"_id": 0}).to_list(100)
+    return {"events": events}

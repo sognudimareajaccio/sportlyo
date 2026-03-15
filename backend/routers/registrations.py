@@ -112,9 +112,12 @@ async def create_registration(reg_data: RegistrationCreate, current_user: dict =
 
     service_fee = round(total_price * PLATFORM_COMMISSION, 2)
     total_to_pay = round(total_price + service_fee, 2)
-    stripe_fee = round(total_to_pay * STRIPE_PERCENT_FEE + STRIPE_FIXED_FEE, 2)
+    stripe_fee = round(total_to_pay * STRIPE_PERCENT_FEE + STRIPE_FIXED_FEE, 2) if total_to_pay > 0 else 0
     platform_net = round(service_fee - stripe_fee, 2)
     organizer_amount = total_price
+
+    # Free event handling
+    is_free = event.get("is_free", False) or total_to_pay == 0
 
     qr_data = f"SPORTSCONNECT:{registration_id}:{bib_number}"
     qr_code = generate_qr_code(qr_data)
@@ -142,7 +145,7 @@ async def create_registration(reg_data: RegistrationCreate, current_user: dict =
         "ffa_license": reg_data.ffa_license, "ffa_discount": ffa_discount,
         "custom_fields_data": reg_data.custom_fields_data,
         "team_id": reg_data.team_id,
-        "payment_status": "pending", "payment_id": None, "checkout_session_id": None,
+        "payment_status": "completed" if is_free else "pending", "payment_id": None, "checkout_session_id": None,
         "base_price": total_price, "service_fee": service_fee,
         "amount_paid": total_to_pay, "stripe_fee": stripe_fee,
         "platform_net": platform_net, "organizer_amount": organizer_amount,
@@ -206,7 +209,8 @@ async def create_registration(reg_data: RegistrationCreate, current_user: dict =
         "registration_id": registration_id, "bib_number": bib_number,
         "rfid_chip_id": rfid_chip_id, "category": category,
         "base_price": total_price, "service_fee": service_fee,
-        "amount": total_to_pay, "event_title": event['title'], "qr_code": qr_code
+        "amount": total_to_pay, "event_title": event['title'], "qr_code": qr_code,
+        "is_free": is_free
     }
 
 
