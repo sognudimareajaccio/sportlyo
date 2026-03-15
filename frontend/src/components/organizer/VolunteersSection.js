@@ -118,15 +118,15 @@ export const VolunteersSection = ({
           </div>
           <div>
             <Label className="text-xs font-heading uppercase text-slate-500">Fonction attribuee *</Label>
-            <Select value={volunteerForm.role_assigned} onValueChange={(v) => setVolunteerForm(p => ({ ...p, role_assigned: v === '__custom__' ? '' : v }))}>
+            <Select value={defaultRoles.includes(volunteerForm.role_assigned) ? volunteerForm.role_assigned : '__custom__'} onValueChange={(v) => setVolunteerForm(p => ({ ...p, role_assigned: v === '__custom__' ? '' : v }))}>
               <SelectTrigger data-testid="volunteer-role-select"><SelectValue placeholder="Choisir une fonction" /></SelectTrigger>
               <SelectContent>
                 {defaultRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 <SelectItem value="__custom__">Autre (personnalise)</SelectItem>
               </SelectContent>
             </Select>
-            {(volunteerForm.role_assigned && !defaultRoles.includes(volunteerForm.role_assigned)) && (
-              <Input placeholder="Fonction personnalisee..." value={volunteerForm.role_assigned === '__custom__' ? '' : volunteerForm.role_assigned} onChange={(e) => setVolunteerForm(p => ({ ...p, role_assigned: e.target.value }))} className="mt-2" data-testid="volunteer-custom-role" />
+            {!defaultRoles.includes(volunteerForm.role_assigned) && (
+              <Input placeholder="Saisir la fonction personnalisee..." value={volunteerForm.role_assigned} onChange={(e) => setVolunteerForm(p => ({ ...p, role_assigned: e.target.value }))} className="mt-2" data-testid="volunteer-custom-role" />
             )}
           </div>
           <div>
