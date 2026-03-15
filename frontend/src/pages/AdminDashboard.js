@@ -1509,7 +1509,7 @@ const AdminDashboard = () => {
 
             {/* Subscription Action Dialog */}
             <Dialog open={showSubActionDialog} onOpenChange={setShowSubActionDialog}>
-              <DialogContent>
+              <DialogContent aria-describedby="sub-action-desc">
                 <DialogHeader>
                   <DialogTitle className="font-heading uppercase">
                     {subAction.action === 'activate' ? 'Activer l\'abonnement' :
@@ -1518,7 +1518,7 @@ const AdminDashboard = () => {
                      'Resilier l\'abonnement'}
                   </DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
+                <div id="sub-action-desc" className="space-y-4">
                   {subAction.action === 'extend' && (
                     <div>
                       <Label>Nombre de jours</Label>

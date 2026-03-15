@@ -35,6 +35,17 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 - Endpoints: GET /api/subscriptions/my, POST /api/subscriptions/create-payment, POST /api/subscriptions/confirm-payment/{id}, POST /api/subscriptions/cancel
 - Dashboard admin: GET /api/admin/subscriptions avec stats (total, trial, active, expired, revenue)
 
+**Gestion Admin des Comptes Partenaires (P0) - COMPLETE:**
+- Tableau de bord admin complet pour les partenaires avec stats globales (7 KPIs)
+- Tableau des partenaires avec recherche, filtrage par statut, et colonnes detaillees
+- Fiche detaillee par partenaire avec profil, abonnement, KPIs activite
+- Graphiques Recharts: revenus mensuels (BarChart) + commandes mensuelles (AreaChart) sur 12 mois
+- Actions compte: Suspendre/Reactiver avec raison obligatoire
+- Actions abonnement: Activer, Prolonger, Offrir des mois, Resilier (avec dialog de confirmation)
+- Historique des actions admin (audit trail) avec timestamp, admin, raison
+- Suspension automatique de l'abonnement lors de la suspension du compte
+- Endpoints: GET /api/admin/providers/detailed, GET /api/admin/providers/{id}/detail, PUT /api/admin/providers/{id}/status, PUT /api/admin/providers/{id}/subscription
+
 **Evenements Gratuits (P0) - COMPLETE:**
 - Toggle `is_free` dans les formulaires creation et edition d'evenements
 - Badge "GRATUIT" affiche sur la page detail (hero + sidebar)
