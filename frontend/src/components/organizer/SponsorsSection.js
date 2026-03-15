@@ -100,7 +100,7 @@ export const SponsorsSection = ({
                 </div>
                 <div className="flex gap-1 flex-shrink-0 ml-3">
                   {s.amount && !s.payment_link && (
-                    <Button variant="outline" size="sm" className="h-8 text-green-600 border-green-200 hover:bg-green-50 gap-1 text-[10px]" onClick={() => generatePaymentLink('sponsor', s.sponsor_id, parseFloat(s.amount), `Sponsoring ${s.name}`)} data-testid={`pay-link-sponsor-${s.sponsor_id}`}><Link2 className="w-3 h-3" /> Lien paiement</Button>
+                    <Button variant="outline" size="sm" className="h-8 text-green-600 border-green-200 hover:bg-green-50 gap-1 text-[10px]" onClick={() => generatePaymentLink('sponsor', s.sponsor_id, parseFloat(s.amount), `Sponsoring ${s.name}`)} data-testid={`pay-link-sponsor-${s.sponsor_id}`}><Link2 className="w-3 h-3" /> Generer lien de paiement</Button>
                   )}
                   {s.payment_link && (
                     <Button variant="outline" size="sm" className="h-8 text-green-600 border-green-200 gap-1 text-[10px]" onClick={() => { navigator.clipboard.writeText(s.payment_link); toast.success('Lien copie !'); }} data-testid={`copy-link-sponsor-${s.sponsor_id}`}><Copy className="w-3 h-3" /> Copier lien</Button>
