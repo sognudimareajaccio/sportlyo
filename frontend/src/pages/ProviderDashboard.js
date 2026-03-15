@@ -4,7 +4,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   ShoppingBag, Package, Euro, TrendingUp, FileText, Plus, Edit, Trash2,
-  MessageSquare, Send, Loader2, X, ChevronRight, ChevronLeft, PieChart as PieChartIcon, BarChart3, Users, ArrowDownRight, Upload, Check, Search, ImagePlus, ClipboardList, Eye, Clock, CheckCircle
+  MessageSquare, Send, Loader2, X, ChevronRight, ChevronLeft, PieChart as PieChartIcon, BarChart3, Users, ArrowDownRight, Upload, Check, Search, ImagePlus, ClipboardList, Eye, Clock, CheckCircle,
+  CreditCard, AlertTriangle, Crown, ArrowRight
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -64,12 +65,13 @@ const ProviderDashboard = () => {
   const [customizeImages, setCustomizeImages] = useState([]);
   const [uploadingCustomize, setUploadingCustomize] = useState(false);
   const customizeInputRef = useRef(null);
+  const [subscription, setSubscription] = useState(null);
 
   const categories = ['Textile', 'Accessoire', 'Gourde', 'Sac', 'Nutrition', 'Équipement'];
 
   const fetchData = useCallback(async () => {
     try {
-      const [catRes, ordRes, statsRes, convRes, logosRes, orgRes, finRes, salesRes] = await Promise.all([
+      const [catRes, ordRes, statsRes, convRes, logosRes, orgRes, finRes, salesRes, subRes] = await Promise.all([
         api.get('/provider/catalog'),
         api.get('/provider/orders'),
         api.get('/provider/stats'),
@@ -77,7 +79,8 @@ const ProviderDashboard = () => {
         api.get('/provider/organizer-logos'),
         api.get('/provider/organizers'),
         api.get('/provider/financial-breakdown'),
-        api.get('/provider/sales-breakdown')
+        api.get('/provider/sales-breakdown'),
+        api.get('/subscriptions/my').catch(() => ({ data: { subscription: null } }))
       ]);
       setProducts(catRes.data.products || []);
       setOrders(ordRes.data.orders || []);
@@ -87,6 +90,7 @@ const ProviderDashboard = () => {
       setOrganizersList(orgRes.data.organizers || []);
       setFinancialData(finRes.data || null);
       setSalesData(salesRes.data || null);
+      setSubscription(subRes.data.subscription || null);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, []);
@@ -345,6 +349,18 @@ const ProviderDashboard = () => {
     } catch (e) { toast.error(e.response?.data?.detail || 'Erreur'); }
   };
 
+  const handleSubscriptionPayment = async () => {
+    try {
+      const res = await api.post('/subscriptions/create-payment');
+      if (res.data.payment_url) {
+        window.open(res.data.payment_url, '_blank');
+        toast.success('Lien de paiement ouvert dans un nouvel onglet');
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Erreur creation paiement');
+    }
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="loader" /></div>;
 
   const statCards = [
@@ -395,6 +411,67 @@ const ProviderDashboard = () => {
             </div>
           ))}
         </div>
+
+        {/* Subscription Banner */}
+        {subscription && (
+          <div className={`mb-6 p-4 border-l-4 flex items-center justify-between ${
+            subscription.status === 'trial' ? 'bg-blue-50 border-blue-500' :
+            subscription.status === 'active' ? 'bg-emerald-50 border-emerald-500' :
+            subscription.status === 'trial_expired' || subscription.status === 'expired' ? 'bg-amber-50 border-amber-500' :
+            'bg-slate-50 border-slate-400'
+          }`} data-testid="subscription-banner">
+            <div className="flex items-center gap-3">
+              {subscription.status === 'trial' && <Clock className="w-5 h-5 text-blue-500" />}
+              {subscription.status === 'active' && <Crown className="w-5 h-5 text-emerald-500" />}
+              {(subscription.status === 'trial_expired' || subscription.status === 'expired') && <AlertTriangle className="w-5 h-5 text-amber-500" />}
+              {subscription.status === 'cancelled' && <X className="w-5 h-5 text-slate-400" />}
+              <div>
+                {subscription.status === 'trial' && (() => {
+                  const daysLeft = Math.max(0, Math.ceil((new Date(subscription.trial_end) - new Date()) / (1000 * 60 * 60 * 24)));
+                  return (
+                    <>
+                      <p className="font-heading font-bold text-sm uppercase text-blue-800">Essai gratuit — {daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}</p>
+                      <p className="text-xs text-blue-600">Profitez de toutes les fonctionnalites. Abonnez-vous a 19€/mois pour continuer apres l'essai.</p>
+                    </>
+                  );
+                })()}
+                {subscription.status === 'active' && (
+                  <>
+                    <p className="font-heading font-bold text-sm uppercase text-emerald-800">Abonnement actif — 19€/mois</p>
+                    <p className="text-xs text-emerald-600">
+                      Prochain renouvellement : {subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString('fr-FR') : '—'}
+                      {' '} | {subscription.payments_made || 0}/{subscription.commitment_months || 12} mensualites payees
+                    </p>
+                  </>
+                )}
+                {(subscription.status === 'trial_expired' || subscription.status === 'expired') && (
+                  <>
+                    <p className="font-heading font-bold text-sm uppercase text-amber-800">
+                      {subscription.status === 'trial_expired' ? 'Essai termine' : 'Abonnement expire'}
+                    </p>
+                    <p className="text-xs text-amber-600">Abonnez-vous pour continuer a utiliser la plateforme (19€/mois, engagement 12 mois).</p>
+                  </>
+                )}
+                {subscription.status === 'cancelled' && (
+                  <>
+                    <p className="font-heading font-bold text-sm uppercase text-slate-600">Abonnement annule</p>
+                    <p className="text-xs text-slate-500">Votre acces prendra fin a la fin de la periode en cours.</p>
+                  </>
+                )}
+              </div>
+            </div>
+            {(subscription.status === 'trial' || subscription.status === 'trial_expired' || subscription.status === 'expired') && (
+              <Button className="bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase text-xs gap-2 shrink-0" onClick={handleSubscriptionPayment} data-testid="subscribe-btn">
+                <CreditCard className="w-4 h-4" /> {subscription.status === 'trial' ? 'S\'abonner maintenant' : 'Renouveler'}
+              </Button>
+            )}
+            {subscription.status === 'active' && subscription.payments_made < subscription.commitment_months && (
+              <Button className="bg-brand hover:bg-brand/90 text-white font-heading font-bold uppercase text-xs gap-2 shrink-0" onClick={handleSubscriptionPayment} data-testid="pay-next-month-btn">
+                <CreditCard className="w-4 h-4" /> Payer le mois suivant
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Nav tabs */}
         <div className="flex gap-2 mb-6">

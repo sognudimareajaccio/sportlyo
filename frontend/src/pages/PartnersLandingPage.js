@@ -35,8 +35,8 @@ const steps = [
 ];
 
 const stats = [
-  { value: '0€', label: 'Inscription gratuite' },
-  { value: '100+', label: 'Evenements par an' },
+  { value: '19€', label: 'par mois' },
+  { value: '14j', label: 'Essai gratuit' },
   { value: '15+', label: 'Categories de services' },
   { value: '24h', label: 'Activation du compte' }
 ];
@@ -75,8 +75,8 @@ const PartnersLandingPage = () => {
               </Link>
             </motion.div>
             <motion.div className="flex items-center gap-8 mt-10 text-sm text-slate-400" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.5 }}>
-              <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-brand" /> Inscription gratuite</span>
-              <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-brand" /> Sans engagement</span>
+              <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-brand" /> 14 jours d'essai gratuit</span>
+              <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-brand" /> 19€/mois</span>
               <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-brand" /> Missions toute l annee</span>
             </motion.div>
           </div>
@@ -144,6 +144,62 @@ const PartnersLandingPage = () => {
         </div>
       </section>
 
+      {/* Pricing */}
+      <section className="py-24 bg-white" data-testid="partner-pricing">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <span className="text-brand font-heading font-bold uppercase tracking-widest text-sm">Tarif</span>
+            <h2 className="font-heading text-3xl md:text-4xl font-bold uppercase mt-2">Un tarif simple et transparent</h2>
+            <p className="text-slate-500 mt-4 max-w-2xl mx-auto">Tout ce dont vous avez besoin pour developper votre activite evenementielle.</p>
+          </div>
+          <div className="max-w-lg mx-auto">
+            <motion.div
+              className="border-2 border-brand p-8 md:p-10 relative"
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              viewport={{ once: true }}
+            >
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-brand text-white font-heading font-bold uppercase text-xs tracking-widest px-6 py-1.5">
+                14 jours d'essai gratuit
+              </div>
+              <div className="text-center mb-8">
+                <h3 className="font-heading font-bold text-xl uppercase tracking-wider mb-4">Partenaire</h3>
+                <div className="flex items-baseline justify-center gap-1">
+                  <span className="font-heading text-6xl font-extrabold text-brand">19</span>
+                  <span className="text-2xl font-heading font-bold text-brand">€</span>
+                  <span className="text-slate-500 text-sm ml-1">/ mois</span>
+                </div>
+                <p className="text-xs text-slate-400 mt-2">Engagement minimum 12 mois. Sans renouvellement automatique.</p>
+              </div>
+              <ul className="space-y-3 mb-8">
+                {[
+                  'Profil partenaire visible par tous les organisateurs',
+                  'Messagerie directe avec les organisateurs',
+                  'Demandes de devis en ligne',
+                  'Suivi des prestations et revenus',
+                  'Systeme d avis et reputation',
+                  'Zone geographique personnalisable',
+                  'Tableau de bord complet',
+                  'Support prioritaire'
+                ].map(item => (
+                  <li key={item} className="flex items-start gap-3 text-sm text-slate-600">
+                    <Check className="w-4 h-4 text-brand flex-shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Link to="/register?role=provider">
+                <Button className="btn-primary w-full h-12 text-base gap-2" data-testid="pricing-cta">
+                  Commencer l'essai gratuit <ArrowRight className="w-5 h-5" />
+                </Button>
+              </Link>
+              <p className="text-center text-[11px] text-slate-400 mt-3">Aucune carte bancaire requise pour l'essai</p>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* How it works */}
       <section className="py-24 bg-asphalt text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -199,10 +255,10 @@ const PartnersLandingPage = () => {
           <motion.div className="mt-10" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} viewport={{ once: true }}>
             <Link to="/register?role=provider">
               <Button className="bg-white text-brand hover:bg-slate-100 h-14 px-8 text-base font-heading font-bold uppercase tracking-wider gap-2" data-testid="partner-cta-final">
-                Devenir partenaire gratuitement <ArrowRight className="w-5 h-5" />
+                Commencer l'essai gratuit <ArrowRight className="w-5 h-5" />
               </Button>
             </Link>
-            <p className="text-sm text-white/60 mt-4">Inscription gratuite. Sans engagement. Premieres missions sous 24h.</p>
+            <p className="text-sm text-white/60 mt-4">14 jours d'essai gratuit. 19€/mois. Engagement 12 mois.</p>
           </motion.div>
         </div>
       </section>

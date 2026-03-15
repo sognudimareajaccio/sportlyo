@@ -48,8 +48,31 @@ async def register(request: Request):
     await db.users.insert_one(user_doc)
 
     if requested_role == "provider":
+        # Auto-start 14-day trial subscription
+        from datetime import timedelta as td
+        now = datetime.now(timezone.utc)
+        trial_end = now + td(days=14)
+        await db.subscriptions.insert_one({
+            "subscription_id": f"sub_{uuid.uuid4().hex[:12]}",
+            "user_id": user_id,
+            "user_name": user_data.name,
+            "user_email": user_data.email,
+            "status": "trial",
+            "plan": "partner_monthly",
+            "price": 19.00,
+            "trial_start": now.isoformat(),
+            "trial_end": trial_end.isoformat(),
+            "commitment_months": 12,
+            "payments_made": 0,
+            "total_paid": 0,
+            "subscription_start": None,
+            "current_period_end": None,
+            "created_at": now.isoformat(),
+            "cancelled_at": None,
+            "payment_history": []
+        })
         return {
-            "message": "Inscription enregistree. Votre compte prestataire est en attente de validation par l'administrateur.",
+            "message": "Inscription enregistree. Votre essai gratuit de 14 jours est active !",
             "pending": True,
             "user": {"user_id": user_id, "email": user_data.email, "name": user_data.name, "role": "provider", "status": "pending"}
         }

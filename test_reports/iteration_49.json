@@ -1,0 +1,51 @@
+{
+  "summary": "Tested Partner Subscription System (19€/month, 14-day trial, 12-month commitment). All 5 features working correctly: Partners Landing Page pricing section with correct pricing/trial/commitment info, Subscription API auto-creates trial for providers, Payment URL generation, Provider Dashboard subscription banner with trial status/days remaining/subscribe button, and Admin subscription stats endpoint.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_subscription_features.py", "/app/test_reports/pytest/pytest_subscription.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": ["/app/backend/tests/test_subscription_features.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": {
+    "provider": "boutique@sportlyo.fr / boutique123",
+    "admin": "admin@sportsconnect.fr / admin123"
+  },
+  "seed_data_creation": "None - subscription auto-created via GET /api/subscriptions/my for existing provider",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Partner subscription system fully functional. Subscription auto-creates 14-day trial for providers on first API access. Provider dashboard shows subscription banner with trial status and 'S'abonner maintenant' button. Payment links use SIMULATED Square checkout URLs (https://checkout.square.site/simulated/...) since real Square API may not have subscription plan configured.",
+  "features_tested": {
+    "feature_1_partners_landing_pricing": {
+      "status": "PASS",
+      "details": "Pricing section visible at /partners with: 19€/month price, '14 JOURS D'ESSAI GRATUIT' badge, '12 mois' commitment text, 'Sans renouvellement automatique' note, CTA button linking to /register?role=provider. Hero badges also show '14 jours essai gratuit' and '19€/mois'."
+    },
+    "feature_2_subscription_api": {
+      "status": "PASS",
+      "details": "GET /api/subscriptions/my returns subscription with status=trial, price=19.0, commitment_months=12, trial_end in future. Auto-creates trial for providers without existing subscription."
+    },
+    "feature_3_subscription_payment": {
+      "status": "PASS",
+      "details": "POST /api/subscriptions/create-payment returns payment_url and amount=19.0. Payment URL format: https://checkout.square.site/simulated/subpay_xxx?amount=19.0&desc=Abonnement+Partenaire"
+    },
+    "feature_4_provider_dashboard_banner": {
+      "status": "PASS",
+      "details": "Subscription banner visible between stats cards and nav tabs. Shows 'ESSAI GRATUIT — 14 JOURS RESTANTS' with trial status, '19€/mois' price mention, and 'S'ABONNER MAINTENANT' button. Button opens payment link in new tab with success toast."
+    },
+    "feature_5_admin_subscriptions": {
+      "status": "PASS",
+      "details": "GET /api/admin/subscriptions returns subscriptions list and stats object with total, trial, active, expired, cancelled counts and total_revenue."
+    }
+  },
+  "mocked_apis": {
+    "Square payment": "SIMULATED - Uses simulated checkout URLs (https://checkout.square.site/simulated/...) when real Square API fails",
+    "Twilio SMS": "Not configured"
+  }
+}

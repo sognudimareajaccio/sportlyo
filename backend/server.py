@@ -36,6 +36,7 @@ from routers.xdconnects_import import router as xdconnects_router
 from routers.invoices import router as invoices_router
 from routers.community import router as community_router
 from routers.refunds import router as refunds_router
+from routers.subscriptions import router as subscriptions_router
 from routers.rfid import router as rfid_router
 from routers.checkin import router as checkin_router
 from routers.analytics import router as analytics_router
@@ -65,6 +66,7 @@ app.include_router(rfid_router)
 app.include_router(checkin_router)
 app.include_router(analytics_router)
 app.include_router(sms_router)
+app.include_router(subscriptions_router)
 
 
 # ============== HEALTH CHECK ==============
