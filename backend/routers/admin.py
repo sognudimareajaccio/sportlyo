@@ -233,13 +233,20 @@ async def get_revenue_breakdown(current_user: dict = Depends(get_current_user)):
     platform_fees_collected = round(sum(c.get("commission_amount", 0) for c in all_commissions if c.get("status") == "collected"), 2)
     platform_fees_pending = round(sum(c.get("commission_amount", 0) for c in all_commissions if c.get("status") == "pending"), 2)
 
-    # 6. Subscriptions placeholder
-    subscriptions_total = 0
-    subscriptions_count = 0
+    # 6. Subscriptions (real data from subscription_payments)
+    sub_payments = await db.subscription_payments.find({"status": "completed"}, {"_id": 0}).to_list(10000)
+    subscriptions_total = round(sum(sp.get("amount", 0) for sp in sub_payments), 2)
+    subscriptions_count = len(sub_payments)
+    # Pending subscription payments
+    sub_pending = await db.subscription_payments.find({"status": "pending"}, {"_id": 0}).to_list(1000)
+    subscriptions_pending_total = round(sum(sp.get("amount", 0) for sp in sub_pending), 2)
+    # Active subscriptions count
+    active_subs = await db.subscriptions.count_documents({"status": "active"})
+    trial_subs = await db.subscriptions.count_documents({"status": "trial"})
 
     # Grand total
     grand_total = inscriptions_total + donations_total + sponsors_total + products_total + subscriptions_total
-    grand_fees = inscriptions_fees + donations_fees + sponsors_fees + products_commission
+    grand_fees = inscriptions_fees + donations_fees + sponsors_fees + products_commission + subscriptions_total  # subscriptions = 100% platform revenue
 
     # Monthly evolution (last 12 months)
     now = datetime.now(timezone.utc)
@@ -262,6 +269,8 @@ async def get_revenue_breakdown(current_user: dict = Depends(get_current_user)):
         m_spon = sum(s.get("base_amount", s.get("amount", 0)) for s in sponsors if m_iso_start <= s.get("paid_at", s.get("created_at", "")) < m_iso_end)
         # Products
         m_prod = sum(o.get("total", 0) for o in orders if m_iso_start <= o.get("created_at", "") < m_iso_end)
+        # Subscriptions
+        m_subs = sum(sp.get("amount", 0) for sp in sub_payments if m_iso_start <= sp.get("confirmed_at", sp.get("created_at", "")) < m_iso_end)
         # Fees
         m_fees = sum(c.get("commission_amount", 0) for c in all_commissions if m_iso_start <= c.get("created_at", "") < m_iso_end)
 
@@ -271,8 +280,9 @@ async def get_revenue_breakdown(current_user: dict = Depends(get_current_user)):
             "dons": round(m_don, 2),
             "sponsors": round(m_spon, 2),
             "produits": round(m_prod, 2),
+            "abonnements": round(m_subs, 2),
             "frais_plateforme": round(m_fees, 2),
-            "total": round(m_insc + m_don + m_spon + m_prod, 2)
+            "total": round(m_insc + m_don + m_spon + m_prod + m_subs, 2)
         })
 
     # Recent transactions (mixed, sorted by date)
@@ -285,6 +295,10 @@ async def get_revenue_breakdown(current_user: dict = Depends(get_current_user)):
         recent.append({"type": "sponsor", "label": f"Sponsor - {s.get('name', '')}", "amount": s.get("base_amount", s.get("amount", 0)), "fee": s.get("platform_fee", 0), "date": s.get("paid_at", s.get("created_at", "")), "status": s.get("payment_status", "pending")})
     for o in sorted(orders, key=lambda x: x.get("created_at", ""), reverse=True)[:5]:
         recent.append({"type": "produit", "label": f"Vente - Commande {o.get('order_id', '')[:12]}", "amount": o.get("total", 0), "fee": o.get("admin_commission_total", 0), "date": o.get("created_at", ""), "status": "completed"})
+    for sp in sorted(sub_payments, key=lambda x: x.get("confirmed_at", x.get("created_at", "")), reverse=True)[:5]:
+        user = await db.users.find_one({"user_id": sp.get("user_id")}, {"_id": 0, "name": 1, "company_name": 1})
+        sp_name = (user.get("company_name") or user.get("name", "")) if user else ""
+        recent.append({"type": "abonnement", "label": f"Abo - {sp_name}", "amount": sp.get("amount", 0), "fee": sp.get("amount", 0), "date": sp.get("confirmed_at", sp.get("created_at", "")), "status": "completed"})
     recent.sort(key=lambda x: x.get("date", ""), reverse=True)
 
     return {
@@ -293,7 +307,7 @@ async def get_revenue_breakdown(current_user: dict = Depends(get_current_user)):
             "dons": {"total": donations_total, "fees": donations_fees, "count": donations_count, "pending_total": donations_pending_total, "pending_count": len(donations_pending), "label": "Dons"},
             "sponsors": {"total": sponsors_total, "fees": sponsors_fees, "count": sponsors_count, "pending_total": sponsors_pending_total, "pending_count": len(sponsors_pending), "label": "Sponsors & Mecenes"},
             "produits": {"total": products_total, "fees": products_commission, "count": products_count, "label": "Produits derives"},
-            "abonnements": {"total": subscriptions_total, "fees": 0, "count": subscriptions_count, "label": "Abonnements partenaires"}
+            "abonnements": {"total": subscriptions_total, "fees": subscriptions_total, "count": subscriptions_count, "pending_total": subscriptions_pending_total, "pending_count": len(sub_pending), "active_subs": active_subs, "trial_subs": trial_subs, "label": "Abonnements partenaires"}
         },
         "grand_total": round(grand_total, 2),
         "grand_fees": round(grand_fees, 2),

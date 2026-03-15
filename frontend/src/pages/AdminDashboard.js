@@ -63,6 +63,7 @@ const AdminDashboard = () => {
   const [showSubActionDialog, setShowSubActionDialog] = useState(false);
   const [subAction, setSubAction] = useState({ action: '', days: 30, months: 1, reason: '' });
   const [suspendReason, setSuspendReason] = useState('');
+  const [trialAlerts, setTrialAlerts] = useState([]);
 
   const filteredRefunds = refundFilter === 'all' ? refundRequests : refundRequests.filter(r => r.status === refundFilter);
 
@@ -77,7 +78,7 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [statsRes, usersRes, paymentsRes, eventsRes, providersRes, commissionsRes, invoicesRes, refundsRes] = await Promise.all([
+      const [statsRes, usersRes, paymentsRes, eventsRes, providersRes, commissionsRes, invoicesRes, refundsRes, subsRes] = await Promise.all([
         adminApi.getStats(),
         adminApi.getUsers({ page: 1, limit: 20 }),
         adminApi.getPayments({ page: 1, limit: 100 }),
@@ -85,7 +86,8 @@ const AdminDashboard = () => {
         api.get('/admin/providers'),
         api.get('/admin/commissions'),
         api.get('/admin/invoices'),
-        api.get('/admin/refunds/all')
+        api.get('/admin/refunds/all'),
+        api.get('/admin/subscriptions').catch(() => ({ data: { subscriptions: [], stats: {} } }))
       ]);
       setStats(statsRes.data);
       setUsers(usersRes.data.users);
@@ -98,6 +100,11 @@ const AdminDashboard = () => {
       setAllInvoices(invoicesRes.data.invoices || []);
       setInvoiceTotals({ total_count: invoicesRes.data.total_count || 0, total_amount: invoicesRes.data.total_amount || 0 });
       setRefundRequests(refundsRes.data.refunds || []);
+      setTrialAlerts(subsRes.data.subscriptions?.filter(s => {
+        if (s.status !== 'trial') return false;
+        const daysLeft = Math.ceil((new Date(s.trial_end) - new Date()) / (1000 * 60 * 60 * 24));
+        return daysLeft <= 5;
+      }).map(s => ({ ...s, days_left: Math.max(0, Math.ceil((new Date(s.trial_end) - new Date()) / (1000 * 60 * 60 * 24))) })).sort((a, b) => a.days_left - b.days_left) || []);
     } catch (error) {
       console.error('Error fetching admin data:', error);
       toast.error('Erreur lors du chargement des données');
@@ -351,6 +358,41 @@ const AdminDashboard = () => {
                 </motion.div>
               ))}
             </div>
+
+            {/* Trial Expiry Alerts */}
+            {trialAlerts.length > 0 && (
+              <div className="mb-8 border-l-4 border-amber-500 bg-amber-50 p-4" data-testid="trial-alerts">
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                  <h3 className="font-heading font-bold uppercase text-sm text-amber-800">
+                    Fin d'essai imminente — {trialAlerts.length} partenaire{trialAlerts.length > 1 ? 's' : ''}
+                  </h3>
+                </div>
+                <div className="space-y-2">
+                  {trialAlerts.map(alert => (
+                    <div key={alert.subscription_id} className="flex items-center justify-between bg-white p-3 border border-amber-200 rounded" data-testid={`trial-alert-${alert.user_id}`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-heading font-bold text-sm ${alert.days_left <= 1 ? 'bg-red-100 text-red-700' : alert.days_left <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {alert.days_left}j
+                        </div>
+                        <div>
+                          <p className="font-heading font-bold text-sm">{alert.user_name}</p>
+                          <p className="text-xs text-slate-500">{alert.user_email} — Fin le {alert.trial_end ? format(new Date(alert.trial_end), 'd MMM yyyy', { locale: fr }) : '—'}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" className="bg-brand text-white gap-1 text-xs h-7" onClick={() => { setActiveTab('providers'); fetchDetailedProviders(); setTimeout(() => { setSelectedProvider(alert.user_id); fetchProviderDetail(alert.user_id); }, 500); }} data-testid={`alert-view-${alert.user_id}`}>
+                          <Eye className="w-3 h-3" /> Voir
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-red-600 border-red-200 gap-1 text-xs h-7" onClick={() => { const r = prompt('Raison de la suspension:'); if (r) handleProviderStatusChange(alert.user_id, 'suspended', r); }} data-testid={`alert-suspend-${alert.user_id}`}>
+                          <Ban className="w-3 h-3" /> Couper
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Revenue Summary - 4 columns */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -972,8 +1014,8 @@ const AdminDashboard = () => {
                         {src.pending_total > 0 && (
                           <div className="mt-1 text-[10px] text-amber-600 font-medium">{src.pending_count} en attente ({src.pending_total.toLocaleString()}€)</div>
                         )}
-                        {key === 'abonnements' && src.total === 0 && (
-                          <div className="mt-1 text-[10px] text-slate-400 italic">Bientot disponible</div>
+                        {key === 'abonnements' && (src.active_subs > 0 || src.trial_subs > 0) && (
+                          <div className="mt-1 text-[10px] text-teal-600 font-medium">{src.active_subs || 0} actif(s) · {src.trial_subs || 0} en essai</div>
                         )}
                       </motion.div>
                     );
@@ -992,6 +1034,7 @@ const AdminDashboard = () => {
                           <linearGradient id="gradDons" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ec4899" stopOpacity={0.3} /><stop offset="100%" stopColor="#ec4899" stopOpacity={0} /></linearGradient>
                           <linearGradient id="gradSpon" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f59e0b" stopOpacity={0.3} /><stop offset="100%" stopColor="#f59e0b" stopOpacity={0} /></linearGradient>
                           <linearGradient id="gradProd" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} /><stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} /></linearGradient>
+                          <linearGradient id="gradAbo" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#14b8a6" stopOpacity={0.3} /><stop offset="100%" stopColor="#14b8a6" stopOpacity={0} /></linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis dataKey="month" tick={{ fontSize: 10 }} />
@@ -1002,6 +1045,7 @@ const AdminDashboard = () => {
                         <Area type="monotone" dataKey="dons" name="Dons" stroke="#ec4899" fill="url(#gradDons)" strokeWidth={2} />
                         <Area type="monotone" dataKey="sponsors" name="Sponsors" stroke="#f59e0b" fill="url(#gradSpon)" strokeWidth={2} />
                         <Area type="monotone" dataKey="produits" name="Produits" stroke="#8b5cf6" fill="url(#gradProd)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="abonnements" name="Abonnements" stroke="#14b8a6" fill="url(#gradAbo)" strokeWidth={2} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>

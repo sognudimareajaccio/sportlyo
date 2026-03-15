@@ -1,0 +1,52 @@
+{
+  "summary": "Tested P1 features: Revenue Dashboard with Subscriptions and Trial Alerts. All 5 features working correctly - backend APIs return proper subscription data in revenue breakdown, frontend displays Abonnements card with active/trial counts, AreaChart includes 5th 'Abonnements' line (teal), trial alerts render conditionally (not visible as no trials expiring within 5 days), and admin provider detail view shows subscription status with action log.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_iter51_revenue_subscriptions.py", "/app/test_reports/pytest/pytest_iter51.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": ["/app/backend/tests/test_iter51_revenue_subscriptions.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": {
+    "admin": "admin@sportsconnect.fr / admin123",
+    "provider": "boutique@sportlyo.fr / boutique123"
+  },
+  "seed_data_creation": "None - used existing data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Revenue dashboard now shows subscription data with 5 source cards (inscriptions, dons, sponsors, produits, abonnements). Abonnements card displays active_subs and trial_subs counts instead of 'Bientot disponible' placeholder. AreaChart has 5th line 'Abonnements' with teal color (#14b8a6). Trial alerts not visible because provider user_provider_001 has status='active' (not 'trial') with period_end ~2026-05-14. 4 pending subscription payments at 19€ each exist. Action log shows previous admin actions (gift, suspend, reactivate).",
+  "features_tested": {
+    "feature_1_revenue_breakdown_with_subscriptions": {
+      "status": "PASS",
+      "backend_tests": "9/9 pytest tests passed",
+      "details": "GET /api/admin/revenue-breakdown returns sources.abonnements with fields: total=0€, fees=0€, count=0, pending_total=76€, pending_count=4, active_subs=1, trial_subs=0, label='Abonnements partenaires'. Monthly data includes 'abonnements' key. grand_total correctly includes subscription revenue."
+    },
+    "feature_2_revenue_dashboard_ui": {
+      "status": "PASS",
+      "details": "Revenus tab shows: Grand total banner (5,103.85€), 5 source cards (Inscriptions, Dons, Sponsors, Produits, Abonnements), Abonnements card shows '1 actif(s) · 0 en essai' (no 'Bientot disponible' placeholder), AreaChart with 5 lines including 'Abonnements' in teal, PieChart shows revenue distribution"
+    },
+    "feature_3_trial_alerts_backend": {
+      "status": "PASS",
+      "details": "GET /api/admin/subscriptions returns subscriptions list with user_id, status, trial_end fields. Stats object includes total, trial, active, expired, cancelled counts."
+    },
+    "feature_4_trial_alerts_ui": {
+      "status": "PASS (code correct, no alerts visible)",
+      "details": "Trial alerts section renders conditionally based on trialAlerts array filtered from subscriptions with status='trial' and days_left<=5. Currently no subscriptions match criteria (provider has status='active' not 'trial'), so alert banner not visible - this is expected behavior."
+    },
+    "feature_5_admin_provider_flow": {
+      "status": "PASS",
+      "details": "Prestataires tab shows 7 stats cards (Total=2, Actifs=1, En attente=1, Suspendus=0, Abo Essai=0, Abo Actif=1, Rev. Abo=0€). Provider detail view shows: profile info, subscription card with ACTIVE status and 19€/mois, period_end=14 mai 2026, action buttons (Activer/Prolonger/Offrir/Résilier), revenue charts, subscription payments table, HISTORIQUE DES ACTIONS ADMIN with logged admin actions (gift, suspend, reactivate)"
+    }
+  },
+  "mocked_apis": {
+    "Square payment": "SIMULATED - Uses simulated checkout URLs",
+    "note": "No subscription payments completed yet - all 4 are pending"
+  }
+}
