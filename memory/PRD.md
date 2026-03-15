@@ -23,6 +23,23 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 
 ## Ce qui est implemente
 
+### Mars 2026 - Session 14 (Benevoles + UI)
+
+**Widget Gestion des Benevoles (P0) - COMPLETE:**
+- CRUD complet backend (GET/POST/PUT/DELETE) dans /api/organizer/volunteers
+- 10 fonctions predefinies: Ravitaillement, Signaleur, Accueil, Chronometrage, Securite, Logistique, Animation, Medical, Transport, Communication
+- Tableau avec colonnes: Nom, Prenom, Fonction, Evenement, Telephone, Email, Actions
+- Dialog ajout/modification avec validation champs obligatoires
+- Filtre par evenement + barre de recherche
+- Liens cliquables telephone (tel:) et email (mailto:)
+
+**Ameliorations UI:**
+- Boutons Publier/Depublier: rond vert clignotant (en ligne) + rond rouge fixe (brouillon)
+- Badges statut: "EN LIGNE" avec animation ping verte, "BROUILLON" avec point rouge
+- Slide Boutique: "Boutique zero stock" → "Boutique personnalisee"
+- Slide Boutique: textes bullet points mis a jour
+- Slide Paiement: "Stripe" → "Square" + icones CB Visa/Mastercard/AmEx
+
 ### Mars 2026 - Session 13 (Dotation participant + N inscrit)
 
 **Dotation participant (P0) - COMPLETE:**
