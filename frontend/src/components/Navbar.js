@@ -89,6 +89,7 @@ const Navbar = () => {
   const navLinks = [
     { label: 'Événements', href: '/events' },
     { label: 'Organisateurs', href: '/organizers' },
+    { label: 'Partenaires', href: '/partners' },
   ];
 
   return (

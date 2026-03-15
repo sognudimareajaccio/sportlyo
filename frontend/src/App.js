@@ -25,6 +25,7 @@ import ResultsPage from "./pages/ResultsPage";
 import CheckInPage from "./pages/CheckInPage";
 import OrganizerEventPage from "./pages/OrganizerEventPage";
 import OrgaLandingPage from "./pages/OrgaLandingPage";
+import PartnersLandingPage from "./pages/PartnersLandingPage";
 // ComingSoonPage removed - app is now publicly accessible
 import MessagingPage from "./pages/MessagingPage";
 import EventShopPage from "./pages/EventShopPage";
@@ -195,6 +196,7 @@ const AppRouter = () => {
       {/* Organizer Landing Page (public) */}
       <Route element={<Layout />}>
         <Route path="/organizers" element={<OrgaLandingPage />} />
+        <Route path="/partners" element={<PartnersLandingPage />} />
       </Route>
 
       {/* Fallback */}

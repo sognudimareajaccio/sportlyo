@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import {
   Zap, Clock, CreditCard, BarChart3, QrCode, Users, Shield, Headphones,
   Bike, Footprints, Medal, Car, Mountain, Target, Wind, Flag, CircleDot,
-  Dumbbell, Swords, ChevronRight, Check, ArrowRight, Globe, Timer, ShoppingBag
+  Dumbbell, Swords, ChevronRight, Check, ArrowRight, Globe, Timer, ShoppingBag, Handshake
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
@@ -26,7 +26,7 @@ const features = [
   },
   {
     icon: CreditCard,
-    title: 'Paiement securise Stripe',
+    title: 'Paiement securise Square',
     desc: 'Paiements CB, Apple Pay, Google Pay. Commission transparente de 5%, zero frais caches.'
   },
   {
@@ -43,6 +43,11 @@ const features = [
     icon: ShoppingBag,
     title: 'Boutique personnalisee',
     desc: 'Vendez des produits derives a vos couleurs grace a nos prestataires partenaires. Commission sur chaque vente, zero stock a gerer.'
+  },
+  {
+    icon: Handshake,
+    title: 'Des partenaires locaux de confiance',
+    desc: 'Accedez a un reseau de prestataires qualifies pour l organisation de votre evenement : impression, ravitaillement, securite, animation.'
   }
 ];
 
