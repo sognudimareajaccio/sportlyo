@@ -47,7 +47,7 @@ const features = [
   {
     icon: Handshake,
     title: 'Des partenaires locaux de confiance',
-    desc: 'Accedez a un reseau de prestataires qualifies pour l organisation de votre evenement : impression, ravitaillement, securite, animation.'
+    desc: 'Location de tentes, podiums, barrieres de securite, chronometrage, societes de securite, nettoyage... Trouvez tous les prestataires pour l organisation de votre evenement.'
   }
 ];
 
