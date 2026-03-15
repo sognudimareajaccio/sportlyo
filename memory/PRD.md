@@ -48,6 +48,14 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 - Notification email au donateur via Resend
 - 3 etats visuels : "Generer lien" → "Confirmer paiement" / "Copier lien" → "Telecharger recu fiscal" / "Paye"
 
+**Prestations Externes Organisateur (P0) - COMPLETE:**
+- Section "Partenaires" renommee en "Prestations Externes" dans le hub
+- 5 widgets cliquables par categorie: Infrastructures, Securite & Balisage, Course & Technique, Services & Logistique, Autres Services
+- 23 sous-categories couvrant toutes les prestations evenementielles (tentes, podiums, barrieres, chronometrage, nettoyage, etc.)
+- Filtrage par widget + barre de recherche + tag filtre actif avec bouton X
+- Dialog d'ajout avec dropdown organise par groupes de prestations
+- Icone coloree par categorie sur chaque fiche prestataire
+
 **Page Partenaires + Header + Section Organizers (P1) - COMPLETE:**
 - Page /partners creee avec hero, stats, 8 avantages, 4 etapes, temoignages, 2 CTA "Devenir partenaire"
 - Bouton "PARTENAIRES" ajoute dans le header a cote de "ORGANISATEURS"
