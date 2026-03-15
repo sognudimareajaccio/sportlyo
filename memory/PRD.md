@@ -52,6 +52,17 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 - Boutons d'action rapide: Voir (ouvre la fiche detail) et Couper (suspend le compte)
 - Tri par urgence (jours restants croissants)
 
+**Emails automatiques rappel essai (P1) - COMPLETE:**
+- 3 templates email HTML (design SportLyo): Rappel J-3, Expiration J0, Derniere chance J+1
+- Envoi via Resend avec log complet dans email_log (status, erreur, template)
+- Prevention doublons : un template n'est envoye qu'une fois par abonnement
+- Auto-expiration des essais depasses (status trial -> trial_expired)
+- Bouton admin "Verifier les essais & envoyer les rappels" avec panneau de resultats
+- 4 indicateurs : Emails envoyes, Essais expires, Deja notifies, Erreurs
+- Detail par partenaire avec badge template colore (Rappel J-3 / Expiration J0 / Derniere chance J+1)
+- Endpoint email-log pour consulter l'historique des envois
+- Note: Resend en mode test (emails uniquement vers l'adresse proprietaire)
+
 **Stats abonnements dans le dashboard revenus (P1) - COMPLETE:**
 - Carte "Abonnements" avec donnees reelles (total, pending, active_subs, trial_subs)
 - AreaChart 12 mois avec 5e ligne "Abonnements" (couleur teal)
