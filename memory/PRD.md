@@ -23,6 +23,20 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 
 ## Ce qui est implemente
 
+### Mars 2026 - Session 13 (Dotation participant + N inscrit)
+
+**Dotation participant (P0) - COMPLETE:**
+- Champ `provided_items: List[str]` ajoute au modele EventCreate et endpoint POST /api/events
+- 9 articles predefinis: T-shirt, Medaille, Sac, Casquette, Gourde, Dossard, Serviette, Ravitaillement, Photo souvenir
+- Possibilite d'ajouter des articles personnalises
+- Interface dans formulaires Creation et Edition d'evenements
+- Affichage des dotations sur la page de detail evenement
+- Selecteur taille T-shirt conditionnel (apparait uniquement si 'tshirt' dans provided_items)
+
+**Renommage N de dossard → N d'inscrit (P0) - COMPLETE:**
+- "N de dossard" renomme en "N d'inscrit" dans tous les contextes participant (inscription, mes inscriptions, timer)
+- "Dossard" conserve dans les contextes jour de course (check-in, chronometrage, resultats)
+
 ### Mars 2026 - Session 12 (P3 + Audit Pre-Production + Slideshow)
 
 **7 fonctionnalites P3 finalisees et testees:**
@@ -35,17 +49,12 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 - Remboursements admin (filtres statut + notes admin)
 
 **Slideshow interactif homepage:**
-- 4 slides avec visuels generes (creation evenement, gestion inscriptions, check-in mobile, analytics)
-- Fond anime asphalt avec cercles rotatifs + couleur accent par slide
-- Navigation fleches + dots + auto-play 6s avec pause au survol
-- CTA "Commencer gratuitement" avec sous-texte "Aucune carte bancaire requise"
-- Composant: /app/frontend/src/components/PlatformSlideshow.js
+- 4 slides avec visuels generes
+- Navigation fleches + dots + auto-play 6s
+- CTA "Commencer gratuitement"
 
 **Audit pre-production COMPLET:**
-- Securite: pas de secrets hardcodes, pas de fuite _id, auth protegee, CORS OK
-- Backend: 100% endpoints fonctionnels (auth, events, admin, organizer, participant, provider, checkin, community, invoices, rfid, sms)
-- Frontend: 100% regression (4 roles testes, tous dashboards, toutes pages)
-- Seul warning non-critique: Recharts dimensions dans conteneurs collapses
+- Securite, Backend, Frontend: 100% fonctionnel
 
 ### Sessions precedentes
 - Session 11: Refactorisation OrganizerDashboard validee (16 sous-composants)
@@ -58,8 +67,9 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 - **Twilio SMS MOCKED** : notifications sauvegardees en base, envoi reel en attente de configuration cles API
 
 ## Backlog restant
-- [ ] Ameliorer onglet Commissions admin avec graphiques visuels
-- [ ] Configurer cles Twilio pour envoi reel de SMS
-- [ ] Export CSV des statistiques organisateur
-- [ ] Paiement en ligne locations RFID
-- [ ] Refactorisation supplementaire ProviderDashboard.js
+- [ ] (P1) Mode Demo avec bouton "Essayer gratuitement" sur la page d'accueil
+- [ ] (P2) Ameliorer onglet Commissions admin avec graphiques visuels
+- [ ] (P2) Configurer cles Twilio pour envoi reel de SMS
+- [ ] (P2) Export CSV des statistiques organisateur
+- [ ] (P2) Paiement en ligne locations RFID
+- [ ] (P2) Refactorisation supplementaire ProviderDashboard.js
