@@ -52,7 +52,7 @@ export const EventsSection = ({ events, onEdit, onDelete, onCreateNew, onToggleP
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 pt-3 border-t border-slate-100">
-                  <Button variant="outline" size="sm" className={`h-8 text-xs gap-1 ${event.published ? 'text-amber-600' : 'text-green-600'}`} onClick={() => onTogglePublish(event)} data-testid={`publish-toggle-${event.event_id}`}>
+                  <Button size="sm" className={`h-8 text-xs gap-1 font-heading font-bold uppercase ${event.published ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`} onClick={() => onTogglePublish(event)} data-testid={`publish-toggle-${event.event_id}`}>
                     {event.published ? <><ToggleRight className="w-3.5 h-3.5" />Depublier</> : <><ToggleLeft className="w-3.5 h-3.5" />Publier</>}
                   </Button>
                   <Link to={`/organizer/event/${event.event_id}`} className="flex-1">
