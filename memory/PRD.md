@@ -48,6 +48,12 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 - Notification email au donateur via Resend
 - 3 etats visuels : "Generer lien" → "Confirmer paiement" / "Copier lien" → "Telecharger recu fiscal" / "Paye"
 
+**Page Partenaires + Header + Section Organizers (P1) - COMPLETE:**
+- Page /partners creee avec hero, stats, 8 avantages, 4 etapes, temoignages, 2 CTA "Devenir partenaire"
+- Bouton "PARTENAIRES" ajoute dans le header a cote de "ORGANISATEURS"
+- Section "Des partenaires locaux de confiance" ajoutee sur /organizers apres "Boutique personnalisee"
+- CTA "Devenir partenaire gratuitement" redirige vers formulaire inscription /register
+
 **Dashboard Finances & Revenus Organisateur (P0) - COMPLETE:**
 - Endpoint GET /api/organizer/revenue-breakdown avec 5 sources dissociees
 - Sources: Inscriptions, Dons, Sponsors & Mecenes, Produits derives, Reservations entreprises
