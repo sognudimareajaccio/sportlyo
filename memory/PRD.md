@@ -23,6 +23,33 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 
 ## Ce qui est implemente
 
+### Mars 2026 - Session 15 (4 nouvelles fonctionnalites)
+
+**Evenements Gratuits (P0) - COMPLETE:**
+- Toggle `is_free` dans les formulaires creation et edition d'evenements
+- Badge "GRATUIT" affiche sur la page detail (hero + sidebar)
+- Inscription gratuite sans paiement (payment_status auto "completed")
+- Badge "Gratuit" sur les cartes evenements organisateur
+
+**Logos Sponsors (P0) - COMPLETE:**
+- Section "Logos des sponsors" dans le dialog d'edition d'evenement
+- Upload d'images via /api/upload/image avec nom optionnel
+- Suppression individuelle des logos (bouton X au survol)
+- Affichage des logos sur la page detail evenement (section "Nos sponsors & partenaires")
+
+**Sauvegarde Evenements (P0) - COMPLETE:**
+- Bouton Bookmark/BookmarkCheck sur la page detail evenement
+- Toggle save/unsave via POST /api/events/{id}/save
+- Verification statut via GET /api/events/{id}/is-saved
+- Section "Mes Favoris" dans le dashboard participant avec grille de cartes
+- Suppression de favoris depuis le dashboard participant
+- Bouton "Explorer les evenements" si aucun favori
+
+**Formulaire Inscription Intelligent (P0) - COMPLETE:**
+- "Prestataire" renomme en "Partenaire" sur le formulaire
+- Pre-selection du role via parametre URL (?role=organizer, ?role=provider)
+- CTA des pages /organizers et /partners redirigent avec le bon parametre
+
 ### Mars 2026 - Session 14 (Benevoles + UI)
 
 **Widget Gestion des Benevoles (P0) - COMPLETE:**
@@ -130,3 +157,4 @@ Plateforme de vente de tickets en ligne pour des evenements sportifs (marathon, 
 - [ ] (P2) Export CSV des statistiques organisateur
 - [ ] (P2) Paiement en ligne locations RFID
 - [ ] (P2) Refactorisation supplementaire ProviderDashboard.js
+- [ ] (P2) Refactorisation OrganizerDashboard.js (hooks personnalises)
