@@ -520,3 +520,68 @@ async def export_timing_csv(event_id: str, current_user: dict = Depends(get_curr
     csv_bytes = BytesIO(output.getvalue().encode('utf-8-sig'))
     return StreamingResponse(csv_bytes, media_type="text/csv; charset=utf-8",
                             headers={"Content-Disposition": f'attachment; filename="timing_export_{event_id}.csv"'})
+
+
+# ============== VOLUNTEERS ==============
+
+@router.get("/organizer/volunteers")
+async def get_volunteers(current_user: dict = Depends(get_current_user), event_id: Optional[str] = None):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    query = {"organizer_id": current_user['user_id']}
+    if event_id:
+        query["event_id"] = event_id
+    volunteers = await db.volunteers.find(query, {"_id": 0}).sort("last_name", 1).to_list(500)
+    return {"volunteers": volunteers}
+
+
+@router.post("/organizer/volunteers")
+async def create_volunteer(request: Request, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    data = await request.json()
+    if not data.get("first_name") or not data.get("last_name") or not data.get("phone") or not data.get("role_assigned") or not data.get("event_id"):
+        raise HTTPException(status_code=400, detail="Prenom, nom, telephone, fonction et evenement requis")
+    volunteer = {
+        "volunteer_id": f"vol_{uuid.uuid4().hex[:12]}",
+        "organizer_id": current_user['user_id'],
+        "first_name": data.get("first_name", ""),
+        "last_name": data.get("last_name", ""),
+        "phone": data.get("phone", ""),
+        "email": data.get("email", ""),
+        "role_assigned": data.get("role_assigned", ""),
+        "event_id": data.get("event_id", ""),
+        "notes": data.get("notes", ""),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.volunteers.insert_one(volunteer)
+    del volunteer["_id"]
+    return {"volunteer": volunteer}
+
+
+@router.put("/organizer/volunteers/{volunteer_id}")
+async def update_volunteer(volunteer_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    data = await request.json()
+    update_fields = {}
+    for field in ["first_name", "last_name", "phone", "email", "role_assigned", "event_id", "notes"]:
+        if field in data:
+            update_fields[field] = data[field]
+    update_fields["updated_at"] = datetime.now(timezone.utc).isoformat()
+    result = await db.volunteers.update_one({"volunteer_id": volunteer_id, "organizer_id": current_user['user_id']}, {"$set": update_fields})
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Benevole non trouve")
+    updated = await db.volunteers.find_one({"volunteer_id": volunteer_id}, {"_id": 0})
+    return {"volunteer": updated}
+
+
+@router.delete("/organizer/volunteers/{volunteer_id}")
+async def delete_volunteer(volunteer_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user['role'] not in ['organizer', 'admin']:
+        raise HTTPException(status_code=403, detail="Organisateur requis")
+    result = await db.volunteers.delete_one({"volunteer_id": volunteer_id, "organizer_id": current_user['user_id']})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Benevole non trouve")
+    return {"message": "Benevole supprime"}

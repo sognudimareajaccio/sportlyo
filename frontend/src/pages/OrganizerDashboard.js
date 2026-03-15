@@ -13,7 +13,8 @@ import {
   Search, Share2, MessageSquare, Mail, Shield, Send, Filter,
   CheckCircle, Package, Shirt, ArrowUp, ArrowDown, Home, Trophy, ExternalLink,
   Handshake, Phone, MapPinned, Heart, Star, Award, Globe2, Lock, ChevronLeft,
-  ShoppingBag, Palette, GripVertical, FileDown, ToggleLeft, ToggleRight, Radio
+  ShoppingBag, Palette, GripVertical, FileDown, ToggleLeft, ToggleRight, Radio,
+  HeartHandshake
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
@@ -33,7 +34,8 @@ import {
   HubSection, EventsSection, ParticipantsSection, GaugesSection,
   CheckinSection, FinancesSection, CorrespondancesSection,
   ShareSection, ChronometrageSection, ResultsSection,
-  PartnersSection, SponsorsSection, BookingsSection, BoutiqueSection
+  PartnersSection, SponsorsSection, BookingsSection, BoutiqueSection,
+  VolunteersSection
 } from '../components/organizer';
 
 const sportOptions = [
@@ -183,6 +185,16 @@ const OrganizerDashboard = () => {
   const [bookingSearch, setBookingSearch] = useState('');
   const [providersList, setProvidersList] = useState([]);
 
+  // Volunteers
+  const [volunteers, setVolunteers] = useState([]);
+  const [volunteersLoading, setVolunteersLoading] = useState(false);
+  const [volunteerEventFilter, setVolunteerEventFilter] = useState('all');
+  const [volunteerSearch, setVolunteerSearch] = useState('');
+  const [showVolunteerDialog, setShowVolunteerDialog] = useState(false);
+  const [editingVolunteer, setEditingVolunteer] = useState(null);
+  const [volunteerForm, setVolunteerForm] = useState({ first_name: '', last_name: '', phone: '', email: '', role_assigned: '', event_id: '', notes: '' });
+  const [volunteerSaving, setVolunteerSaving] = useState(false);
+
   const isOrganizer = user?.role === 'organizer' || user?.role === 'admin';
 
   // ==================== DATA FETCHING ====================
@@ -257,6 +269,15 @@ const OrganizerDashboard = () => {
   const fetchProviderConvos = async () => { try { const res = await api.get('/provider/conversations'); setProviderConvos(res.data.conversations || []); } catch (e) { console.error(e); } };
   const fetchBookings = async () => { setBookingsLoading(true); try { const res = await api.get('/organizer/bookings'); setBookings(res.data.bookings || []); } catch { toast.error('Erreur'); } finally { setBookingsLoading(false); } };
 
+  const fetchVolunteers = async (evtFilter) => {
+    setVolunteersLoading(true);
+    try {
+      const url = evtFilter && evtFilter !== 'all' ? `/organizer/volunteers?event_id=${evtFilter}` : '/organizer/volunteers';
+      const res = await api.get(url); setVolunteers(res.data.volunteers || []);
+    } catch { toast.error('Erreur chargement benevoles'); }
+    finally { setVolunteersLoading(false); }
+  };
+
   // ==================== SECTION NAVIGATION ====================
   const handleSectionChange = (section) => {
     setActiveSection(section);
@@ -267,6 +288,7 @@ const OrganizerDashboard = () => {
     if (section === 'sponsors') fetchSponsors();
     if (section === 'boutique') { fetchShopData(); fetchProviderCatalog(); fetchProviderConvos(); fetchOrgLogo(); fetchProvidersList(); }
     if (section === 'bookings') fetchBookings();
+    if (section === 'volunteers') fetchVolunteers();
   };
 
   // ==================== HANDLERS ====================
@@ -395,6 +417,45 @@ const OrganizerDashboard = () => {
   const handleDeleteBooking = async (id) => {
     if (!window.confirm('Supprimer cette reservation ?')) return;
     await api.delete(`/organizer/bookings/${id}`); toast.success('Supprimee'); fetchBookings();
+  };
+
+  // Volunteers handlers
+  const handleSaveVolunteer = async () => {
+    if (!volunteerForm.first_name || !volunteerForm.last_name || !volunteerForm.phone || !volunteerForm.role_assigned || !volunteerForm.event_id) {
+      toast.error('Prenom, nom, telephone, fonction et evenement requis'); return;
+    }
+    setVolunteerSaving(true);
+    try {
+      if (editingVolunteer) {
+        await api.put(`/organizer/volunteers/${editingVolunteer.volunteer_id}`, volunteerForm);
+        toast.success('Benevole mis a jour');
+      } else {
+        await api.post('/organizer/volunteers', volunteerForm);
+        toast.success('Benevole ajoute');
+      }
+      setShowVolunteerDialog(false); setEditingVolunteer(null);
+      setVolunteerForm({ first_name: '', last_name: '', phone: '', email: '', role_assigned: '', event_id: '', notes: '' });
+      fetchVolunteers(volunteerEventFilter !== 'all' ? volunteerEventFilter : undefined);
+    } catch (err) { toast.error(err.response?.data?.detail || 'Erreur'); }
+    finally { setVolunteerSaving(false); }
+  };
+
+  const handleDeleteVolunteer = async (id) => {
+    if (!window.confirm('Supprimer ce benevole ?')) return;
+    try { await api.delete(`/organizer/volunteers/${id}`); toast.success('Benevole supprime'); fetchVolunteers(volunteerEventFilter !== 'all' ? volunteerEventFilter : undefined); }
+    catch { toast.error('Erreur suppression'); }
+  };
+
+  const openEditVolunteer = (v) => {
+    setEditingVolunteer(v);
+    setVolunteerForm({ first_name: v.first_name, last_name: v.last_name, phone: v.phone, email: v.email || '', role_assigned: v.role_assigned, event_id: v.event_id, notes: v.notes || '' });
+    setShowVolunteerDialog(true);
+  };
+
+  const openNewVolunteer = () => {
+    setEditingVolunteer(null);
+    setVolunteerForm({ first_name: '', last_name: '', phone: '', email: '', role_assigned: '', event_id: '', notes: '' });
+    setShowVolunteerDialog(true);
   };
 
   const generatePaymentLink = async (type, sourceId, amount, description) => {
@@ -570,6 +631,12 @@ const OrganizerDashboard = () => {
     return p.company_name?.toLowerCase().includes(q) || p.contact_name?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q) || p.email?.toLowerCase().includes(q);
   });
 
+  const filteredVolunteers = volunteers.filter(v => {
+    if (!volunteerSearch) return true;
+    const q = volunteerSearch.toLowerCase();
+    return v.last_name?.toLowerCase().includes(q) || v.first_name?.toLowerCase().includes(q) || v.role_assigned?.toLowerCase().includes(q) || v.phone?.includes(q) || v.email?.toLowerCase().includes(q);
+  });
+
   const hubItems = [
     { id: 'events', label: 'Evenements', icon: Calendar, desc: `${events.length} evenement(s)`, color: 'bg-blue-500' },
     { id: 'participants', label: 'Participants', icon: Users, desc: `${totalParticipants} inscrit(s)`, color: 'bg-emerald-500' },
@@ -581,6 +648,7 @@ const OrganizerDashboard = () => {
     { id: 'contact-admin', label: 'Contact Admin', icon: Shield, desc: 'Support & finances', color: 'bg-red-500' },
     { id: 'chronometrage', label: 'Chronometrage', icon: Timer, desc: 'Import temps & export dossards', color: 'bg-teal-600' },
     { id: 'results', label: 'Resultats', icon: Trophy, desc: 'Classements & performances', color: 'bg-amber-500' },
+    { id: 'volunteers', label: 'Benevoles', icon: HeartHandshake, desc: 'Gestion des benevoles', color: 'bg-fuchsia-500' },
     { id: 'partners', label: 'Partenaires', icon: Handshake, desc: 'Annuaire & contacts', color: 'bg-indigo-500' },
     { id: 'bookings', label: 'Reservation Entreprises', icon: Building2, desc: 'Equipes & tarifs groupe', color: 'bg-cyan-600' },
     { id: 'sponsors', label: 'Sponsors & Donateurs', icon: Heart, desc: 'Sponsoring & mecenat', color: 'bg-rose-500' },
@@ -707,6 +775,13 @@ const OrganizerDashboard = () => {
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
             <SectionHeader title="Partenaires" onBack={() => setActiveSection('hub')} />
             <PartnersSection filteredPartners={filteredPartners} partnersLoading={partnersLoading} partnerFilter={partnerFilter} partnerSearch={partnerSearch} allCategories={allCategories} onFilterChange={(v) => { setPartnerFilter(v); fetchPartners(v !== 'all' ? v : undefined); }} onSearchChange={setPartnerSearch} onOpenNew={openNewPartner} onOpenEdit={openEditPartner} onDelete={handleDeletePartner} showPartnerDialog={showPartnerDialog} setShowPartnerDialog={setShowPartnerDialog} editingPartner={editingPartner} setEditingPartner={setEditingPartner} partnerForm={partnerForm} setPartnerForm={setPartnerForm} customCategory={customCategory} setCustomCategory={setCustomCategory} partnerSaving={partnerSaving} onSave={handleSavePartner} />
+          </motion.div>
+        )}
+
+        {activeSection === 'volunteers' && (
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+            <SectionHeader title="Gestion des Benevoles" onBack={() => setActiveSection('hub')} />
+            <VolunteersSection events={events} volunteers={volunteers} filteredVolunteers={filteredVolunteers} volunteersLoading={volunteersLoading} volunteerEventFilter={volunteerEventFilter} volunteerSearch={volunteerSearch} onEventFilterChange={(v) => { setVolunteerEventFilter(v); fetchVolunteers(v !== 'all' ? v : undefined); }} onSearchChange={setVolunteerSearch} showVolunteerDialog={showVolunteerDialog} setShowVolunteerDialog={setShowVolunteerDialog} editingVolunteer={editingVolunteer} setEditingVolunteer={setEditingVolunteer} volunteerForm={volunteerForm} setVolunteerForm={setVolunteerForm} volunteerSaving={volunteerSaving} onSave={handleSaveVolunteer} onDelete={handleDeleteVolunteer} onOpenEdit={openEditVolunteer} onOpenNew={openNewVolunteer} />
           </motion.div>
         )}
 

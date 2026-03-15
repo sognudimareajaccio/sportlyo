@@ -12,3 +12,4 @@ export { ResultsSection } from './ResultsSection';
 export { PartnersSection } from './PartnersSection';
 export { SponsorsSection } from './SponsorsSection';
 export { BookingsSection } from './BookingsSection';
+export { VolunteersSection } from './VolunteersSection';
