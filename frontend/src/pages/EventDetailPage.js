@@ -8,7 +8,7 @@ import {
   Heart, CheckCircle, AlertCircle, Loader2, QrCode, Clock, Timer,
   Route, FileText, Navigation, ExternalLink, ChevronDown, ChevronUp,
   ArrowRight, Check, Phone, Mail, User, Globe, Shirt, Facebook, Instagram, Youtube, Twitter,
-  CreditCard, Lock, ShoppingBag, Package, ChevronRight, Copy, X, Link
+  CreditCard, Lock, ShoppingBag, Package, ChevronRight, Copy, X, Link, Download
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -632,7 +632,7 @@ const EventDetailPage = () => {
             )}
 
             {/* Regulations */}
-            {event.regulations && (
+            {(event.regulations || event.regulations_pdf_url) && (
               <motion.div
                 className="bg-white border border-slate-200"
                 initial={{ opacity: 0, y: 20 }}
@@ -657,9 +657,32 @@ const EventDetailPage = () => {
                     className="px-6 pb-6"
                   >
                     <div className="border-t border-slate-100 pt-4">
-                      <p className="text-slate-600 leading-relaxed whitespace-pre-wrap text-sm" data-testid="regulations-content">
-                        {event.regulations}
-                      </p>
+                      {event.regulations_pdf_url && (
+                        <div className="mb-4 flex items-center gap-3" data-testid="regulations-pdf-download">
+                          <a
+                            href={event.regulations_pdf_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 bg-brand text-white font-heading font-bold text-sm uppercase px-5 py-2.5 hover:bg-brand/90 transition-colors"
+                            data-testid="regulations-pdf-btn"
+                          >
+                            <Download className="w-4 h-4" /> Telecharger le reglement (PDF)
+                          </a>
+                          <a
+                            href={event.regulations_pdf_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 border border-slate-200 text-slate-600 font-heading font-bold text-sm uppercase px-5 py-2.5 hover:bg-slate-50 transition-colors"
+                          >
+                            <ExternalLink className="w-4 h-4" /> Voir en ligne
+                          </a>
+                        </div>
+                      )}
+                      {event.regulations && (
+                        <p className="text-slate-600 leading-relaxed whitespace-pre-wrap text-sm" data-testid="regulations-content">
+                          {event.regulations}
+                        </p>
+                      )}
                     </div>
                   </motion.div>
                 )}

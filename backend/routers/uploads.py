@@ -60,8 +60,8 @@ async def upload_image(file: UploadFile = File(...), current_user: dict = Depend
     if current_user['role'] not in ['organizer', 'admin', 'provider']:
         raise HTTPException(status_code=403, detail="Not authorized")
     ext = Path(file.filename).suffix.lower()
-    if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail=f"Type de fichier non autorise. Utilisez: {', '.join(ALLOWED_EXTENSIONS)}")
+    if ext not in ALLOWED_DOC_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Type de fichier non autorise. Utilisez: {', '.join(ALLOWED_DOC_EXTENSIONS)}")
     content = await file.read()
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="Fichier trop volumineux (max 10MB)")
@@ -78,5 +78,5 @@ async def get_uploaded_file(filename: str):
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     ext = Path(filename).suffix.lower()
-    content_types = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp'}
+    content_types = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp', '.pdf': 'application/pdf'}
     return FileResponse(path=file_path, media_type=content_types.get(ext, 'application/octet-stream'))
