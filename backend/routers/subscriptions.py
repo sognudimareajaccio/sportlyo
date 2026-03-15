@@ -226,3 +226,178 @@ async def admin_list_subscriptions(current_user: dict = Depends(get_current_user
         "total_revenue": sum(s.get("total_paid", 0) for s in subs)
     }
     return {"subscriptions": subs, "stats": stats}
+
+
+
+# ===== EMAIL TEMPLATES =====
+
+def _build_trial_email(template: str, partner_name: str, days_left: int, trial_end_str: str, subscribe_url: str) -> dict:
+    """Build HTML email for trial reminders."""
+    brand = "#FF5A1F"
+    if template == "reminder_3days":
+        subject = f"SportLyo — Votre essai gratuit se termine dans {days_left} jour{'s' if days_left > 1 else ''}"
+        body = f"""
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;">
+          <div style="background:{brand};padding:24px 32px;">
+            <h1 style="color:#fff;font-size:22px;margin:0;">SPORTLYO</h1>
+          </div>
+          <div style="padding:32px;">
+            <h2 style="color:#1e293b;font-size:20px;">Bonjour {partner_name},</h2>
+            <p style="color:#475569;line-height:1.6;">Votre <strong>essai gratuit de 14 jours</strong> se termine dans <strong style="color:{brand};">{days_left} jour{'s' if days_left > 1 else ''}</strong> (le {trial_end_str}).</p>
+            <p style="color:#475569;line-height:1.6;">Pour continuer a beneficier de toutes les fonctionnalites de la plateforme et rester visible aupres des organisateurs d'evenements sportifs, pensez a activer votre abonnement.</p>
+            <div style="background:#f8fafc;border-left:4px solid {brand};padding:16px 20px;margin:24px 0;">
+              <p style="margin:0;font-size:14px;color:#64748b;">Abonnement Partenaire</p>
+              <p style="margin:4px 0 0;font-size:28px;font-weight:bold;color:{brand};">19€<span style="font-size:14px;color:#94a3b8;">/mois</span></p>
+              <p style="margin:4px 0 0;font-size:12px;color:#94a3b8;">Engagement 12 mois · Sans renouvellement automatique</p>
+            </div>
+            <a href="{subscribe_url}" style="display:inline-block;background:{brand};color:#fff;padding:14px 32px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:1px;margin-top:8px;">S'ABONNER MAINTENANT</a>
+            <p style="color:#94a3b8;font-size:12px;margin-top:24px;">Si vous avez des questions, n'hesitez pas a nous contacter.</p>
+          </div>
+          <div style="background:#f1f5f9;padding:16px 32px;text-align:center;">
+            <p style="color:#94a3b8;font-size:11px;margin:0;">SportLyo — La plateforme des evenements sportifs</p>
+          </div>
+        </div>"""
+    elif template == "expired":
+        subject = "SportLyo — Votre essai gratuit est termine"
+        body = f"""
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;">
+          <div style="background:{brand};padding:24px 32px;">
+            <h1 style="color:#fff;font-size:22px;margin:0;">SPORTLYO</h1>
+          </div>
+          <div style="padding:32px;">
+            <h2 style="color:#1e293b;font-size:20px;">Bonjour {partner_name},</h2>
+            <p style="color:#475569;line-height:1.6;">Votre <strong>essai gratuit de 14 jours</strong> est arrive a son terme aujourd'hui.</p>
+            <p style="color:#475569;line-height:1.6;">Pour maintenir votre profil actif et continuer a recevoir des demandes d'organisateurs, activez votre abonnement des maintenant.</p>
+            <div style="background:#fef2f2;border-left:4px solid #ef4444;padding:16px 20px;margin:24px 0;">
+              <p style="margin:0;font-size:14px;color:#dc2626;font-weight:bold;">Sans abonnement, votre profil ne sera plus visible par les organisateurs.</p>
+            </div>
+            <div style="background:#f8fafc;padding:16px 20px;margin:24px 0;text-align:center;">
+              <p style="margin:0;font-size:28px;font-weight:bold;color:{brand};">19€<span style="font-size:14px;color:#94a3b8;">/mois</span></p>
+            </div>
+            <a href="{subscribe_url}" style="display:inline-block;background:{brand};color:#fff;padding:14px 32px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:1px;">ACTIVER MON ABONNEMENT</a>
+          </div>
+          <div style="background:#f1f5f9;padding:16px 32px;text-align:center;">
+            <p style="color:#94a3b8;font-size:11px;margin:0;">SportLyo — La plateforme des evenements sportifs</p>
+          </div>
+        </div>"""
+    else:  # last_chance (J+1)
+        subject = "SportLyo — Derniere chance : votre compte sera desactive"
+        body = f"""
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;">
+          <div style="background:#1e293b;padding:24px 32px;">
+            <h1 style="color:#fff;font-size:22px;margin:0;">SPORTLYO</h1>
+          </div>
+          <div style="padding:32px;">
+            <h2 style="color:#1e293b;font-size:20px;">Bonjour {partner_name},</h2>
+            <p style="color:#475569;line-height:1.6;">Votre essai gratuit a expire <strong>hier</strong>. Votre compte partenaire sera bientot desactive si vous n'activez pas votre abonnement.</p>
+            <div style="background:#fef2f2;border:2px solid #ef4444;padding:20px;margin:24px 0;text-align:center;">
+              <p style="margin:0;font-size:16px;color:#dc2626;font-weight:bold;">DERNIERE CHANCE</p>
+              <p style="margin:8px 0 0;font-size:13px;color:#64748b;">Activez votre abonnement pour eviter la desactivation de votre compte</p>
+            </div>
+            <div style="text-align:center;margin:24px 0;">
+              <a href="{subscribe_url}" style="display:inline-block;background:{brand};color:#fff;padding:16px 40px;text-decoration:none;font-weight:bold;font-size:16px;letter-spacing:1px;">S'ABONNER — 19€/MOIS</a>
+            </div>
+            <p style="color:#94a3b8;font-size:12px;text-align:center;">Engagement 12 mois · Sans renouvellement automatique</p>
+          </div>
+          <div style="background:#f1f5f9;padding:16px 32px;text-align:center;">
+            <p style="color:#94a3b8;font-size:11px;margin:0;">SportLyo — La plateforme des evenements sportifs</p>
+          </div>
+        </div>"""
+    return {"subject": subject, "html": body}
+
+
+async def _send_trial_email(email: str, template: str, partner_name: str, days_left: int, trial_end_str: str, subscription_id: str):
+    """Send trial reminder email via Resend and log it."""
+    try:
+        import resend
+        resend.api_key = os.environ.get("RESEND_API_KEY", "")
+        sender_email = os.environ.get("SENDER_EMAIL", "onboarding@resend.dev")
+        frontend_url = os.environ.get("FRONTEND_URL", "")
+        subscribe_url = f"{frontend_url}/provider?tab=subscription"
+        email_data = _build_trial_email(template, partner_name, days_left, trial_end_str, subscribe_url)
+        resend.Emails.send({
+            "from": sender_email,
+            "to": [email],
+            "subject": email_data["subject"],
+            "html": email_data["html"]
+        })
+        # Log email sent
+        await db.email_log.insert_one({
+            "email_id": f"email_{uuid.uuid4().hex[:12]}",
+            "subscription_id": subscription_id,
+            "recipient": email,
+            "template": template,
+            "subject": email_data["subject"],
+            "status": "sent",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        logger.info(f"Trial email sent: {template} -> {email}")
+        return True
+    except Exception as e:
+        logger.warning(f"Failed to send trial email ({template}) to {email}: {e}")
+        await db.email_log.insert_one({
+            "email_id": f"email_{uuid.uuid4().hex[:12]}",
+            "subscription_id": subscription_id,
+            "recipient": email,
+            "template": template,
+            "subject": f"[FAILED] {template}",
+            "status": "failed",
+            "error": str(e),
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        return False
+
+
+@router.post("/subscriptions/check-trials")
+async def check_trial_expirations(current_user: dict = Depends(get_current_user)):
+    """Check all trials and send appropriate reminder emails. Can be triggered by admin."""
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin uniquement")
+    now = datetime.now(timezone.utc)
+    trials = await db.subscriptions.find({"status": {"$in": ["trial", "trial_expired"]}}, {"_id": 0}).to_list(500)
+    results = {"emails_sent": 0, "trials_expired": 0, "already_notified": 0, "errors": 0, "details": []}
+    for sub in trials:
+        trial_end = datetime.fromisoformat(sub["trial_end"].replace("Z", "+00:00"))
+        days_left = (trial_end - now).days
+        trial_end_str = trial_end.strftime("%d/%m/%Y")
+        partner_name = sub.get("user_name", "Partenaire")
+        email = sub.get("user_email", "")
+        sid = sub["subscription_id"]
+        if not email:
+            continue
+        # Determine which template to send
+        template = None
+        if 1 <= days_left <= 3:
+            template = "reminder_3days"
+        elif days_left == 0 or (days_left < 0 and days_left >= -1 and sub["status"] == "trial"):
+            template = "expired"
+            # Auto-expire trial
+            await db.subscriptions.update_one({"subscription_id": sid}, {"$set": {"status": "trial_expired"}})
+            results["trials_expired"] += 1
+        elif days_left < -1 and days_left >= -3:
+            template = "last_chance"
+        if not template:
+            continue
+        # Check if already sent this template for this subscription
+        already = await db.email_log.find_one({"subscription_id": sid, "template": template, "status": "sent"})
+        if already:
+            results["already_notified"] += 1
+            results["details"].append({"partner": partner_name, "template": template, "status": "already_sent"})
+            continue
+        sent = await _send_trial_email(email, template, partner_name, days_left, trial_end_str, sid)
+        if sent:
+            results["emails_sent"] += 1
+            results["details"].append({"partner": partner_name, "email": email, "template": template, "status": "sent", "days_left": days_left})
+        else:
+            results["errors"] += 1
+            results["details"].append({"partner": partner_name, "template": template, "status": "error"})
+    return results
+
+
+@router.get("/subscriptions/email-log")
+async def get_email_log(current_user: dict = Depends(get_current_user)):
+    """Get email log for admin."""
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin uniquement")
+    logs = await db.email_log.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return {"emails": logs}

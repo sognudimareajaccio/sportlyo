@@ -64,6 +64,8 @@ const AdminDashboard = () => {
   const [subAction, setSubAction] = useState({ action: '', days: 30, months: 1, reason: '' });
   const [suspendReason, setSuspendReason] = useState('');
   const [trialAlerts, setTrialAlerts] = useState([]);
+  const [checkingTrials, setCheckingTrials] = useState(false);
+  const [trialCheckResult, setTrialCheckResult] = useState(null);
 
   const filteredRefunds = refundFilter === 'all' ? refundRequests : refundRequests.filter(r => r.status === refundFilter);
 
@@ -157,6 +159,17 @@ const AdminDashboard = () => {
       fetchDetailedProviders();
       if (providerDetail?.provider?.user_id === selectedProvider) fetchProviderDetail(selectedProvider);
     } catch (e) { toast.error(e.response?.data?.detail || 'Erreur'); }
+  };
+
+  const handleCheckTrials = async () => {
+    setCheckingTrials(true);
+    try {
+      const res = await api.post('/subscriptions/check-trials');
+      setTrialCheckResult(res.data);
+      toast.success(`Verification terminee : ${res.data.emails_sent} email(s) envoye(s), ${res.data.trials_expired} essai(s) expire(s)`);
+      fetchData();
+    } catch (e) { toast.error(e.response?.data?.detail || 'Erreur verification'); }
+    finally { setCheckingTrials(false); }
   };
 
   const fetchRfidData = async () => {
@@ -359,40 +372,103 @@ const AdminDashboard = () => {
               ))}
             </div>
 
-            {/* Trial Expiry Alerts */}
-            {trialAlerts.length > 0 && (
-              <div className="mb-8 border-l-4 border-amber-500 bg-amber-50 p-4" data-testid="trial-alerts">
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertTriangle className="w-5 h-5 text-amber-600" />
-                  <h3 className="font-heading font-bold uppercase text-sm text-amber-800">
-                    Fin d'essai imminente — {trialAlerts.length} partenaire{trialAlerts.length > 1 ? 's' : ''}
-                  </h3>
+            {/* Trial Management */}
+            <div className="mb-8 bg-white border border-slate-200 p-5" data-testid="trial-management">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-brand" />
+                  <h3 className="font-heading font-bold uppercase text-sm">Gestion des essais partenaires</h3>
                 </div>
-                <div className="space-y-2">
-                  {trialAlerts.map(alert => (
-                    <div key={alert.subscription_id} className="flex items-center justify-between bg-white p-3 border border-amber-200 rounded" data-testid={`trial-alert-${alert.user_id}`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-heading font-bold text-sm ${alert.days_left <= 1 ? 'bg-red-100 text-red-700' : alert.days_left <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                          {alert.days_left}j
-                        </div>
-                        <div>
-                          <p className="font-heading font-bold text-sm">{alert.user_name}</p>
-                          <p className="text-xs text-slate-500">{alert.user_email} — Fin le {alert.trial_end ? format(new Date(alert.trial_end), 'd MMM yyyy', { locale: fr }) : '—'}</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" className="bg-brand text-white gap-1 text-xs h-7" onClick={() => { setActiveTab('providers'); fetchDetailedProviders(); setTimeout(() => { setSelectedProvider(alert.user_id); fetchProviderDetail(alert.user_id); }, 500); }} data-testid={`alert-view-${alert.user_id}`}>
-                          <Eye className="w-3 h-3" /> Voir
-                        </Button>
-                        <Button size="sm" variant="outline" className="text-red-600 border-red-200 gap-1 text-xs h-7" onClick={() => { const r = prompt('Raison de la suspension:'); if (r) handleProviderStatusChange(alert.user_id, 'suspended', r); }} data-testid={`alert-suspend-${alert.user_id}`}>
-                          <Ban className="w-3 h-3" /> Couper
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <Button
+                  className="bg-brand text-white gap-2 font-heading font-bold uppercase text-xs"
+                  onClick={handleCheckTrials}
+                  disabled={checkingTrials}
+                  data-testid="check-trials-btn"
+                >
+                  {checkingTrials ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
+                  {checkingTrials ? 'Verification...' : 'Verifier les essais & envoyer les rappels'}
+                </Button>
               </div>
-            )}
+
+              {/* Check result */}
+              {trialCheckResult && (
+                <div className="mb-4 p-4 bg-slate-50 border border-slate-200 rounded" data-testid="trial-check-result">
+                  <div className="grid grid-cols-4 gap-3 mb-3">
+                    <div className="text-center">
+                      <p className="font-heading font-extrabold text-lg text-brand">{trialCheckResult.emails_sent}</p>
+                      <p className="text-[10px] text-slate-500 uppercase">Emails envoyes</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-heading font-extrabold text-lg text-amber-600">{trialCheckResult.trials_expired}</p>
+                      <p className="text-[10px] text-slate-500 uppercase">Essais expires</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-heading font-extrabold text-lg text-slate-400">{trialCheckResult.already_notified}</p>
+                      <p className="text-[10px] text-slate-500 uppercase">Deja notifies</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-heading font-extrabold text-lg text-red-500">{trialCheckResult.errors}</p>
+                      <p className="text-[10px] text-slate-500 uppercase">Erreurs</p>
+                    </div>
+                  </div>
+                  {trialCheckResult.details?.length > 0 && (
+                    <div className="space-y-1">
+                      {trialCheckResult.details.map((d, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs">
+                          <span className={`w-1.5 h-1.5 rounded-full ${d.status === 'sent' ? 'bg-green-500' : d.status === 'already_sent' ? 'bg-slate-400' : 'bg-red-500'}`} />
+                          <span className="font-medium">{d.partner}</span>
+                          <span className="text-slate-400">—</span>
+                          <span className={`px-1.5 py-0.5 text-[10px] font-bold uppercase ${d.template === 'reminder_3days' ? 'bg-blue-100 text-blue-700' : d.template === 'expired' ? 'bg-amber-100 text-amber-700' : d.template === 'last_chance' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
+                            {d.template === 'reminder_3days' ? 'Rappel J-3' : d.template === 'expired' ? 'Expiration J0' : d.template === 'last_chance' ? 'Derniere chance J+1' : d.template}
+                          </span>
+                          <span className={`text-[10px] ${d.status === 'sent' ? 'text-green-600' : d.status === 'already_sent' ? 'text-slate-400' : 'text-red-600'}`}>
+                            {d.status === 'sent' ? 'Envoye' : d.status === 'already_sent' ? 'Deja envoye' : 'Erreur'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Trial Expiry Alerts */}
+              {trialAlerts.length > 0 && (
+                <div className="border-l-4 border-amber-500 bg-amber-50 p-4" data-testid="trial-alerts">
+                  <div className="flex items-center gap-2 mb-3">
+                    <AlertTriangle className="w-4 h-4 text-amber-600" />
+                    <p className="font-heading font-bold uppercase text-xs text-amber-800">
+                      {trialAlerts.length} partenaire{trialAlerts.length > 1 ? 's' : ''} — essai finissant dans 5 jours ou moins
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    {trialAlerts.map(alert => (
+                      <div key={alert.subscription_id} className="flex items-center justify-between bg-white p-3 border border-amber-200 rounded" data-testid={`trial-alert-${alert.user_id}`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-heading font-bold text-sm ${alert.days_left <= 1 ? 'bg-red-100 text-red-700' : alert.days_left <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                            {alert.days_left}j
+                          </div>
+                          <div>
+                            <p className="font-heading font-bold text-sm">{alert.user_name}</p>
+                            <p className="text-xs text-slate-500">{alert.user_email} — Fin le {alert.trial_end ? format(new Date(alert.trial_end), 'd MMM yyyy', { locale: fr }) : '—'}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" className="bg-brand text-white gap-1 text-xs h-7" onClick={() => { setActiveTab('providers'); fetchDetailedProviders(); setTimeout(() => { setSelectedProvider(alert.user_id); fetchProviderDetail(alert.user_id); }, 500); }} data-testid={`alert-view-${alert.user_id}`}>
+                            <Eye className="w-3 h-3" /> Voir
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-red-600 border-red-200 gap-1 text-xs h-7" onClick={() => { const r = prompt('Raison de la suspension:'); if (r) handleProviderStatusChange(alert.user_id, 'suspended', r); }} data-testid={`alert-suspend-${alert.user_id}`}>
+                            <Ban className="w-3 h-3" /> Couper
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {trialAlerts.length === 0 && !trialCheckResult && (
+                <p className="text-sm text-slate-400 text-center py-2">Aucune alerte d'essai en cours. Cliquez sur "Verifier les essais" pour scanner les partenaires.</p>
+              )}
+            </div>
 
             {/* Revenue Summary - 4 columns */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
